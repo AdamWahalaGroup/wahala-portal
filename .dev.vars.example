@@ -1,0 +1,7 @@
+# Local Cloudflare Workers secrets (read by wrangler / OpenNext dev).
+# Copy to `.dev.vars` and fill in. NEVER commit `.dev.vars`.
+# In production set these with: npx wrangler secret put NAME
+CLERK_SECRET_KEY=sk_test_xxx
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+ANTHROPIC_API_KEY=sk-ant-xxx

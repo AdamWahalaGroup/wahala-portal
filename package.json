@@ -1,0 +1,36 @@
+{
+  "name": "wahala-portal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply wahala-portal --local",
+    "db:migrate:remote": "wrangler d1 migrations apply wahala-portal --remote"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.12.0",
+    "@opennextjs/cloudflare": "^1.3.0",
+    "drizzle-orm": "^0.38.0",
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250400.0",
+    "@types/node": "^22.13.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "drizzle-kit": "^0.30.0",
+    "typescript": "^5.8.0",
+    "wrangler": "^4.10.0"
+  },
+  "comment": "Versions are recent-as-of-authoring; run `npm install` to resolve, and bump as needed. If install conflicts, you can regenerate the Cloudflare base with `npm create cloudflare@latest -- --framework=next` and drop these files back in."
+}
