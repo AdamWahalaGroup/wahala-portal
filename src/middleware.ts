@@ -1,12 +1,10 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+// TODO (Phase 1): verify the Cognito session cookie here and redirect
+// unauthenticated users to the Cognito Hosted UI. See src/lib/auth.ts.
+// Empty matcher = this currently runs nowhere.
+export function middleware() {
+  return NextResponse.next();
+}
 
-export const config = {
-  matcher: [
-    // Run on everything except static files and Next internals
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run on API routes
-    "/(api|trpc)(.*)",
-  ],
-};
+export const config = { matcher: [] as string[] };

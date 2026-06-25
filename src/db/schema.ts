@@ -52,8 +52,7 @@ export const VISIBILITY = ["client_visible", "internal"] as const;
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
   id: pk(),
-  clerkOrgId: text("clerk_org_id").unique(),
-  name: text("name").notNull(),
+  name: text("name").notNull(), // Cognito has no org concept — we own organizations here
   slug: text("slug").unique(),
   status: text("status", { enum: ["prospect", "active", "archived"] })
     .notNull()
@@ -66,12 +65,12 @@ export const organizations = sqliteTable("organizations", {
   updatedAt: updatedAt(),
 });
 
-// ---- Users (Wahala staff + client users; Clerk-backed) ----
+// ---- Users (Wahala staff + client users; Cognito-backed) ----
 export const users = sqliteTable(
   "users",
   {
     id: pk(),
-    clerkUserId: text("clerk_user_id").notNull().unique(),
+    cognitoSub: text("cognito_sub").notNull().unique(), // Cognito user's "sub" claim
     organizationId: text("organization_id").references(() => organizations.id), // null = Wahala staff
     userType: text("user_type", { enum: USER_TYPES }).notNull(),
     role: text("role", { enum: USER_ROLES }).notNull(),

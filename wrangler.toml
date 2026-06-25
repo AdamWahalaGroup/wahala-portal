@@ -22,5 +22,5 @@ migrations_dir = "drizzle/migrations"
 binding = "R2"
 bucket_name = "wahala-portal-assets"
 
-# Secrets (CLERK_SECRET_KEY, STRIPE_SECRET_KEY, etc.) are NOT stored here.
+# Secrets (COGNITO_*, STRIPE_SECRET_KEY, etc.) are NOT stored here.
 # Local: put them in `.dev.vars`.  Production: `npx wrangler secret put NAME`.

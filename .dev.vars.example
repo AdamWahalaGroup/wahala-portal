@@ -1,7 +1,15 @@
-# Local Cloudflare Workers secrets (read by wrangler / OpenNext dev).
+# Local Cloudflare Workers vars/secrets (read by wrangler / OpenNext dev).
 # Copy to `.dev.vars` and fill in. NEVER commit `.dev.vars`.
-# In production set these with: npx wrangler secret put NAME
-CLERK_SECRET_KEY=sk_test_xxx
+# In production set secrets with: npx wrangler secret put NAME
+
+# AWS Cognito (authentication)
+COGNITO_REGION=us-east-1
+COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+COGNITO_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx
+COGNITO_DOMAIN=wahala.auth.us-east-1.amazoncognito.com
+
+# Stripe / Anthropic
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
 ANTHROPIC_API_KEY=sk-ant-xxx

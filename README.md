@@ -19,18 +19,18 @@ Internal **CRM + client portal** for **Wahala Group**, a services firm (marketed
 | Hosting / compute | Cloudflare (Pages + Workers) |
 | Framework | Next.js (one repo) via OpenNext |
 | Database | Cloudflare D1 (SQLite) + ORM (Drizzle or Prisma) |
-| Auth | Clerk (Organizations) |
+| Auth | AWS Cognito (authentication; orgs/roles self-managed in our DB) |
 | Files / media | Cloudflare R2 (with client/internal visibility flag) |
 | Payments | Stripe (hosted Checkout/Invoicing) |
 | AI (internal, Phase 2) | Anthropic Claude via Cloudflare AI Gateway; Whisper for transcription |
 
 ## Status
 
-Phase 0 **skeleton scaffolded** (Next.js + OpenNext/Cloudflare, Clerk, Drizzle on D1, R2, Stripe wiring). Not yet `npm install`ed/built — see setup.
+Phase 0 **skeleton scaffolded** (Next.js + OpenNext/Cloudflare, Cognito auth, Drizzle on D1, R2, Stripe wiring). Not yet `npm install`ed/built — see setup.
 
 ## Getting started
 
-➡️ **[`docs/SETUP.md`](docs/SETUP.md)** — install, create D1/R2, wire Clerk/Stripe, run migrations, run dev.
+➡️ **[`docs/SETUP.md`](docs/SETUP.md)** — install, create D1/R2, wire Cognito/Stripe, run migrations, run dev.
 
 The data model (the centerpiece) lives in [`src/db/schema.ts`](src/db/schema.ts); see [`docs/PLAN.md`](docs/PLAN.md) §7–§8 for context.
 
@@ -42,5 +42,5 @@ The data model (the centerpiece) lives in [`src/db/schema.ts`](src/db/schema.ts)
 
 - `docs/` — build plan, decisions, setup guide
 - `src/db/` — Drizzle schema (the data model) + D1 client
-- `src/app/`, `src/middleware.ts` — Next.js app (Clerk-wired)
+- `src/app/`, `src/middleware.ts`, `src/lib/auth.ts` — Next.js app (Cognito auth)
 - `wrangler.toml`, `open-next.config.ts`, `next.config.mjs`, `drizzle.config.ts` — Cloudflare/OpenNext/Drizzle config

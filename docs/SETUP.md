@@ -1,10 +1,10 @@
 # Phase 0 — Setup
 
-This is a hand-authored skeleton (Next.js + OpenNext for Cloudflare, Clerk, Drizzle on D1, R2, Stripe wiring). It has **not** been `npm install`ed or built yet — do that below. Versions in `package.json` are recent-as-of-authoring; bump if `npm install` complains.
+This is a hand-authored skeleton (Next.js + OpenNext for Cloudflare, **AWS Cognito** auth, Drizzle on D1, R2, Stripe wiring). It has **not** been `npm install`ed or built yet — do that below. Versions in `package.json` are recent-as-of-authoring; bump if `npm install` complains.
 
 ## Prerequisites
 - Node 20+ and npm
-- Accounts: **Cloudflare**, **Clerk**, **Stripe** (test mode)
+- Accounts: **Cloudflare**, **AWS** (for Cognito), **Stripe** (test mode)
 
 ## 1. Install
 ```bash
@@ -30,15 +30,22 @@ npm run db:migrate:local     # apply to local D1
 npm run db:migrate:remote
 ```
 
-## 4. Clerk
-- Create an application; **enable Organizations** (each client company = an Organization).
-- Copy keys: put `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` in `.env.local`, and
-  `CLERK_SECRET_KEY` in `.dev.vars`.
-- Plan the roles (see docs/PLAN.md §4–§5): Wahala admin / account owner / lead engineer /
-  engineer, and client admin / user / billing / read-only.
+## 4. AWS Cognito (authentication)
+Cognito handles **authentication only**. Organizations, roles, and all access rules live in
+our own DB (see `src/db/schema.ts`).
+1. In the AWS console, create a **Cognito User Pool**.
+2. Add an **App client** with a client secret; note the **Client ID** and **Client secret**.
+3. Set up a **Hosted UI domain** (e.g. `wahala.auth.us-east-1.amazoncognito.com`) and add the
+   callback URL `http://localhost:3000/auth/callback` (add your prod URL later).
+4. Put these into `.dev.vars` (see `.dev.vars.example`): `COGNITO_REGION`, `COGNITO_USER_POOL_ID`,
+   `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, `COGNITO_DOMAIN`.
+
+The JWT verification helper is in `src/lib/auth.ts` (verifies Cognito tokens with `jose`). The
+login/callback flow + session cookie is the first thing to build in Phase 1 (recommended:
+Cognito Hosted UI, OIDC Authorization Code grant).
 
 ## 5. Stripe (test mode)
-- Grab `STRIPE_SECRET_KEY` (test) and a webhook signing secret; put them in `.dev.vars`.
+Grab `STRIPE_SECRET_KEY` (test) and a webhook signing secret; put them in `.dev.vars`.
 
 ## 6. Run it
 ```bash
@@ -50,17 +57,19 @@ npm run deploy     # build + deploy to Cloudflare
 ## Env / secrets summary
 | Value | Where |
 |---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `.env.local` (public) |
-| `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY` | `.dev.vars` locally; `wrangler secret put` in prod |
+| `COGNITO_*` (region, user pool, client id/secret, domain) | `.dev.vars` locally; `wrangler secret put` in prod |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY` | `.dev.vars` locally; `wrangler secret put` in prod |
 | D1 `database_id`, R2 bucket | `wrangler.toml` |
 
 ## What's here
 - `src/db/schema.ts` — the Phase 1 data model (stages/pay-gate, tasks + visibility, roster, assets). **This is the centerpiece.**
 - `src/db/index.ts` — Drizzle client bound to D1.
-- `src/app/*`, `src/middleware.ts` — minimal Clerk-wired Next.js app.
+- `src/lib/auth.ts` — Cognito JWT verification helper.
+- `src/app/*`, `src/middleware.ts` — minimal Next.js app (auth flow to be built in Phase 1).
 - `wrangler.toml`, `open-next.config.ts`, `next.config.mjs`, `drizzle.config.ts` — Cloudflare/OpenNext/Drizzle config.
 
 ## Next (Phase 1)
 Build the loop: onboarding → assign Account Owner → client account (people/files/history)
 → create project + Lead Engineer + roster → quote an itemized stage (threshold approval)
 → pay (Stripe) → tasks assigned to engineers → deliver → formal acceptance → next stage.
+Auth: build the Cognito Hosted UI login/callback + session on top of `src/lib/auth.ts`.
