@@ -52,7 +52,7 @@ export const VISIBILITY = ["client_visible", "internal"] as const;
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
   id: pk(),
-  name: text("name").notNull(), // Cognito has no org concept — we own organizations here
+  name: text("name").notNull(), // we own organizations here (no external identity provider)
   slug: text("slug").unique(),
   status: text("status", { enum: ["prospect", "active", "archived"] })
     .notNull()
@@ -65,17 +65,16 @@ export const organizations = sqliteTable("organizations", {
   updatedAt: updatedAt(),
 });
 
-// ---- Users (Wahala staff + client users; Cognito-backed) ----
+// ---- Users (Wahala staff + client users; magic-link auth, identity = email) ----
 export const users = sqliteTable(
   "users",
   {
     id: pk(),
-    cognitoSub: text("cognito_sub").notNull().unique(), // Cognito user's "sub" claim
     organizationId: text("organization_id").references(() => organizations.id), // null = Wahala staff
     userType: text("user_type", { enum: USER_TYPES }).notNull(),
     role: text("role", { enum: USER_ROLES }).notNull(),
     name: text("name").notNull(),
-    email: text("email").notNull(),
+    email: text("email").notNull().unique(), // login identity (magic-link)
     status: text("status", { enum: ["invited", "active", "disabled"] })
       .notNull()
       .default("invited"),

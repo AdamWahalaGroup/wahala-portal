@@ -15,9 +15,11 @@ export default function Home() {
       </p>
 
       <p style={{ marginTop: 32, color: "#888", fontSize: 14 }}>
-        Auth is AWS Cognito (wired in Phase 1; see <code>src/lib/auth.ts</code>).
-        Next: the Phase 1 loop — onboarding → owner → client account → stage
-        cycle. See <code>docs/PLAN.md</code>.
+        Stack: Next.js (App Router) on Cloudflare Workers via OpenNext, with D1
+        (Drizzle) + KV (sessions) + R2 (files) + Cloudflare Email (magic-link
+        login) + Stripe. No external identity provider. Next: the magic-link
+        auth flow and the Phase 1 loop — see <code>docs/PLAN.md</code> and
+        <code> phase-0.md</code>.
       </p>
     </main>
   );

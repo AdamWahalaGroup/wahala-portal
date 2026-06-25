@@ -2,45 +2,43 @@
 
 Internal **CRM + client portal** for **Wahala Group**, a services firm (marketed as software development, but work-agnostic). It runs client relationships and delivers work end-to-end: **staged, pay-as-you-go**, with a dedicated owner per client and transparent, real-time communication.
 
-> 📋 Full build plan: [`docs/PLAN.md`](docs/PLAN.md) · Decisions brief for Jason: [`docs/DECISIONS-for-Jason.md`](docs/DECISIONS-for-Jason.md)
+> 📋 Build plan: [`docs/PLAN.md`](docs/PLAN.md) · Phase 0 setup: [`docs/PHASE-0.md`](docs/PHASE-0.md) · Decisions brief: [`docs/DECISIONS-for-Jason.md`](docs/DECISIONS-for-Jason.md)
 
 ## Core model
 
-- **Project → Stages → Tasks**
-  - **Stage** = the piece the client pays for (itemized, prepaid; no work before payment).
-  - **Task** = the internal work the Lead Engineer assigns to 1…N engineers (± AI tools).
-- **Account Owner** (client relationship) + **Lead Engineer** (project delivery) — one person on small projects, a team on large ones (roster scales 1…N).
+- **Project → Stages → Tasks** — Stage = the piece the client pays for (itemized, prepaid; no work before payment); Task = the internal work the Lead Engineer assigns to 1…N engineers (± AI tools).
+- **Account Owner** (relationship) + **Lead Engineer** (delivery) — one person on small projects, a team on large ones (roster scales 1…N).
 - Clients see **live status, who's doing what, and their own "on you" action items**. Internal-only: meeting recordings, AI digests, cost/margin, anything flagged private.
 
 ## Stack (decided)
 
 | Layer | Choice |
 |---|---|
-| Hosting / compute | Cloudflare (Pages + Workers) |
-| Framework | Next.js (one repo) via OpenNext |
-| Database | Cloudflare D1 (SQLite) + ORM (Drizzle or Prisma) |
-| Auth | AWS Cognito (authentication; orgs/roles self-managed in our DB) |
+| Hosting / compute | Cloudflare Workers via OpenNext |
+| Framework | Next.js (App Router), one repo |
+| Database | Cloudflare D1 (SQLite) + Drizzle |
+| Auth | Cloudflare **magic-link** (Cloudflare Email + KV sessions) — no external IdP |
 | Files / media | Cloudflare R2 (with client/internal visibility flag) |
-| Payments | Stripe (hosted Checkout/Invoicing) |
-| AI (internal, Phase 2) | Anthropic Claude via Cloudflare AI Gateway; Whisper for transcription |
+| Payments | Stripe (hosted checkout + webhooks) |
+| AI (internal, Phase 2) | Anthropic Claude via Cloudflare AI Gateway; Whisper (Workers AI) for transcription |
 
 ## Status
 
-Phase 0 **skeleton scaffolded** (Next.js + OpenNext/Cloudflare, Cognito auth, Drizzle on D1, R2, Stripe wiring). Not yet `npm install`ed/built — see setup.
+Phase 0 skeleton aligned to [`docs/PHASE-0.md`](docs/PHASE-0.md) (Workers/OpenNext + D1/Drizzle + KV + R2 + Cloudflare Email + Stripe wiring). Not yet `npm install`ed/built.
 
 ## Getting started
 
-➡️ **[`docs/SETUP.md`](docs/SETUP.md)** — install, create D1/R2, wire Cognito/Stripe, run migrations, run dev.
+➡️ **[`docs/PHASE-0.md`](docs/PHASE-0.md)** — scaffold, create D1/KV/R2/Email, wire Stripe, run migrations, run dev.
 
 The data model (the centerpiece) lives in [`src/db/schema.ts`](src/db/schema.ts); see [`docs/PLAN.md`](docs/PLAN.md) §7–§8 for context.
 
 ## Open decision
 
-- The **dollar threshold** above which a quote needs Wahala Admin sign-off (business call).
+- The **dollar threshold** above which a quote needs Wahala Admin sign-off (and whether it governs *issuing* a quote vs the client *accepting* one).
 
 ## Repo layout
 
-- `docs/` — build plan, decisions, setup guide
+- `docs/` — build plan, Phase 0 guide, decisions
 - `src/db/` — Drizzle schema (the data model) + D1 client
-- `src/app/`, `src/middleware.ts`, `src/lib/auth.ts` — Next.js app (Cognito auth)
-- `wrangler.toml`, `open-next.config.ts`, `next.config.mjs`, `drizzle.config.ts` — Cloudflare/OpenNext/Drizzle config
+- `src/app/`, `src/middleware.ts` — Next.js app (magic-link auth flow built in Phase 1)
+- `wrangler.jsonc`, `open-next.config.ts`, `next.config.ts`, `drizzle.config.ts` — Cloudflare/OpenNext/Drizzle config

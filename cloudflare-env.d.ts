@@ -1,18 +1,14 @@
-// Minimal Cloudflare bindings interface.
-// Regenerate from wrangler.toml with: `npm run cf-typegen`
+// Cloudflare bindings + secrets for the Worker runtime.
+// Regenerate from wrangler.jsonc with: `npm run cf-typegen`
 interface CloudflareEnv {
-  DB: D1Database;
-  R2: R2Bucket;
+  // --- bindings (wrangler.jsonc) ---
+  DB: D1Database; // Cloudflare D1 (SQLite)
+  SESSIONS: KVNamespace; // server-side sessions + magic-link tokens
+  FILES: R2Bucket; // files / Zoom recordings
+  EMAIL: SendEmail; // Cloudflare Email — magic links, invites, notifications
   ASSETS: Fetcher;
-  // Secrets (set in .dev.vars locally, `wrangler secret put` in prod):
-  // --- AWS Cognito (authentication) ---
-  COGNITO_REGION: string;
-  COGNITO_USER_POOL_ID: string;
-  COGNITO_CLIENT_ID: string;
-  COGNITO_CLIENT_SECRET: string;
-  COGNITO_DOMAIN: string; // Hosted UI domain, e.g. wahala.auth.us-east-1.amazoncognito.com
-  // --- Stripe / Anthropic ---
+  // --- secrets (.dev.vars locally; `wrangler secret put` in prod) ---
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  ANTHROPIC_API_KEY: string;
+  SESSION_SECRET?: string; // optional — only if signing the session cookie
 }

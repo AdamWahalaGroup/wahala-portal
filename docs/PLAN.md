@@ -60,7 +60,7 @@ Principle for two people: **fewest moving parts you can operate yourselves**, st
 | Hosting & compute | **Cloudflare** (Pages + Workers) | No Vercel. |
 | Framework | **Next.js** (one repo) via **OpenNext** | Separate API later = **Hono**, not Express. |
 | Database | **Cloudflare D1** (SQLite) + ORM (Drizzle/Prisma) | Not Postgres; ORM keeps it open later. |
-| Auth | **AWS Cognito** (authentication only) | Familiar to the team; orgs/roles owned in our DB. The lone AWS piece — verify JWTs at the edge with `jose`. |
+| Auth | **Cloudflare magic-link** (Cloudflare Email + KV sessions) | No external IdP; all on Cloudflare. We own orgs/roles/sessions in the DB. |
 | File/media storage | **Cloudflare R2** + presigned URLs | Stores recordings; carries a **visibility flag**. |
 | Payments | **Stripe** hosted + webhooks — **foundational** | Never touch card data. |
 | AI (internal) | **Claude** (`claude-opus-4-8`), via **Cloudflare AI Gateway** | Internal only. |
@@ -72,7 +72,7 @@ Principle for two people: **fewest moving parts you can operate yourselves**, st
 ## 3. The client "account" — the durable hub
 
 Each client company is a tenant with one **account** holding everything:
-- **Profile & people** (their users, authenticated via Cognito) + their dedicated **Account Owner**.
+- **Profile & people** (their users, authenticated via magic-link) + their dedicated **Account Owner**.
 - **Work history** — every project, stage, deliverable, payment, acceptance.
 - **Assets/files** with a **visibility flag**: *client-visible* (their uploads, shared deliverables) vs. *internal-only* (Wahala's **Zoom recordings** + their Phase-2 AI digests — clients never see these).
 - **Communication** — threaded, attributed, each flagged "Waiting on you" vs. "Waiting on Wahala."
@@ -129,7 +129,7 @@ A Wahala person uploads a **meeting recording**/data to a client account (intern
 
 Every tenant table carries `organization_id`. Key tables:
 - **`organizations`** + `account_owner_user_id` + assignment acceptance (`assigned_at`, `accepted_at`).
-- **`users`** (Cognito-backed via `cognito_sub`) — Wahala staff + client users; roles.
+- **`users`** (magic-link auth; identity = email) — Wahala staff + client users; roles.
 - **`projects`** (any work type; optional `work_type`, optional `linear_project_id`) + **`lead_engineer_user_id`**.
 - **`project_members`** — the roster: `project_id`, `user_id`, `project_role` (lead/engineer). 1…N.
 - **`stages`**: `status` (Draft→Quoted→Approved→Paid→In Progress→Delivered→Accepted; +Needs Revision/Rejected), `total_amount_cents`, `stripe_ref`, `approved_by_user_id`, `requires_admin_approval`, `paid_at`, `delivered_at`, `accepted_by_user_id`, `accepted_at`. **Invariant: no Paid→In Progress without confirmed payment.**
@@ -146,7 +146,7 @@ Every tenant table carries `organization_id`. Key tables:
 Relative effort (S/M/L/XL). Each phase ends in a demoable milestone.
 
 ### Phase 0 — Foundations (S–M)
-Cloudflare skeleton (Next.js/OpenNext + Workers); **Cognito** (user pool with a Wahala-staff user + a test client user; orgs/roles in our DB, owner assignment); **D1** + ORM (minimal schema incl. `projects`, `project_members`, `stages`, `stage_line_items`, `assets`); **R2** (visibility flag); **Stripe test payment** end-to-end; **AI Gateway** wired; secrets in Cloudflare. **Milestone:** staff + test-client logins; owner assigned & accepts; test payment flips a record; file uploads with visibility; deploy-on-push.
+Cloudflare skeleton (Next.js/OpenNext + Workers); **magic-link auth** (Cloudflare Email + KV sessions; a Wahala-staff user + a test client user; orgs/roles in our DB, owner assignment); **D1** + ORM (minimal schema incl. `projects`, `project_members`, `stages`, `stage_line_items`, `assets`); **R2** (visibility flag); **Stripe test payment** end-to-end; **AI Gateway** wired; secrets in Cloudflare. **Milestone:** staff + test-client logins; owner assigned & accepts; test payment flips a record; file uploads with visibility; deploy-on-push.
 
 ### Phase 1 — Core CRM + portal + pay-as-you-go loop + delivery layer (L) ← the heart
 Run a full lifecycle: onboard → assign **Account Owner** → client account (people, files, history) → create a project → assign a **Lead Engineer + roster** → quote an itemized stage (threshold approval) → client **pays** → Lead breaks the stage into **tasks assigned to engineers** (with status) → deliver → client **formally accepts** → next stage. Plus change orders, threaded comms + "waiting on whom," basic notifications, **real RBAC** (Admin / Account Owner / Lead Engineer / Engineer / client roles), tenant-scoped, with **visibility enforced** (clients see work status, tasks, and assignees, plus their own "on you" action items; recordings/digests/internal-flagged items stay private). **Out of scope:** meeting AI, Linear, deep financial ops, Teams presets, AI-as-assignee, cost/margin. **Milestone:** a real client goes request → paid → delivered (work assigned to engineers) → accepted, entirely in the portal.
@@ -169,7 +169,7 @@ Named **Teams** presets; **AI as first-class assignee**; **cost/margin per stage
 | **Pay-gate / Stage state machine** | Core from Phase 1; no delivery before `Paid`; server-side. | Deposits/splits. |
 | **Visibility (client vs. internal)** | Clients **do** see work status, tasks, and assignees (transparency), plus their own action items. **Internal-only (non-negotiable):** meeting recordings, AI digests, cost/margin, and any task/comment flagged internal. Enforce server-side, test explicitly. | — |
 | **Tenant isolation** | `organization_id` everywhere; one enforcement point (ORM middleware/repo). | Row-level hardening. |
-| **Role-based access** | **Auth = Cognito; authorization = ours** (orgs/roles in DB). Admin / Account Owner / Lead Engineer / Engineer / client roles; engineers see only assigned work. | Granular per-resource perms. |
+| **Role-based access** | **Auth = Cloudflare magic-link; authorization = ours** (orgs/roles in DB). Admin / Account Owner / Lead Engineer / Engineer / client roles; engineers see only assigned work. | Granular per-resource perms. |
 | **Human approval gates** | AI output never reaches a client without owner approval; threshold → admin co-sign. | Looser automation (added later). |
 | **Payments correctness** | Stripe webhooks: signed + idempotent; reconcile paid↔unlock atomically. | Dunning, proration. |
 | **Meeting consent/retention** (Ph2) | Consent to record; retention policy before storing/processing. | Advanced compliance. |
@@ -198,9 +198,9 @@ Named **Teams** presets; **AI as first-class assignee**; **cost/margin per stage
 
 ## 12. Money & decisions
 
-**Spend that accelerates (funding undecided):** transcription (cheap via Whisper) · transactional email (Phase 3) · a contractor for a bounded slice (Stripe pay-gate, the Cognito auth flow, or Linear sync) if a phase drags.
+**Spend that accelerates (funding undecided):** transcription (cheap via Whisper) · transactional email (Phase 3) · a contractor for a bounded slice (Stripe pay-gate, the magic-link auth flow, or Linear sync) if a phase drags.
 
-**Resolved:** CRM (not generator) · Cloudflare/no-Vercel · Next.js · D1 · **Cognito** (auth; permissions self-managed in our DB) · Stripe foundational · staged-only billing · dedicated Account Owner + threshold authority · per-stage acceptance · meeting AI in Phase 2 · Linear optional/dev-only · **Account Owner & Lead Engineer are separate roles (collapse on small projects)** · **clients see work status, tasks, and assignees + their own action items; recordings/digests/internal-flagged items stay private**.
+**Resolved:** CRM (not generator) · Cloudflare/no-Vercel · Next.js · D1 · **Cloudflare magic-link auth** (KV sessions; no external IdP; permissions self-managed in our DB) · Stripe foundational · staged-only billing · dedicated Account Owner + threshold authority · per-stage acceptance · meeting AI in Phase 2 · Linear optional/dev-only · **Account Owner & Lead Engineer are separate roles (collapse on small projects)** · **clients see work status, tasks, and assignees + their own action items; recordings/digests/internal-flagged items stay private**.
 
 **Still open for you + Jason:** (1) the **dollar threshold** for admin co-sign; (2) Phase-2-time: transcription upgrade vs. Whisper, and a **meeting consent + retention policy**.
 

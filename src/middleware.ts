@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
-// TODO (Phase 1): verify the Cognito session cookie here and redirect
-// unauthenticated users to the Cognito Hosted UI. See src/lib/auth.ts.
+// TODO (Phase 1): lightweight session-cookie presence check here, then do the
+// real authorization in route handlers (the scoped-query layer), NOT in middleware.
+//
+// OpenNext caveat: Node.js-runtime middleware is not yet supported — keep this
+// file edge-compatible (no Node APIs). Heavy auth logic belongs in route handlers.
 // Empty matcher = this currently runs nowhere.
 export function middleware() {
   return NextResponse.next();

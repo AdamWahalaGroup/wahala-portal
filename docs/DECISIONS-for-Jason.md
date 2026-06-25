@@ -27,7 +27,7 @@ scope → itemized quote → **pay in full upfront** → we deliver → **client
 | Hosting | **Cloudflare** (Pages + Workers) — no Vercel | You're out on Vercel; we're Cloudflare-centric. |
 | Framework | **Next.js**, one repo, via **OpenNext** | TDD was Vite + Express. Separate API (if wanted) = **Hono**, not Express (Express isn't Workers-native). |
 | **Database** | **Cloudflare D1** (SQLite) + an ORM | **The one to sanity-check with you:** TDD said Postgres. D1 keeps everything in-Cloudflare with the fewest parts; ORM keeps Postgres open later. Push back if you need Postgres on day one. |
-| Auth | **AWS Cognito** (authentication; we own orgs/roles in the DB) | Team's choice: fewer new deps, familiar. The lone AWS piece in a Cloudflare stack. |
+| Auth | **Cloudflare magic-link** (Cloudflare Email + KV sessions) | Fully Cloudflare, no external IdP, no password handling. We own orgs/roles/sessions in the DB. |
 | Storage | **Cloudflare R2** + a client-visible/internal **visibility flag** (for Zoom recordings) | Extends your R2 choice. |
 | Payments | **Stripe** hosted + webhooks, **foundational** | You had Stripe; moved earlier. |
 | AI | **Claude**, internal-only, via Cloudflare AI Gateway; **Whisper** (Cloudflare) for transcription in Phase 2 | TDD was OpenAI. |
@@ -49,6 +49,6 @@ scope → itemized quote → **pay in full upfront** → we deliver → **client
 
 ## Proposed first move
 
-Stand up the **Phase 0 Cloudflare skeleton** (Next.js/OpenNext + D1 + Cognito + R2 + Stripe test mode), then build the **Phase 1 core loop**: onboard a client → assign an owner → client account with files/history → quote a stage → pay → deliver → accept. Meeting-digestion AI comes in Phase 2.
+Stand up the **Phase 0 Cloudflare skeleton** (Next.js/OpenNext + D1 + magic-link auth + R2 + Stripe test mode), then build the **Phase 1 core loop**: onboard a client → assign an owner → client account with files/history → quote a stage → pay → deliver → accept. Meeting-digestion AI comes in Phase 2.
 
 *Full plan (phases, data model, verification, cost flags) is in the build-plan doc.*

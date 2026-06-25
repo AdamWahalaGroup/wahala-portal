@@ -1,9 +1,9 @@
-import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-// Generates SQL migrations from src/db/schema.ts into drizzle/migrations.
-// Apply them to D1 with `npm run db:migrate:local` / `db:migrate:remote`.
-export default {
+// Generate-only: migrations are applied through Wrangler (`db:migrate:*`),
+// so no remote DB credentials are needed here.
+export default defineConfig({
+  dialect: "sqlite",
   schema: "./src/db/schema.ts",
   out: "./drizzle/migrations",
-  dialect: "sqlite",
-} satisfies Config;
+});
