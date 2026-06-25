@@ -14,7 +14,7 @@
     {
       "binding": "DB",
       "database_name": "wahala-db",
-      "database_id": "<paste id from `wrangler d1 create`>",
+      "database_id": "740b65ab-773a-4ed1-a468-fed90d4684bf",
       "migrations_dir": "drizzle/migrations"
     }
   ],
@@ -22,7 +22,7 @@
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
-      "id": "<paste id from `wrangler kv namespace create`>"
+      "id": "dc38a0ef3ad54115a93a3b92ec84393b"
     }
   ],
 
