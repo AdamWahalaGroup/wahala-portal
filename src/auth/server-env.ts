@@ -20,5 +20,15 @@ export function isDevAuth(): boolean {
 
 /** From-address for login emails. Must be on a domain onboarded to Email Sending. */
 export function emailFrom(): string {
-  return vars().EMAIL_FROM ?? "login@wahala.group";
+  return vars().EMAIL_FROM ?? "login@wahala-services.com";
+}
+
+/**
+ * Quote total (in cents) above which a Wahala admin must co-sign (PLAN.md §4, §12).
+ * Placeholder default of $5,000 pending the figure you + Jason set. Configure via
+ * the ADMIN_APPROVAL_THRESHOLD_CENTS var.
+ */
+export function adminApprovalThresholdCents(): number {
+  const n = Number(vars().ADMIN_APPROVAL_THRESHOLD_CENTS);
+  return Number.isFinite(n) && n > 0 ? n : 500_000;
 }

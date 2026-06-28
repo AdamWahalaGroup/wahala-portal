@@ -11,4 +11,6 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 # log in locally before the email domain is onboarded. NEVER set this in production.
 DEV_AUTH=true
 # From-address for login emails once the domain is onboarded to Email Sending.
-EMAIL_FROM=login@wahala.group
+EMAIL_FROM=login@wahala-services.com
+# Quote total (cents) above which a Wahala admin must co-sign quotes.
+ADMIN_APPROVAL_THRESHOLD_CENTS=500000

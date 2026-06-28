@@ -14,7 +14,10 @@
   // Email Sending (wahala-services.com — enabled). DEV_AUTH is intentionally NOT
   // here — it lives only in .dev.vars so it can never leak into production.
   "vars": {
-    "EMAIL_FROM": "login@wahala-services.com"
+    "EMAIL_FROM": "login@wahala-services.com",
+    // Quote total (cents) above which a Wahala admin must co-sign. $5,000 placeholder
+    // pending the figure you + Jason set.
+    "ADMIN_APPROVAL_THRESHOLD_CENTS": "500000"
   },
 
   // Serve the portal on a branded hostname. custom_domain makes Cloudflare create

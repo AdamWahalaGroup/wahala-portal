@@ -7,6 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
@@ -29,6 +31,7 @@
     "@types/react-dom": "^19.1.0",
     "drizzle-kit": "^0.30.0",
     "typescript": "^5.8.0",
+    "vitest": "^4.1.9",
     "wrangler": "^4.10.0"
   }
 }
