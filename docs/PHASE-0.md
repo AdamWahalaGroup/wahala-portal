@@ -150,12 +150,15 @@ export async function GET() {
   const files = env.FILES;           // R2
   const email = env.EMAIL;           // Cloudflare Email Service
 
-  // Sending a magic link:
+  // Sending a magic link (Workers binding — `from` is an OBJECT, not a string):
   // await env.EMAIL.send({
-  //   to, from: `login@${YOUR_DOMAIN}`,
+  //   to,
+  //   from: { email: `login@${YOUR_DOMAIN}`, name: "Wahala Portal" },
   //   subject: "Your sign-in link",
   //   text: `Sign in: ${url}`, html: `<a href="${url}">Sign in</a>`,
   // });
+  // Onboard the domain first: `wrangler email sending enable <domain>`. Until then
+  // the send throws — dev surfaces the link instead (DEV_AUTH=true). See src/auth/email.ts.
 
   // ...
 }

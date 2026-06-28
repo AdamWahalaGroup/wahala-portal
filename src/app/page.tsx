@@ -14,6 +14,10 @@ export default function Home() {
         Client services CRM &amp; portal — Phase 0 skeleton.
       </p>
 
+      <p style={{ marginTop: 16 }}>
+        <a href="/login">Sign in →</a>
+      </p>
+
       <p style={{ marginTop: 32, color: "#888", fontSize: 14 }}>
         Stack: Next.js (App Router) on Cloudflare Workers via OpenNext, with D1
         (Drizzle) + KV (sessions) + R2 (files) + Cloudflare Email (magic-link

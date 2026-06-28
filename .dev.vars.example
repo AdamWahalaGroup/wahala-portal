@@ -5,4 +5,10 @@
 
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
-SESSION_SECRET=changeme   # optional — only if you sign the session cookie
+
+# Auth (dev only)
+# DEV_AUTH=true surfaces the magic link in the /api/auth/request response so you can
+# log in locally before the email domain is onboarded. NEVER set this in production.
+DEV_AUTH=true
+# From-address for login emails once the domain is onboarded to Email Sending.
+EMAIL_FROM=login@wahala.group
