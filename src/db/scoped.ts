@@ -67,6 +67,36 @@ export class ScopedDb {
         ),
       );
   }
+
+  /** Stages for a project (tenant-scoped), ordered by sequence. */
+  async listStages(projectId: string) {
+    return this.db
+      .select()
+      .from(schema.stages)
+      .where(and(this.tenant(schema.stages), eq(schema.stages.projectId, projectId)))
+      .orderBy(schema.stages.sequence);
+  }
+
+  /** A single stage the caller may see, or null (tenant-scoped). */
+  async getStage(id: string) {
+    const rows = await this.db
+      .select()
+      .from(schema.stages)
+      .where(and(this.tenant(schema.stages), eq(schema.stages.id, id)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** Line items for a stage, gated through the parent stage's tenant scope. */
+  async listStageLineItems(stageId: string) {
+    const stage = await this.getStage(stageId);
+    if (!stage) return [];
+    return this.db
+      .select()
+      .from(schema.stageLineItems)
+      .where(eq(schema.stageLineItems.stageId, stageId))
+      .orderBy(schema.stageLineItems.sortOrder);
+  }
 }
 
 export function scopedDb(ctx: AuthContext): ScopedDb {
