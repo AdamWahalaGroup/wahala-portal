@@ -54,6 +54,26 @@ export class ScopedDb {
       .where(this.tenant(schema.projects));
   }
 
+  /** A single project the caller may see, or null (tenant-scoped). */
+  async getProject(id: string) {
+    const rows = await this.db
+      .select()
+      .from(schema.projects)
+      .where(and(this.tenant(schema.projects), eq(schema.projects.id, id)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** Organizations the caller may act within (all for staff; own org for a client). */
+  async listOrganizations() {
+    if (this.ctx.canSeeAllOrgs) return this.db.select().from(schema.organizations);
+    if (!this.ctx.organizationId) return [];
+    return this.db
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, this.ctx.organizationId));
+  }
+
   /** Tasks for a project — tenant- AND visibility-scoped. */
   async listTasks(projectId: string) {
     return this.db

@@ -6,11 +6,12 @@
  * single batch. This is the server-side chokepoint where the invariants hold:
  *   • no delivery before payment   • no cross-tenant action   • everything logged.
  */
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
-import { canActOnStage, type PolicyActor } from "@/auth/policy";
+import { canActOnStage, type PolicyActor, type StageResource } from "@/auth/policy";
 import {
+  ACTION_TRANSITION,
   assertStageAction,
   requiresAdminApproval,
   StageError,
@@ -180,6 +181,71 @@ export async function markStagePaidBySystem(stageId: string, stripeRef: string):
   ]);
 
   return { ...stage, ...set } as Stage;
+}
+
+/**
+ * Actions that are BOTH state-legal from the stage's current status AND permitted
+ * for this actor — i.e. exactly the buttons the UI should render.
+ */
+export function availableActions(
+  ctx: AuthContext,
+  stage: Stage,
+  resource: StageResource,
+): StageAction[] {
+  const actor = actorFromCtx(ctx);
+  return (Object.keys(ACTION_TRANSITION) as StageAction[])
+    .filter((a) => ACTION_TRANSITION[a].from === stage.status)
+    .filter((a) => {
+      const overThreshold =
+        a === "send_quote" &&
+        requiresAdminApproval(stage.totalAmountCents, adminApprovalThresholdCents());
+      return canActOnStage(actor, a, resource, { overThreshold }).allowed;
+    });
+}
+
+export type StageDetail = {
+  stage: Stage;
+  resource: StageResource;
+  lineItems: (typeof schema.stageLineItems.$inferSelect)[];
+  audit: { action: string; createdAt: Date; actorName: string; from?: string; to?: string }[];
+  actions: StageAction[];
+};
+
+/** Everything the stage detail page needs, in one tenant-isolated read. */
+export async function getStageDetail(ctx: AuthContext, stageId: string): Promise<StageDetail> {
+  const { stage, resource } = await loadStageContext(ctx, stageId);
+  const db = getDb();
+
+  const lineItems = await db
+    .select()
+    .from(schema.stageLineItems)
+    .where(eq(schema.stageLineItems.stageId, stageId))
+    .orderBy(schema.stageLineItems.sortOrder);
+
+  const auditRows = await db
+    .select()
+    .from(schema.auditLog)
+    .where(and(eq(schema.auditLog.entityType, "stage"), eq(schema.auditLog.entityId, stageId)))
+    .orderBy(schema.auditLog.createdAt);
+
+  const actorIds = [...new Set(auditRows.map((r) => r.actorUserId).filter(Boolean))] as string[];
+  const actors = actorIds.length
+    ? await db.select().from(schema.users).where(inArray(schema.users.id, actorIds))
+    : [];
+  const nameById = new Map(actors.map((u) => [u.id, u.name]));
+
+  const audit = auditRows.map((r) => {
+    const meta = (r.metadata ?? {}) as { from?: string; to?: string };
+    return {
+      action: r.action,
+      createdAt: r.createdAt,
+      actorName: r.actorUserId ? (nameById.get(r.actorUserId) ?? "Unknown") : "System",
+      from: meta.from,
+      to: meta.to,
+    };
+  });
+
+  return { stage, resource, lineItems, audit, actions: availableActions(ctx, stage, resource) };
 }
 
 /** Create a draft stage with itemized line items. Owner/admin only. */
