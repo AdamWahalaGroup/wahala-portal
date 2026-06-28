@@ -10,6 +10,13 @@
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "observability": { "enabled": true },
 
+  // Non-secret production vars. EMAIL_FROM must be on a domain onboarded to
+  // Email Sending (wahala-services.com — enabled). DEV_AUTH is intentionally NOT
+  // here — it lives only in .dev.vars so it can never leak into production.
+  "vars": {
+    "EMAIL_FROM": "login@wahala-services.com"
+  },
+
   "d1_databases": [
     {
       "binding": "DB",
