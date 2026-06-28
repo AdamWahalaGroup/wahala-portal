@@ -17,6 +17,13 @@
     "EMAIL_FROM": "login@wahala-services.com"
   },
 
+  // Serve the portal on a branded hostname. custom_domain makes Cloudflare create
+  // the DNS record + TLS cert on deploy (zone is already on the account). The
+  // default *.workers.dev URL keeps working alongside this.
+  "routes": [
+    { "pattern": "portal.wahala-services.com", "custom_domain": true }
+  ],
+
   "d1_databases": [
     {
       "binding": "DB",
