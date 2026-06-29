@@ -14,12 +14,13 @@ const input: React.CSSProperties = {
 };
 
 /** Onboard a prospect + send an invite. POSTs to /api/clients (admin only). */
-export function OnboardClientForm() {
+export function OnboardClientForm({ staff, currentUserId }: { staff: { id: string; name: string }[]; currentUserId: string }) {
   const router = useRouter();
   const [org, setOrg] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [agent, setAgent] = useState(currentUserId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export function OnboardClientForm() {
           contactName: name.trim(),
           contactEmail: email.trim(),
           intakeNotes: notes.trim(),
+          assignedAgentId: agent,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string; inviteLink?: string };
@@ -74,6 +76,16 @@ export function OnboardClientForm() {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
       />
+      <label style={{ display: "grid", gap: 5 }}>
+        <span className="kicker">Assigned agent (account owner)</span>
+        <select style={input} value={agent} onChange={(e) => setAgent(e.target.value)}>
+          {staff.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.id === currentUserId ? `${s.name} (you)` : s.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <div>
         <button
           type="submit"

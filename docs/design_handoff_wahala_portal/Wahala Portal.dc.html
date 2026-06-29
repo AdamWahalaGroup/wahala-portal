@@ -935,6 +935,13 @@
           </div>
           <label class="mono" style="display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:14px 0 7px;">Intake notes — what they're looking for</label>
           <textarea style="width:100%; height:74px; padding:11px 13px; border:1px solid #d7d9df; border-radius:9px; font:400 13.5px 'Hanken Grotesk'; color:#3a3f47; background:#fff; resize:none;">Needs a customer portal rebuild + data migration off their legacy CRM. Budget approved, wants to start with a discovery stage.</textarea>
+          <label class="mono" style="display:flex; align-items:center; justify-content:space-between; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:14px 0 7px;">Assigned agent<span style="font-weight:500; letter-spacing:0; text-transform:none; color:#b4b9c1;">defaults to you</span></label>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px 8px 8px; border:1px solid #d7d9df; border-radius:9px; background:#fff;">
+            <div style="width:28px; height:28px; border-radius:50%; background:#16181d; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">AO</div>
+            <div style="flex:1; line-height:1.2;"><div style="font-size:13px; font-weight:700;">Ada Obi <span class="mono" style="font-size:9.5px; font-weight:500; color:#9aa0aa;">· you</span></div><div class="mono" style="font-size:9.5px; color:#9aa0aa;">Account owner</div></div>
+            <span style="color:#9aa0aa; font-size:12px;">▾</span>
+          </div>
+          <div class="mono" style="font-size:10px; color:#b4b9c1; margin-top:6px; line-height:1.5;">Reassign to another Wahala employee if someone else will own this relationship.</div>
           <button style="width:100%; margin-top:16px; border:0; padding:13px; border-radius:9px; background:#16181d; color:#fff; font:600 14px 'Hanken Grotesk'; cursor:pointer;">Invite client →</button>
           <div class="mono" style="font-size:10.5px; color:#b4b9c1; text-align:center; margin-top:11px; line-height:1.5;">Sends a magic-link invite. They appear as <strong style="color:#b45309;">Invited</strong> until they accept.</div>
         </div>
@@ -964,6 +971,102 @@
         <button style="flex:1; border:0; padding:13px; border-radius:10px; background:#dc2626; color:#fff; font:700 14px 'Hanken Grotesk'; cursor:pointer;">Delete client</button>
       </div>
       <div class="mono" style="font-size:10px; color:#b4b9c1; text-align:center; margin-top:12px; line-height:1.5;">Logged · admin-only · ideal for resetting test data</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME P : CLIENT WELCOME / NO PROJECTS YET ============ -->
+<div style="position:absolute; left:0; top:13760px; width:1360px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#2536c4;">15 — Client welcome · empty state</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">/dashboard · just accepted invite · no projects yet</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); overflow:hidden; display:grid; grid-template-columns:228px 1fr;">
+    <!-- sidebar -->
+    <div style="background:#16181d; padding:24px 18px; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:10px; padding:0 6px 22px;">
+        <div style="width:28px; height:28px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center;"><div style="width:10px; height:10px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+        <span style="font-size:18px; font-weight:800; letter-spacing:-.02em; color:#fff;">wahala</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; background:#23262e; border-radius:9px; padding:9px 11px; margin-bottom:18px;">
+        <div style="width:24px; height:24px; border-radius:6px; background:#2b3ee6; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">L</div>
+        <div style="line-height:1.2;"><div style="font-size:12.5px; font-weight:700; color:#fff;">Lumen Co.</div><div class="mono" style="font-size:9.5px; color:#7c828d;">your account</div></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; background:#2b3ee6; color:#fff; font-size:13.5px; font-weight:600;"><span style="opacity:.9;">◧</span>Home</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span>▤</span>Projects</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span>◈</span>Files</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span>✉</span>Messages</div>
+      </div>
+      <div style="margin-top:auto; padding:13px 11px; background:#23262e; border-radius:10px;">
+        <div class="mono" style="font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#7c828d; margin-bottom:9px;">Your account owner</div>
+        <div style="display:flex; align-items:center; gap:9px;">
+          <div style="width:30px; height:30px; border-radius:50%; background:#2b3ee6; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">AO</div>
+          <div style="line-height:1.25;"><div style="font-size:12.5px; font-weight:700; color:#fff;">Ada Obi</div><div class="mono" style="font-size:9.5px; color:#7c828d;">ada@wahala.co</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- main -->
+    <div style="padding:30px 0 0;">
+      <div style="padding:0 36px;">
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Tuesday · 29 Jun</div>
+        <h1 style="margin:6px 0 0; font-size:26px; font-weight:800; letter-spacing:-.025em;">Good afternoon, Adam.</h1>
+      </div>
+
+      <!-- hero -->
+      <div style="margin:22px 36px 0; border-radius:16px; background:#16181d; padding:38px 40px; position:relative; overflow:hidden;">
+        <div style="position:absolute; right:-40px; top:-40px; width:200px; height:200px; border-radius:36px; background:#2b3ee6; opacity:.16; transform:rotate(45deg);"></div>
+        <div style="position:absolute; right:60px; bottom:-60px; width:130px; height:130px; border-radius:24px; background:#2b3ee6; opacity:.1; transform:rotate(45deg);"></div>
+        <div style="position:relative; max-width:620px;">
+          <span class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#7aa2ff;">Welcome to Wahala Portal</span>
+          <h2 style="margin:14px 0 0; font-size:30px; font-weight:800; letter-spacing:-.025em; color:#fff; line-height:1.15;">We build it, run it, and remove the wahala.</h2>
+          <p style="margin:14px 0 0; font-size:15px; line-height:1.65; color:#b8bcc4;">Wahala Group is an engineering services firm. We design, build, and ship websites, services, and apps — then keep them running so you don't have to. Every piece of work is scoped, paid one stage at a time, and formally accepted by you. No surprises.</p>
+          <div style="display:flex; gap:11px; margin-top:24px;">
+            <button style="border:0; padding:12px 20px; border-radius:9px; background:#fff; color:#16181d; font:600 14px 'Hanken Grotesk'; cursor:pointer;">Message Ada to get started</button>
+            <button style="padding:12px 20px; border-radius:9px; background:transparent; color:#fff; font:600 14px 'Hanken Grotesk'; border:1px solid #3a3f47; cursor:pointer;">Book a kickoff call</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- what we do -->
+      <div style="padding:30px 36px 0;">
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:14px;">What we do</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div style="border:1px solid #ededf1; border-radius:13px; padding:22px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:#eef0fe; display:flex; align-items:center; justify-content:center; margin-bottom:14px;"><div style="width:13px; height:13px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+            <div style="font-size:15.5px; font-weight:700; letter-spacing:-.01em;">Build &amp; ship</div>
+            <p style="margin:6px 0 0; font-size:13.5px; line-height:1.6; color:#5a6069;">Websites, services, and apps built to your needs — designed, engineered, and delivered stage by stage.</p>
+          </div>
+          <div style="border:1px solid #ededf1; border-radius:13px; padding:22px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:#eef0fe; display:flex; align-items:center; justify-content:center; margin-bottom:14px;"><div style="display:flex; gap:3px;"><span style="width:5px;height:13px;background:#2b3ee6;border-radius:2px;"></span><span style="width:5px;height:13px;background:#2b3ee6;border-radius:2px;opacity:.55;"></span></div></div>
+            <div style="font-size:15.5px; font-weight:700; letter-spacing:-.01em;">Custom AI, tuned to you</div>
+            <p style="margin:6px 0 0; font-size:13.5px; line-height:1.6; color:#5a6069;">Bespoke AI models and pipelines built for your specific needs — engineered for minimal hallucinations, and they learn your business over time.</p>
+          </div>
+          <div style="border:1px solid #ededf1; border-radius:13px; padding:22px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:#eef0fe; display:flex; align-items:center; justify-content:center; margin-bottom:14px;"><div style="width:14px; height:14px; border:2.5px solid #2b3ee6; border-radius:50%;"></div></div>
+            <div style="font-size:15.5px; font-weight:700; letter-spacing:-.01em;">Hosting &amp; maintenance</div>
+            <p style="margin:6px 0 0; font-size:13.5px; line-height:1.6; color:#5a6069;">Hosting, upkeep, and ongoing care stay on us. We keep everything running and up to date so it's never your problem.</p>
+          </div>
+          <div style="border:1px solid #ededf1; border-radius:13px; padding:22px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:#eef0fe; display:flex; align-items:center; justify-content:center; margin-bottom:14px;"><div style="display:flex; align-items:center; gap:2px; color:#2b3ee6; font-size:15px; font-weight:800;">→|</div></div>
+            <div style="font-size:15.5px; font-weight:700; letter-spacing:-.01em;">Grow on your terms</div>
+            <p style="margin:6px 0 0; font-size:13.5px; line-height:1.6; color:#5a6069;">As you scale, we can hand off cleanly to your own team of developers — you stay in control of the product you own.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- next step -->
+      <div style="margin:24px 36px 32px; padding:20px 22px; border-radius:13px; background:#fbfbfc; border:1px solid #ededf1;">
+        <div class="mono" style="font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:13px;">Your Wahala agent</div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="width:46px; height:46px; border-radius:50%; background:#2b3ee6; color:#fff; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">AO</div>
+          <div style="flex:1;">
+            <div style="font-size:15px; font-weight:700;">Ada Obi</div>
+            <div style="font-size:13px; color:#5a6069; margin-top:2px;">Your dedicated point of contact at Wahala. <strong style="color:#16181d;">Ada will reach out with the next steps</strong> to scope and build your first project — message her any time in the meantime.</div>
+          </div>
+          <button style="border:0; padding:11px 18px; border-radius:9px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; cursor:pointer; flex-shrink:0;">Message Ada</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -3,7 +3,7 @@
  * then invite them. The contact starts "invited" and flips to "active" (= Accepted)
  * on first sign-in. Clients never self-signup.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -65,13 +65,31 @@ export async function listClients(ctx: AuthContext): Promise<ClientListItem[]> {
     .sort((a, b) => +new Date(b.org.createdAt) - +new Date(a.org.createdAt));
 }
 
+/** Active Wahala staff — candidates to own a client relationship (the "agent" selector). */
+export async function listWahalaStaff(ctx: AuthContext): Promise<{ id: string; name: string }[]> {
+  if (!ctx.isStaff) return [];
+  const db = getDb();
+  return db
+    .select({ id: schema.users.id, name: schema.users.name })
+    .from(schema.users)
+    .where(and(eq(schema.users.userType, "wahala"), ne(schema.users.status, "disabled")))
+    .orderBy(schema.users.name);
+}
+
 /**
- * Onboard a prospect: create the org + primary client contact (invited), set the
- * onboarding admin as Account Owner, and send/return the invite link. Admin only.
+ * Onboard a prospect: create the org + primary client contact (invited), assign an
+ * Account Owner (the chosen Wahala "agent", defaulting to the inviting admin), and
+ * send/return the invite link. Admin only.
  */
 export async function onboardClient(
   ctx: AuthContext,
-  input: { organizationName: string; contactName: string; contactEmail: string; intakeNotes?: string },
+  input: {
+    organizationName: string;
+    contactName: string;
+    contactEmail: string;
+    intakeNotes?: string;
+    assignedAgentId?: string;
+  },
   origin: string,
 ): Promise<{ organizationId: string; userId: string; inviteLink?: string }> {
   if (!ctx.isAdmin) {
@@ -90,6 +108,16 @@ export async function onboardClient(
   const existing = await db.query.users.findFirst({ where: eq(schema.users.email, contactEmail) });
   if (existing) throw new StageError("VALIDATION", "A user with that email already exists.");
 
+  // Account owner = the chosen Wahala agent (defaults to the inviting admin).
+  let accountOwnerUserId = ctx.user.id;
+  if (input.assignedAgentId && input.assignedAgentId !== ctx.user.id) {
+    const agent = await db.query.users.findFirst({ where: eq(schema.users.id, input.assignedAgentId) });
+    if (!agent || agent.userType !== "wahala" || agent.status === "disabled") {
+      throw new StageError("VALIDATION", "The assigned agent must be an active Wahala user.");
+    }
+    accountOwnerUserId = agent.id;
+  }
+
   const organizationId = crypto.randomUUID();
   const userId = crypto.randomUUID();
   const now = new Date();
@@ -100,7 +128,7 @@ export async function onboardClient(
       name: organizationName,
       status: "prospect",
       intakeNotes: input.intakeNotes?.trim() || null,
-      accountOwnerUserId: ctx.user.id, // onboarding admin becomes the Account Owner
+      accountOwnerUserId, // the chosen Wahala agent (default: inviting admin)
       ownerAssignedAt: now,
       ownerAcceptedAt: now,
     }),

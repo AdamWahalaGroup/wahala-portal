@@ -12,7 +12,7 @@
 
 **Legend:** ✅ built · 🟡 partial · ⬜ not built · 🔼 new/changed vs the original handoff
 
-_Last updated: after the Files (R2) screen._
+_Last updated: after the client welcome (frame 15) + assign-agent-at-invite._
 
 ---
 
@@ -40,7 +40,8 @@ _Last updated: after the Files (R2) screen._
 
 | Item | Status | Route | What it is |
 |------|--------|-------|-----------|
-| 🔼 **Clients** (handoff frame 14 / 14b) | ✅ built | `/dashboard/clients` | Staff-only. Admin onboards a prospect (company, contact, **intake notes**), **Invite** (magic-link email), tracks **Invited → Accepted**, and can **delete a client** — admin-only **cascade** delete (removes the org + all its projects/stages/tasks/history) behind a destructive confirm modal. For resetting test data. |
+| 🔼 **Clients** (handoff frame 14 / 14b) | ✅ built | `/dashboard/clients` | Staff-only. Admin onboards a prospect (company, contact, **intake notes**), assigns an **Account Owner / Wahala agent** (defaults to the inviter), **Invite** (magic-link email), tracks **Invited → Accepted**, and can **delete a client** — admin-only **cascade** delete behind a destructive confirm modal. *(PATCH reassign-agent not built yet.)* |
+| 🔼 **Client welcome** (handoff frame 15) | ✅ built | `/dashboard` (client, no projects) | What a customer lands on right after accepting their invite: dark hero ("We build it, run it, and remove the wahala"), a **What we do** 2×2 offerings grid, and a **Your Wahala agent** card (the assigned account owner) with a Message (mailto) action. Replaced the bare greeting for new clients. |
 | 🔼 **"Continue with Google"** | ✅ built | `/login` | Google SSO button + "or" divider; surfaces `?error=` messages. |
 | 🔼 Staff auto-provisioning | ✅ built | (no UI) | A `@wahalagroup.com` Google login auto-becomes a Wahala admin. No screen, but affects who sees the staff views. |
 

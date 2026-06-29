@@ -57,12 +57,12 @@ export class ScopedDb {
     });
   }
 
-  /** The caller's org's Account Owner (name only). Clients only; null for staff. */
+  /** The caller's org's Account Owner (name + email). Clients only; null for staff. */
   async accountOwner() {
     const org = await this.currentOrganization();
     if (!org?.accountOwnerUserId) return null;
     const rows = await this.db
-      .select({ id: schema.users.id, name: schema.users.name })
+      .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
       .from(schema.users)
       .where(eq(schema.users.id, org.accountOwnerUserId))
       .limit(1);

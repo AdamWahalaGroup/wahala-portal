@@ -263,8 +263,10 @@ Reference only — the Server/Island mapping below, rendered visually.
   status pill — Accepted = green, Invited = amber/"waiting"-style, a **delete**
   (trash) action, chevron); and a right **Onboard a client** panel (Company,
   Primary contact + Email, **Intake notes — "what they're looking for"** textarea,
-  Ink **Invite client** button that sends a magic-link invite, with a note that
-  they show as *Invited* until they accept).
+  an **Assigned agent** selector (defaults to the inviting Wahala user; can be
+  reassigned to any other Wahala employee who'll own the relationship), Ink
+  **Invite client** button that sends a magic-link invite, with a note that they
+  show as *Invited* until they accept).
 - **Delete client (frame 14b):** each row has an admin-only **delete** action that
   opens a **destructive confirm modal** (red trash tile, "Delete this client?",
   copy warning it removes the org + all projects/stages/history, an optional
@@ -274,11 +276,34 @@ Reference only — the Server/Island mapping below, rendered visually.
   testing.*
 - **Islands:** the onboard form (create + invite), the status filter, the delete
   confirm.
-- **API:** `POST /api/clients` (create + invite), `DELETE /api/clients/:id`
+- **API:** `POST /api/clients` (create + invite, incl. `assignedAgentId`),
+  `PATCH /api/clients/:id` (reassign agent), `DELETE /api/clients/:id`
   (cascade-delete org + children; admin-only).
 - **Constraint:** staff-only screen; respects tenant isolation (this is the
   pre-org, staff-side view). Partially covers the staff "see your clients" need
   until the full **account hub (frame 12)** ships.
+
+### 15 — Client welcome / empty state (`/dashboard`, client with no projects)
+- **Purpose:** What a client lands on right after **accepting their invite**, before
+  any project exists. Replaces the bare "Good afternoon, {name}" page with a warm
+  welcome + a promo of Wahala Group's services, and a clear first step.
+- **Layout:** the client shell (ink sidebar, org context, account-owner pinned) +
+  main column. Main = greeting; a dark **hero card** (cobalt-facet accents) —
+  eyebrow "Welcome to Wahala Portal", headline "We build it, run it, and remove the
+  wahala", a paragraph on the firm + the pay-per-stage / formal-acceptance promise,
+  and two CTAs ("Message Ada to get started" / "Book a kickoff call"); a **What we
+  do** 2×2 offerings grid; and a **Your Wahala agent** card — shows the assigned
+  agent (set at invite time), states they'll reach out with next steps to scope the
+  first project, and offers a **Message {agent}** action.
+- **Offerings (the four cards):** (1) **Build & ship** — websites, services, apps,
+  delivered stage by stage; (2) **Custom AI, tuned to you** — bespoke models &
+  pipelines, minimal hallucinations, learns the business over time; (3) **Hosting &
+  maintenance** — hosting + upkeep stay on Wahala; (4) **Grow on your terms** —
+  clean hand-off to the client's own dev team as they scale.
+- **Note:** purely promotional/empty-state — no project data. Once the client has
+  ≥1 project, this is replaced by the normal client dashboard (frame 03). All work
+  is created by Wahala staff; the client never authors projects/tasks here.
+- **Type:** RSC (static, no island).
 
 ---
 

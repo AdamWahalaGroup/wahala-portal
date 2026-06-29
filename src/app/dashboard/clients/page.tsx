@@ -3,7 +3,7 @@
  */
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
-import { listClients } from "@/services/clients";
+import { listClients, listWahalaStaff } from "@/services/clients";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { OnboardClientForm } from "@/components/OnboardClientForm";
@@ -31,6 +31,7 @@ export default async function ClientsPage() {
   if (!ctx.isStaff) redirect("/dashboard");
 
   const clients = await listClients(ctx);
+  const staff = ctx.isAdmin ? await listWahalaStaff(ctx) : [];
 
   return (
     <AppShell
@@ -50,7 +51,7 @@ export default async function ClientsPage() {
           <div className="kicker" style={{ marginBottom: 12 }}>
             Onboard a new client
           </div>
-          <OnboardClientForm />
+          <OnboardClientForm staff={staff} currentUserId={ctx.user.id} />
         </section>
       )}
 

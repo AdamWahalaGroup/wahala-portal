@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { WaitingOn } from "@/components/WaitingOn";
 import { Money } from "@/components/Money";
 import { CreateProjectForm } from "@/components/CreateProjectForm";
+import { ClientWelcome } from "@/components/ClientWelcome";
 import { onYouCta, waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function Dashboard() {
   const canCreateProject = ctx.isAdmin || ctx.user.role === "account_owner";
   const orgs = canCreateProject ? await sdb.listOrganizations() : [];
   const firstName = (ctx.user.name.split(/\s+/)[0] || ctx.user.name).replace(/[^A-Za-z].*$/, "");
+  const isNewClient = !ctx.isStaff && projects.length === 0;
 
   return (
     <AppShell
@@ -49,6 +51,10 @@ export default async function Dashboard() {
       orgName={org?.name ?? (ctx.isStaff ? "Wahala Group" : null)}
       accountOwner={accountOwner}
     >
+      {isNewClient ? (
+        <ClientWelcome firstName={firstName} agent={accountOwner} />
+      ) : (
+        <>
       <div className="kicker">{ctx.isStaff ? "Wahala staff" : org?.name ?? "Client"}</div>
       <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>
         {greeting(new Date().getHours())}, {firstName}.
@@ -161,6 +167,8 @@ export default async function Dashboard() {
           </div>
           <CreateProjectForm orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} />
         </section>
+      )}
+        </>
       )}
     </AppShell>
   );

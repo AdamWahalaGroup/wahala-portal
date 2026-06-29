@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       contactName?: string;
       contactEmail?: string;
       intakeNotes?: string;
+      assignedAgentId?: string;
     }>(req);
 
     if (!body.organizationName?.trim() || !body.contactName?.trim() || !body.contactEmail?.trim()) {
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
         contactName: body.contactName,
         contactEmail: body.contactEmail,
         intakeNotes: body.intakeNotes,
+        assignedAgentId: body.assignedAgentId || undefined,
       },
       new URL(req.url).origin,
     );
