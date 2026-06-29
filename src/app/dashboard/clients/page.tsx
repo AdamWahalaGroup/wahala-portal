@@ -8,6 +8,7 @@ import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { OnboardClientForm } from "@/components/OnboardClientForm";
 import { DeleteClientButton } from "@/components/DeleteClientButton";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function ClientsPage() {
       orgName="Wahala Group"
       accountOwner={null}
     >
+      <AutoRefresh enabled={clients.some((c) => c.contact?.status === "invited")} />
       <div className="kicker">Clients</div>
       <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>Clients</h1>
       <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 14.5 }}>
