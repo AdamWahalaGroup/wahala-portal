@@ -45,20 +45,12 @@ export function ClientWelcome({
           delivered by your Wahala people, and formally accepted by you before the next one begins.
           No surprises, no runaway scope.
         </p>
-        <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap", position: "relative" }}>
-          <a
-            href={mailto(`Getting started with Wahala`) ?? "#"}
-            style={{ background: "var(--white)", color: "var(--ink)", borderRadius: 9, padding: "10px 16px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
-          >
-            {agent ? `Message ${agentFirst} to get started` : "Get started"}
-          </a>
-          <a
-            href={mailto("Book a kickoff call") ?? "#"}
-            style={{ background: "transparent", color: "var(--white)", border: "1px solid #3a3f47", borderRadius: 9, padding: "10px 16px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
-          >
-            Book a kickoff call
-          </a>
-        </div>
+        {agent && (
+          <p style={{ margin: "18px 0 0", fontSize: 15.5, fontWeight: 700, color: "var(--white)", maxWidth: 560, position: "relative" }}>
+            Your Wahala representative is {agent.name}. {agentFirst} will contact you shortly to get
+            started on your project.
+          </p>
+        )}
       </section>
 
       {/* What we do */}

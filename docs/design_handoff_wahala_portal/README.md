@@ -291,7 +291,8 @@ Reference only — the Server/Island mapping below, rendered visually.
   main column. Main = greeting; a dark **hero card** (cobalt-facet accents) —
   eyebrow "Welcome to Wahala Portal", headline "We build it, run it, and remove the
   wahala", a paragraph on the firm + the pay-per-stage / formal-acceptance promise,
-  and two CTAs ("Message Ada to get started" / "Book a kickoff call"); a **What we
+  and a bold closing line ("Your Wahala representative is {agent}. {agent} will
+  contact you shortly to get started on your project.") — no CTAs in the hero); a **What we
   do** 2×2 offerings grid; and a **Your Wahala agent** card — shows the assigned
   agent (set at invite time), states they'll reach out with next steps to scope the
   first project, and offers a **Message {agent}** action.
