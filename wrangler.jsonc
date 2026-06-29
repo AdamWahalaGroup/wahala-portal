@@ -17,7 +17,10 @@
     "EMAIL_FROM": "login@wahala-services.com",
     // Quote total (cents) above which a Wahala admin must co-sign. $5,000 placeholder
     // pending the figure you + Jason set.
-    "ADMIN_APPROVAL_THRESHOLD_CENTS": "500000"
+    "ADMIN_APPROVAL_THRESHOLD_CENTS": "500000",
+    // Email domains whose Google SSO logins auto-become Wahala admins (the team).
+    // Everyone else is invite-only. Comma-separated.
+    "STAFF_SSO_DOMAINS": "wahalagroup.com"
   },
 
   // Serve the portal on a branded hostname. custom_domain makes Cloudflare create

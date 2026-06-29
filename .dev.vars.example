@@ -19,3 +19,5 @@ ADMIN_APPROVAL_THRESHOLD_CENTS=500000
 # Client id can be a var; set the SECRET in prod via `wrangler secret put GOOGLE_CLIENT_SECRET`.
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
+# Google SSO logins from these domains auto-become Wahala admins (comma-separated).
+STAFF_SSO_DOMAINS=wahalagroup.com

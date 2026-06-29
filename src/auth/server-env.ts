@@ -42,3 +42,16 @@ export function googleClientId(): string {
 export function googleClientSecret(): string {
   return vars().GOOGLE_CLIENT_SECRET ?? "";
 }
+
+/**
+ * Email domains whose Google SSO logins are auto-provisioned as Wahala staff
+ * admins (the internal team). Everyone else is invite-only. Comma-separated;
+ * defaults to wahalagroup.com.
+ */
+export function staffSsoDomains(): string[] {
+  const raw = vars().STAFF_SSO_DOMAINS ?? "wahalagroup.com";
+  return raw
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+}

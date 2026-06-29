@@ -8,9 +8,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { completeAuthorization, resolveSsoOutcome, isSsoProvider } from "@/auth/sso";
+import { completeAuthorization, resolveSsoOutcome, isSsoProvider, emailDomain } from "@/auth/sso";
 import { createSession, sessionCookieOptions } from "@/auth/session";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, POST_LOGIN_PATH, LOGIN_PATH } from "@/auth/config";
+import { staffSsoDomains } from "@/auth/server-env";
 import { securityLog } from "@/lib/security-log";
 
 export const dynamic = "force-dynamic";
@@ -53,16 +54,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const redirectUri = new URL(`/api/auth/sso/${provider}/callback`, reqUrl.origin).toString();
 
   try {
-    const { email, emailVerified } = await completeAuthorization(provider, redirectUri, code, codeVerifier);
+    const { email, emailVerified, name } = await completeAuthorization(provider, redirectUri, code, codeVerifier);
     if (!email) return fail("sso_failed");
 
     const db = getDb();
-    const user = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
-    const outcome = resolveSsoOutcome(user ? { id: user.id, status: user.status } : null, emailVerified);
+    const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
+    const isStaffDomain = staffSsoDomains().includes(emailDomain(email));
+    const outcome = resolveSsoOutcome(
+      existing ? { id: existing.id, status: existing.status } : null,
+      emailVerified,
+      { isStaffDomain },
+    );
 
     if (!outcome.ok) {
       securityLog({
-        actorUserId: user?.id ?? null,
+        actorUserId: existing?.id ?? null,
         action: `sso.${provider}`,
         resource: `email:${email}`,
         reason: outcome.reason,
@@ -70,11 +76,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
       return fail(DENY_ERROR[outcome.reason] ?? "sso_failed");
     }
 
-    if (outcome.activate) {
-      await db.update(schema.users).set({ status: "active" }).where(eq(schema.users.id, outcome.userId));
+    let userId: string;
+    if (outcome.kind === "provision_staff") {
+      // First sign-in from a staff domain → auto-create a Wahala admin.
+      userId = crypto.randomUUID();
+      await db.insert(schema.users).values({
+        id: userId,
+        organizationId: null,
+        userType: "wahala",
+        role: "wahala_admin",
+        name: name ?? email,
+        email,
+        status: "active",
+      });
+      securityLog({
+        actorUserId: userId,
+        action: `sso.${provider}.provision_staff`,
+        resource: `email:${email}`,
+        reason: "staff_domain_auto_admin",
+      });
+    } else {
+      userId = outcome.userId;
+      if (outcome.activate) {
+        await db.update(schema.users).set({ status: "active" }).where(eq(schema.users.id, userId));
+      }
     }
 
-    const sessionId = await createSession(outcome.userId);
+    const sessionId = await createSession(userId);
     const res = NextResponse.redirect(new URL(POST_LOGIN_PATH, req.url));
     res.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(SESSION_TTL_SECONDS, secure));
     clearSsoCookies(res);
