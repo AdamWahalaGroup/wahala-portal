@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #16181d; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+</style>
+</helmet>
+
+<!-- ============ FRAME A : DESIGN SYSTEM ============ -->
+<div style="position:absolute; left:0; top:0; width:1360px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">01 — Foundations</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Brand &amp; design system</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:48px 52px;">
+
+    <!-- Brand lockup -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:40px; padding-bottom:36px; border-bottom:1px solid #ededf1;">
+      <div>
+        <div style="display:flex; align-items:center; gap:13px;">
+          <div style="width:34px; height:34px; border-radius:9px; background:#16181d; display:flex; align-items:center; justify-content:center;">
+            <div style="width:12px; height:12px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div>
+          </div>
+          <span style="font-size:27px; font-weight:800; letter-spacing:-.02em;">wahala</span>
+          <span class="mono" style="font-size:12px; color:#9aa0aa; align-self:flex-end; padding-bottom:5px;">portal</span>
+        </div>
+        <p style="margin:18px 0 0; max-width:440px; font-size:14.5px; line-height:1.6; color:#5a6069;">The firm that removes the <em>wahala</em>. A calm, in-control mark: ink for steadiness, one cobalt facet for the moment things click into place. Accountability and clear communication, made visible.</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-shrink:0;">
+        <div style="text-align:center;">
+          <div style="width:80px; height:80px; border-radius:14px; background:#16181d; display:flex; align-items:center; justify-content:center;"><div style="width:26px; height:26px; background:#2b3ee6; transform:rotate(45deg); border-radius:5px;"></div></div>
+          <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:8px;">app icon</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:80px; height:80px; border-radius:14px; background:#f4f5f7; border:1px solid #ededf1; display:flex; align-items:center; justify-content:center;"><div style="width:26px; height:26px; background:#16181d; transform:rotate(45deg); border-radius:5px;"></div></div>
+          <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:8px;">on light</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div style="padding:34px 0; border-bottom:1px solid #ededf1;">
+      <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:18px;">Color</div>
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:24px;">
+        <div><div style="height:56px; border-radius:8px; background:#16181d;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Ink</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#16181D</div></div>
+        <div><div style="height:56px; border-radius:8px; background:#3a3f47;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Ink soft</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#3A3F47</div></div>
+        <div><div style="height:56px; border-radius:8px; background:#767b85;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Muted</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#767B85</div></div>
+        <div><div style="height:56px; border-radius:8px; background:#f4f5f7; border:1px solid #ededf1;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Surface</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#F4F5F7</div></div>
+        <div><div style="height:56px; border-radius:8px; background:#2b3ee6;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Cobalt</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#2B3EE6</div></div>
+        <div><div style="height:56px; border-radius:8px; background:#eef0fe; border:1px solid #dde1fb;"></div><div style="font-size:12px; font-weight:600; margin-top:7px;">Cobalt wash</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">#EEF0FE</div></div>
+      </div>
+      <div class="mono" style="font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#b4b9c1; margin-bottom:12px;">Semantic — stage status ramp</div>
+      <div style="display:grid; grid-template-columns:repeat(9,1fr); gap:10px;">
+        <div><div style="height:40px; border-radius:7px; background:#6b7280;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">draft</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#2563eb;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">quoted</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#7c3aed;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">approved</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#0891b2;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">paid</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#d97706;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">in&nbsp;progress</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#0d9488;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">delivered</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#16a34a;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">accepted</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#dc2626;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">needs&nbsp;rev.</div></div>
+        <div><div style="height:40px; border-radius:7px; background:#b91c1c;"></div><div style="font-size:11px; font-weight:600; margin-top:6px;">rejected</div></div>
+      </div>
+    </div>
+
+    <!-- Type -->
+    <div style="padding:34px 0; border-bottom:1px solid #ededf1; display:grid; grid-template-columns:1.3fr 1fr; gap:48px;">
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:18px;">Type — Hanken Grotesk</div>
+        <div style="font-size:34px; font-weight:800; letter-spacing:-.025em; line-height:1.1;">Pay one stage at a time.</div>
+        <div style="font-size:22px; font-weight:600; letter-spacing:-.01em; margin-top:16px; color:#3a3f47;">Itemized scope, formally accepted.</div>
+        <div style="font-size:15px; line-height:1.6; margin-top:14px; color:#5a6069; max-width:460px;">Body copy sits at 15px with comfortable leading. Every dollar maps to a line item; every delivery is checked against it.</div>
+        <div class="mono tnum" style="font-size:15px; margin-top:14px; color:#16181d;">$ 12,400.00 &nbsp; tabular figures</div>
+      </div>
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:18px;">Scale &amp; foundations</div>
+        <div style="display:flex; flex-direction:column; gap:9px; font-size:13px; color:#5a6069;">
+          <div style="display:flex; justify-content:space-between;"><span>Display</span><span class="mono" style="color:#9aa0aa;">34 / 800</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Title</span><span class="mono" style="color:#9aa0aa;">22 / 600</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Body</span><span class="mono" style="color:#9aa0aa;">15 / 400</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Label</span><span class="mono" style="color:#9aa0aa;">11 / mono caps</span></div>
+        </div>
+        <div style="display:flex; gap:18px; margin-top:24px;">
+          <div><div style="width:46px; height:46px; border-radius:8px; background:#f4f5f7; border:1px solid #ededf1;"></div><div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:7px;">radius 8</div></div>
+          <div><div style="width:46px; height:46px; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.06), 0 4px 14px -6px rgba(0,0,0,.18);"></div><div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:7px;">elevation</div></div>
+          <div><div style="width:46px; height:46px; border-radius:8px; background:#fff; border:2px solid #2b3ee6; box-shadow:0 0 0 4px #eef0fe;"></div><div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:7px;">focus</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components -->
+    <div style="padding-top:34px; display:grid; grid-template-columns:1fr 1fr; gap:44px 56px;">
+      <!-- badges -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:16px;">Status badge</div>
+        <div style="display:flex; flex-wrap:wrap; gap:9px;">
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#f1f2f4; color:#4b5159;"><span style="width:7px;height:7px;border-radius:50%;background:#6b7280;"></span>Draft</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#e8effe; color:#1d4ed8;"><span style="width:7px;height:7px;border-radius:50%;background:#2563eb;"></span>Quoted</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#f1ebfe; color:#6d28d9;"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></span>Approved</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#e1f4f9; color:#0e7490;"><span style="width:7px;height:7px;border-radius:50%;background:#0891b2;"></span>Paid</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#fcefdc; color:#b45309;"><span style="width:7px;height:7px;border-radius:50%;background:#d97706;"></span>In progress</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#dcf3f0; color:#0f766e;"><span style="width:7px;height:7px;border-radius:50%;background:#0d9488;"></span>Delivered</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#dcf5e3; color:#15803d;"><span style="width:7px;height:7px;border-radius:50%;background:#16a34a;"></span>Accepted</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#fbe3e3; color:#b91c1c;"><span style="width:7px;height:7px;border-radius:50%;background:#dc2626;"></span>Needs revision</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#f6dede; color:#991b1b;"><span style="width:7px;height:7px;border-radius:50%;background:#b91c1c;"></span>Rejected</span>
+        </div>
+      </div>
+      <!-- waiting + visibility -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:16px;">Waiting-on &amp; visibility</div>
+        <div style="display:flex; flex-wrap:wrap; gap:9px;">
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:7px; font-size:12.5px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:7px;height:7px;border-radius:50%;background:#ea8a0d;"></span>Waiting on you</span>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:7px; font-size:12.5px; font-weight:600; background:#f4f5f7; color:#5a6069; border:1px solid #e7e8ec;"><span style="width:7px;height:7px;border-radius:50%;background:#9aa0aa;"></span>Waiting on Wahala</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#eef0fe; color:#2536c4; border:1px solid #dde1fb;">Client-visible</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal only</span>
+        </div>
+      </div>
+      <!-- buttons -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:16px;">Actions</div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <button style="border:0; padding:10px 18px; border-radius:8px; background:#16181d; color:#fff; font:600 14px 'Hanken Grotesk'; cursor:pointer;">Primary</button>
+          <button style="padding:10px 18px; border-radius:8px; background:#fff; color:#16181d; font:600 14px 'Hanken Grotesk'; border:1px solid #d7d9df; cursor:pointer;">Secondary</button>
+          <button style="border:0; padding:10px 18px; border-radius:8px; background:#fff; color:#b91c1c; font:600 14px 'Hanken Grotesk'; border:1px solid #f0caca; cursor:pointer;">Destructive</button>
+          <button style="border:0; padding:10px 18px; border-radius:8px; background:#f1f2f4; color:#b4b9c1; font:600 14px 'Hanken Grotesk';">Disabled</button>
+        </div>
+      </div>
+      <!-- people -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:16px;">People</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 14px 8px 8px; border:1px solid #e7e8ec; border-radius:10px;">
+            <div style="width:34px; height:34px; border-radius:50%; background:#16181d; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">AO</div>
+            <div><div style="font-size:13px; font-weight:700;">Ada Obi</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">Account owner</div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 14px 8px 8px; border:1px solid #e7e8ec; border-radius:10px;">
+            <div style="width:34px; height:34px; border-radius:50%; background:#2b3ee6; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">JE</div>
+            <div><div style="font-size:13px; font-weight:700;">Joel Eze</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">Lead engineer</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ FRAME B : LOGIN ============ -->
+<div style="position:absolute; left:1520px; top:0; width:1180px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">02 — Login</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Magic link · idle / sent / error</span>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:36px;">
+    <!-- idle -->
+    <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:56px 48px; min-height:540px; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:11px; margin-bottom:auto;">
+        <div style="width:30px; height:30px; border-radius:8px; background:#16181d; display:flex; align-items:center; justify-content:center;"><div style="width:11px; height:11px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+        <span style="font-size:20px; font-weight:800; letter-spacing:-.02em;">wahala</span>
+      </div>
+      <div style="margin:36px 0;">
+        <h1 style="margin:0; font-size:27px; font-weight:800; letter-spacing:-.025em;">Sign in</h1>
+        <p style="margin:10px 0 0; font-size:14.5px; line-height:1.55; color:#5a6069;">We'll email you a secure link. No passwords to remember.</p>
+        <label class="mono" style="display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin:30px 0 9px;">Work email</label>
+        <input value="you@company.com" style="width:100%; padding:13px 15px; border:1px solid #d7d9df; border-radius:9px; font:400 15px 'Hanken Grotesk'; color:#16181d;" />
+        <button style="width:100%; margin-top:14px; border:0; padding:14px; border-radius:9px; background:#16181d; color:#fff; font:600 15px 'Hanken Grotesk'; cursor:pointer;">Send magic link</button>
+      </div>
+      <div class="mono" style="font-size:11px; color:#b4b9c1; text-align:center;">Protected by Wahala · accountability logged</div>
+    </div>
+    <!-- sent -->
+    <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:56px 48px; min-height:540px; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:11px;">
+        <div style="width:30px; height:30px; border-radius:8px; background:#16181d; display:flex; align-items:center; justify-content:center;"><div style="width:11px; height:11px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+        <span style="font-size:20px; font-weight:800; letter-spacing:-.02em;">wahala</span>
+      </div>
+      <div style="margin:auto 0; text-align:center;">
+        <div style="width:60px; height:60px; border-radius:16px; background:#eef0fe; display:flex; align-items:center; justify-content:center; margin:0 auto 22px; font-size:26px;">✉</div>
+        <h1 style="margin:0; font-size:24px; font-weight:800; letter-spacing:-.02em;">Check your email</h1>
+        <p style="margin:12px auto 0; max-width:300px; font-size:14.5px; line-height:1.6; color:#5a6069;">A sign-in link is on its way to <strong style="color:#16181d;">ada@meridian.co</strong>. It expires in 15 minutes.</p>
+        <button style="margin-top:26px; padding:10px 18px; border-radius:8px; background:#fff; color:#16181d; font:600 14px 'Hanken Grotesk'; border:1px solid #d7d9df; cursor:pointer;">Resend link</button>
+      </div>
+      <div class="mono" style="font-size:11px; color:#b4b9c1; text-align:center;">Wrong address? Use a different email</div>
+    </div>
+  </div>
+  <!-- error strip -->
+  <div style="margin-top:20px; background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:18px 22px; display:flex; align-items:center; gap:14px;">
+    <div style="width:30px; height:30px; border-radius:50%; background:#fbe3e3; color:#dc2626; display:flex; align-items:center; justify-content:center; font-weight:800; flex-shrink:0;">!</div>
+    <div style="flex:1;"><div style="font-size:14px; font-weight:700; color:#b91c1c;">We couldn't send that link</div><div style="font-size:13px; color:#5a6069; margin-top:2px;">That email isn't recognized. Check the spelling, or ask your account owner for an invite.</div></div>
+    <span class="mono" style="font-size:11px; color:#b4b9c1;">error state</span>
+  </div>
+</div>
+
+<!-- ============ FRAME C : CLIENT DASHBOARD ============ -->
+<div style="position:absolute; left:0; top:2040px; width:1360px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">03 — Client dashboard</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Locked to one org · what's on you · what's on Wahala</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); overflow:hidden; display:grid; grid-template-columns:228px 1fr;">
+    <!-- sidebar -->
+    <div style="background:#16181d; padding:24px 18px; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:10px; padding:0 6px 22px;">
+        <div style="width:28px; height:28px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center;"><div style="width:10px; height:10px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+        <span style="font-size:18px; font-weight:800; letter-spacing:-.02em; color:#fff;">wahala</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; background:#23262e; border-radius:9px; padding:9px 11px; margin-bottom:18px;">
+        <div style="width:24px; height:24px; border-radius:6px; background:#2b3ee6; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">M</div>
+        <div style="line-height:1.2;"><div style="font-size:12.5px; font-weight:700; color:#fff;">Meridian Co.</div><div class="mono" style="font-size:9.5px; color:#7c828d;">your account</div></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; background:#2b3ee6; color:#fff; font-size:13.5px; font-weight:600;"><span style="opacity:.9;">◧</span>Home</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span>▤</span>Projects</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span>◈</span>Files</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 11px; border-radius:8px; color:#9aa0aa; font-size:13.5px;"><span style="display:flex; align-items:center; gap:11px;"><span>✉</span>Messages</span><span style="background:#ea8a0d; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px;">2</span></div>
+      </div>
+      <div style="margin-top:auto; padding:13px 11px; background:#23262e; border-radius:10px;">
+        <div class="mono" style="font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#7c828d; margin-bottom:9px;">Your account owner</div>
+        <div style="display:flex; align-items:center; gap:9px;">
+          <div style="width:30px; height:30px; border-radius:50%; background:#2b3ee6; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">AO</div>
+          <div style="line-height:1.25;"><div style="font-size:12.5px; font-weight:700; color:#fff;">Ada Obi</div><div class="mono" style="font-size:9.5px; color:#7c828d;">ada@wahala.co</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- main -->
+    <div style="padding:30px 36px 38px;">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:26px;">
+        <div>
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Tuesday · 29 Jun</div>
+          <h1 style="margin:6px 0 0; font-size:26px; font-weight:800; letter-spacing:-.025em;">Good morning, Ada.</h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:34px; height:34px; border-radius:50%; border:1px solid #e7e8ec; display:flex; align-items:center; justify-content:center; font-size:14px; color:#767b85;">⌕</div>
+          <div style="width:34px; height:34px; border-radius:50%; background:#f4f5f7; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#3a3f47;">AC</div>
+        </div>
+      </div>
+
+      <!-- on you -->
+      <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#ea8a0d;"></span>On you — 2 actions</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:30px;">
+        <div style="border:1px solid #fadcb4; background:#fffaf2; border-radius:11px; padding:18px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1ebfe; color:#6d28d9;"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></span>Approved</span><span class="mono tnum" style="font-size:15px; font-weight:600;">$8,500.00</span></div>
+          <div style="font-size:15.5px; font-weight:700; margin-top:13px; letter-spacing:-.01em;">Stage 2 — Build &amp; integrate</div>
+          <div style="font-size:13px; color:#5a6069; margin-top:3px;">Mobile App · awaiting your payment to begin work.</div>
+          <button style="margin-top:15px; border:0; padding:10px 16px; border-radius:8px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; cursor:pointer;">Pay this stage →</button>
+        </div>
+        <div style="border:1px solid #fadcb4; background:#fffaf2; border-radius:11px; padding:18px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#dcf3f0; color:#0f766e;"><span style="width:7px;height:7px;border-radius:50%;background:#0d9488;"></span>Delivered</span><span class="mono tnum" style="font-size:15px; font-weight:600;">$4,200.00</span></div>
+          <div style="font-size:15.5px; font-weight:700; margin-top:13px; letter-spacing:-.01em;">Stage 1 — Discovery &amp; scope</div>
+          <div style="font-size:13px; color:#5a6069; margin-top:3px;">Website Refresh · review &amp; accept against the checklist.</div>
+          <button style="margin-top:15px; border:0; padding:10px 16px; border-radius:8px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; cursor:pointer;">Review &amp; accept →</button>
+        </div>
+      </div>
+
+      <!-- projects -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Your projects</div>
+        <div class="mono" style="font-size:11px; color:#b4b9c1;">3 active</div>
+      </div>
+      <div style="border:1px solid #ededf1; border-radius:11px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:1fr 132px 142px 16px; gap:16px; align-items:center; padding:15px 18px; border-bottom:1px solid #f2f3f5;">
+          <div><div style="font-size:14.5px; font-weight:700;">Mobile App</div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">app development · 4 stages</div></div>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1ebfe; color:#6d28d9;"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></span>Approved</span>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>On you</span>
+          <span style="color:#c4c8cf; font-size:18px;">›</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 132px 142px 16px; gap:16px; align-items:center; padding:15px 18px; border-bottom:1px solid #f2f3f5;">
+          <div><div style="font-size:14.5px; font-weight:700;">Website Refresh</div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">design + build · 3 stages</div></div>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#dcf3f0; color:#0f766e;"><span style="width:7px;height:7px;border-radius:50%;background:#0d9488;"></span>Delivered</span>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>On you</span>
+          <span style="color:#c4c8cf; font-size:18px;">›</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 132px 142px 16px; gap:16px; align-items:center; padding:15px 18px;">
+          <div><div style="font-size:14.5px; font-weight:700;">Brand System</div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">identity · 2 stages</div></div>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#fcefdc; color:#b45309;"><span style="width:7px;height:7px;border-radius:50%;background:#d97706;"></span>In progress</span>
+          <span style="justify-self:start; display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#f4f5f7; color:#5a6069; border:1px solid #e7e8ec;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>On Wahala</span>
+          <span style="color:#c4c8cf; font-size:18px;">›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME D : PROJECT DETAIL ============ -->
+<div style="position:absolute; left:1520px; top:2040px; width:1280px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">04 — Project detail</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">People · roster · stage list</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:34px 40px 40px;">
+    <div class="mono" style="font-size:11px; color:#9aa0aa; margin-bottom:14px;">Meridian Co. <span style="color:#d7d9df;">/</span> Projects <span style="color:#d7d9df;">/</span> <span style="color:#16181d;">Mobile App</span></div>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:28px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:13px;"><h1 style="margin:0; font-size:25px; font-weight:800; letter-spacing:-.025em;">Mobile App</h1><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#fcefdc; color:#b45309;"><span style="width:7px;height:7px;border-radius:50%;background:#d97706;"></span>In progress</span></div>
+        <p style="margin:11px 0 0; max-width:520px; font-size:14px; line-height:1.6; color:#5a6069;">Native iOS &amp; Android client for Meridian's field team — offline sync, push, and a lightweight admin. Delivered stage by stage.</p>
+        <div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:12px;">WORK TYPE · App development</div>
+      </div>
+    </div>
+    <!-- people row -->
+    <div style="display:flex; gap:12px; margin-top:24px; padding:18px 0; border-top:1px solid #ededf1; border-bottom:1px solid #ededf1;">
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 16px 8px 8px; border:1px solid #e7e8ec; border-radius:10px;">
+        <div style="width:34px; height:34px; border-radius:50%; background:#16181d; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">AO</div>
+        <div><div style="font-size:13px; font-weight:700;">Ada Obi</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">Account owner</div></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 16px 8px 8px; border:1px solid #e7e8ec; border-radius:10px;">
+        <div style="width:34px; height:34px; border-radius:50%; background:#2b3ee6; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">JE</div>
+        <div><div style="font-size:13px; font-weight:700;">Joel Eze</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">Lead engineer</div></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; padding:0 6px;">
+        <div class="mono" style="font-size:10.5px; color:#9aa0aa;">Roster</div>
+        <div style="display:flex;">
+          <div style="width:30px; height:30px; border-radius:50%; background:#dcf3f0; color:#0f766e; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid #fff;">KN</div>
+          <div style="width:30px; height:30px; border-radius:50%; background:#f1ebfe; color:#6d28d9; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid #fff; margin-left:-9px;">TU</div>
+          <div style="width:30px; height:30px; border-radius:50%; background:#f4f5f7; color:#767b85; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid #fff; margin-left:-9px;">+2</div>
+        </div>
+      </div>
+    </div>
+    <!-- stages -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:26px 0 13px;">
+      <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Stages · paid one at a time</div>
+      <button style="border:0; padding:8px 14px; border-radius:8px; background:#16181d; color:#fff; font:600 13px 'Hanken Grotesk'; cursor:pointer;">+ New stage</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 18px; border:1px solid #ededf1; border-radius:11px; background:#fbfbfc;">
+        <div class="mono" style="font-size:12px; color:#b4b9c1; width:24px;">01</div>
+        <div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">Discovery &amp; scope</div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">accepted · 14 Jun</div></div>
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#dcf5e3; color:#15803d;"><span style="width:7px;height:7px;border-radius:50%;background:#16a34a;"></span>Accepted</span>
+        <span class="mono tnum" style="font-size:14.5px; font-weight:600; width:92px; text-align:right;">$3,000.00</span>
+        <span style="color:#c4c8cf; font-size:18px;">›</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 18px; border:1.5px solid #c9d0fb; border-radius:11px; background:#fafbff; box-shadow:0 0 0 3px #f3f5ff;">
+        <div class="mono" style="font-size:12px; color:#b4b9c1; width:24px;">02</div>
+        <div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">Build &amp; integrate</div><div class="mono" style="font-size:11px; color:#b45309; margin-top:2px;">awaiting payment to begin</div></div>
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1ebfe; color:#6d28d9;"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></span>Approved</span>
+        <span class="mono tnum" style="font-size:14.5px; font-weight:600; width:92px; text-align:right;">$8,500.00</span>
+        <span style="color:#c4c8cf; font-size:18px;">›</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 18px; border:1px solid #ededf1; border-radius:11px;">
+        <div class="mono" style="font-size:12px; color:#b4b9c1; width:24px;">03</div>
+        <div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#3a3f47;">QA &amp; launch</div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">not yet scoped</div></div>
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1f2f4; color:#4b5159;"><span style="width:7px;height:7px;border-radius:50%;background:#6b7280;"></span>Draft</span>
+        <span class="mono tnum" style="font-size:14.5px; font-weight:600; width:92px; text-align:right; color:#b4b9c1;">—</span>
+        <span style="color:#c4c8cf; font-size:18px;">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME E : STAGE DETAIL (centerpiece) ============ -->
+<div style="position:absolute; left:0; top:4060px; width:1500px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#2536c4;">05 — Stage detail · the key screen</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Staff view (lead engineer) · in_progress · next action = Deliver</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 18px 50px -26px rgba(0,0,0,.22); overflow:hidden;">
+    <!-- top bar -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #ededf1;">
+      <div class="mono" style="font-size:11px; color:#9aa0aa;">Meridian Co. <span style="color:#d7d9df;">/</span> Mobile App <span style="color:#d7d9df;">/</span> <span style="color:#16181d;">Stage 2</span></div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:7px; font-size:11.5px; font-weight:600; background:#16181d; color:#cfd2da;">Viewing as · Lead engineer</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 372px;">
+      <!-- LEFT -->
+      <div style="padding:30px 36px 38px; border-right:1px solid #ededf1;">
+        <div style="display:flex; align-items:center; gap:13px;">
+          <h1 style="margin:0; font-size:25px; font-weight:800; letter-spacing:-.025em;">Build &amp; integrate</h1>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#fcefdc; color:#b45309;"><span style="width:7px;height:7px;border-radius:50%;background:#d97706;"></span>In progress</span>
+        </div>
+
+        <!-- STEPPER -->
+        <div style="position:relative; margin:32px 4px 8px;">
+          <div style="position:absolute; left:14px; right:14px; top:13px; height:2px; background:#e7e8ec;"></div>
+          <div style="position:absolute; left:14px; top:13px; height:2px; width:62%; background:#16181d;"></div>
+          <div style="position:relative; display:flex; justify-content:space-between;">
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#16181d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto;">✓</div><div style="font-size:11px;color:#5a6069;margin-top:8px;font-weight:600;">Draft</div></div>
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#16181d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto;">✓</div><div style="font-size:11px;color:#5a6069;margin-top:8px;font-weight:600;">Quoted</div></div>
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#16181d;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto;">✓</div><div style="font-size:11px;color:#5a6069;margin-top:8px;font-weight:600;">Approved</div></div>
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#0891b2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto;">✓</div><div style="font-size:11px;color:#0e7490;margin-top:8px;font-weight:700;">Paid</div></div>
+            <div style="text-align:center; width:64px;"><div style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #d97706;box-shadow:0 0 0 4px #fcefdc;display:flex;align-items:center;justify-content:center;margin:0 auto;"><span style="width:9px;height:9px;border-radius:50%;background:#d97706;"></span></div><div style="font-size:11px;color:#16181d;margin-top:8px;font-weight:800;">In progress</div></div>
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid #d7d9df;color:#b4b9c1;display:flex;align-items:center;justify-content:center;font-size:12px;margin:0 auto;">6</div><div style="font-size:11px;color:#9aa0aa;margin-top:8px;">Delivered</div></div>
+            <div style="text-align:center; width:60px;"><div style="width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid #d7d9df;color:#b4b9c1;display:flex;align-items:center;justify-content:center;font-size:12px;margin:0 auto;">7</div><div style="font-size:11px;color:#9aa0aa;margin-top:8px;">Accepted</div></div>
+          </div>
+        </div>
+
+        <!-- paid threshold banner -->
+        <div style="display:flex; align-items:center; gap:13px; margin-top:26px; padding:14px 18px; border-radius:11px; background:#e1f4f9; border:1px solid #b9e3ee;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#0891b2; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; flex-shrink:0;">✓</div>
+          <div style="flex:1;"><div style="font-size:14px; font-weight:700; color:#0e7490;">Paid in full — work cleared to begin</div><div style="font-size:12.5px; color:#3a6b78; margin-top:1px;">$8,500.00 received 18 Jun · the pay-gate is satisfied for this stage.</div></div>
+        </div>
+
+        <!-- scope -->
+        <div style="margin-top:30px;">
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:9px;">Scope</div>
+          <p style="margin:0; font-size:14px; line-height:1.65; color:#3a3f47; max-width:560px;">Implement the core app: offline-first data layer, push notifications, and the field-team capture flow. Integrate with Meridian's existing identity provider and the staging API.</p>
+        </div>
+
+        <!-- line items / checklist -->
+        <div style="margin-top:28px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+            <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Line items — also the acceptance checklist</div>
+            <span class="mono" style="font-size:11px; color:#b4b9c1;">5 items</span>
+          </div>
+          <div style="border:1px solid #ededf1; border-radius:11px; overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid #f2f3f5;"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #d7d9df;flex-shrink:0;"></span><span style="flex:1; font-size:13.5px;">Offline-first sync layer with conflict resolution</span><span class="mono tnum" style="font-size:13px; color:#5a6069;">$2,800.00</span></div>
+            <div style="display:flex; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid #f2f3f5;"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #d7d9df;flex-shrink:0;"></span><span style="flex:1; font-size:13.5px;">Push notifications (iOS + Android)</span><span class="mono tnum" style="font-size:13px; color:#5a6069;">$1,500.00</span></div>
+            <div style="display:flex; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid #f2f3f5;"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #d7d9df;flex-shrink:0;"></span><span style="flex:1; font-size:13.5px;">Field-team capture flow + media upload</span><span class="mono tnum" style="font-size:13px; color:#5a6069;">$2,400.00</span></div>
+            <div style="display:flex; align-items:center; gap:14px; padding:13px 18px; border-bottom:1px solid #f2f3f5;"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #d7d9df;flex-shrink:0;"></span><span style="flex:1; font-size:13.5px;">SSO integration with Meridian IdP</span><span class="mono tnum" style="font-size:13px; color:#5a6069;">$1,200.00</span></div>
+            <div style="display:flex; align-items:center; gap:14px; padding:13px 18px;"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #d7d9df;flex-shrink:0;"></span><span style="flex:1; font-size:13.5px;">Staging API wiring &amp; smoke tests</span><span class="mono tnum" style="font-size:13px; color:#5a6069;">$600.00</span></div>
+          </div>
+        </div>
+
+        <!-- tasks visibility note -->
+        <div style="margin-top:24px; display:flex; gap:10px; align-items:center;">
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal only</span>
+          <span style="font-size:12.5px; color:#9aa0aa;">3 internal tasks &amp; the kickoff recording are hidden from the client.</span>
+        </div>
+      </div>
+
+      <!-- RIGHT RAIL -->
+      <div style="padding:30px 28px 36px; background:#fbfbfc; display:flex; flex-direction:column; gap:22px;">
+        <!-- amount -->
+        <div>
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Stage total</div>
+          <div class="tnum" style="font-size:34px; font-weight:800; letter-spacing:-.02em; margin-top:4px;">$8,500.00</div>
+          <div style="font-size:12.5px; color:#15803d; margin-top:2px; font-weight:600;">● Paid in full · 18 Jun</div>
+        </div>
+
+        <!-- next action -->
+        <div style="background:#fff; border:1px solid #ededf1; border-radius:12px; padding:18px;">
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:6px;">Your next action</div>
+          <div style="font-size:13.5px; color:#3a3f47; line-height:1.5; margin-bottom:14px;">Work is underway. When the line items are complete, deliver for client acceptance.</div>
+          <button style="width:100%; border:0; padding:13px; border-radius:9px; background:#16181d; color:#fff; font:600 14.5px 'Hanken Grotesk'; cursor:pointer;">Deliver to client →</button>
+          <button style="width:100%; margin-top:9px; padding:11px; border-radius:9px; background:#fff; color:#16181d; font:600 13.5px 'Hanken Grotesk'; border:1px solid #d7d9df; cursor:pointer;">Pause work</button>
+          <div class="mono" style="font-size:10.5px; color:#b4b9c1; margin-top:12px; line-height:1.5;">Only actions allowed for your role in this state are shown. The client sees Accept / Request revision once delivered.</div>
+        </div>
+
+        <!-- waiting -->
+        <div style="display:flex; align-items:center; gap:9px; padding:11px 14px; border-radius:9px; background:#f4f5f7; border:1px solid #e7e8ec;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#9aa0aa;"></span>
+          <span style="font-size:13px; font-weight:600; color:#5a6069;">Waiting on Wahala</span>
+        </div>
+
+        <!-- people -->
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">People</div>
+          <div style="display:flex; align-items:center; gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#16181d;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">AO</div><div style="font-size:12.5px;"><strong>Ada Obi</strong> · <span style="color:#9aa0aa;">Account owner</span></div></div>
+          <div style="display:flex; align-items:center; gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">JE</div><div style="font-size:12.5px;"><strong>Joel Eze</strong> · <span style="color:#9aa0aa;">Lead engineer</span></div></div>
+        </div>
+
+        <!-- history -->
+        <div>
+          <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:13px;">History</div>
+          <div style="display:flex; flex-direction:column; gap:0;">
+            <div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center;"><span style="width:9px;height:9px;border-radius:50%;background:#d97706;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:16px;"><div style="font-size:12.5px;"><strong>Joel Eze</strong> started work</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;">→ in_progress · 18 Jun, 14:20</div></div></div>
+            <div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center;"><span style="width:9px;height:9px;border-radius:50%;background:#0891b2;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:16px;"><div style="font-size:12.5px;"><strong>Meridian Co.</strong> paid in full</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;">→ paid · 18 Jun, 11:02 · Stripe</div></div></div>
+            <div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center;"><span style="width:9px;height:9px;border-radius:50%;background:#7c3aed;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:16px;"><div style="font-size:12.5px;"><strong>Ada (Meridian)</strong> approved quote</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;">→ approved · 17 Jun, 16:45</div></div></div>
+            <div style="display:flex; gap:12px;"><div style="display:flex; flex-direction:column; align-items:center;"><span style="width:9px;height:9px;border-radius:50%;background:#2563eb;"></span></div><div><div style="font-size:12.5px;"><strong>Ada Obi</strong> sent quote</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;">→ quoted · 16 Jun, 09:30</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME F : QUOTE / SCOPE BUILDER (staff) ============ -->
+<div style="position:absolute; left:1560px; top:4060px; width:1180px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">06 — Quote / scope builder</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Staff · line items = the quote AND the checklist · over-threshold co-sign</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:30px 36px 34px;">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <h1 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-.02em;">New stage — scope &amp; quote</h1>
+        <div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:5px;">Mobile App · draft · not yet sent</div>
+      </div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1f2f4; color:#4b5159;"><span style="width:7px;height:7px;border-radius:50%;background:#6b7280;"></span>Draft</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:32px; margin-top:24px;">
+      <!-- editor -->
+      <div>
+        <label class="mono" style="display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:8px;">Stage name</label>
+        <input value="QA &amp; launch" style="width:100%; padding:11px 14px; border:1px solid #d7d9df; border-radius:9px; font:600 15px 'Hanken Grotesk'; color:#16181d;" />
+        <label class="mono" style="display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin:18px 0 8px;">Scope description</label>
+        <textarea style="width:100%; height:62px; padding:11px 14px; border:1px solid #d7d9df; border-radius:9px; font:400 14px 'Hanken Grotesk'; color:#3a3f47; resize:none;">Full regression QA, accessibility audit, store submission for iOS &amp; Android, and a supervised production launch.</textarea>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:22px 0 10px;">
+          <label class="mono" style="font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa;">Line items</label>
+          <span class="mono" style="font-size:11px; color:#b4b9c1;">drag to reorder</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #ededf1; border-radius:9px;"><span style="color:#c4c8cf; cursor:grab; font-size:14px;">⠿</span><input value="Full regression QA pass" style="flex:1; border:0; font:400 14px 'Hanken Grotesk'; color:#16181d; outline:none;" /><span class="mono tnum" style="font-size:13px; color:#5a6069;">$4,800.00</span><span style="color:#c4c8cf; cursor:pointer;">✕</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #ededf1; border-radius:9px;"><span style="color:#c4c8cf; cursor:grab; font-size:14px;">⠿</span><input value="WCAG AA accessibility audit + fixes" style="flex:1; border:0; font:400 14px 'Hanken Grotesk'; color:#16181d; outline:none;" /><span class="mono tnum" style="font-size:13px; color:#5a6069;">$3,200.00</span><span style="color:#c4c8cf; cursor:pointer;">✕</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1.5px solid #c9d0fb; background:#fafbff; border-radius:9px; box-shadow:0 0 0 3px #f3f5ff;"><span style="color:#9aa0aa; cursor:grab; font-size:14px;">⠿</span><input value="App Store + Play Store submission" style="flex:1; border:0; background:transparent; font:400 14px 'Hanken Grotesk'; color:#16181d; outline:none;" /><span class="mono tnum" style="font-size:13px; color:#5a6069;">$2,400.00</span><span style="color:#c4c8cf; cursor:pointer;">✕</span></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #ededf1; border-radius:9px;"><span style="color:#c4c8cf; cursor:grab; font-size:14px;">⠿</span><input value="Supervised production launch" style="flex:1; border:0; font:400 14px 'Hanken Grotesk'; color:#16181d; outline:none;" /><span class="mono tnum" style="font-size:13px; color:#5a6069;">$2,000.00</span><span style="color:#c4c8cf; cursor:pointer;">✕</span></div>
+        </div>
+        <button style="margin-top:11px; padding:9px 14px; border-radius:8px; background:#fff; color:#2536c4; font:600 13px 'Hanken Grotesk'; border:1px dashed #c9d0fb; cursor:pointer; width:100%;">+ Add line item</button>
+      </div>
+
+      <!-- summary rail -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div style="background:#fbfbfc; border:1px solid #ededf1; border-radius:12px; padding:18px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; color:#5a6069; margin-bottom:8px;"><span>4 line items</span><span class="mono tnum">$12,400.00</span></div>
+          <div style="border-top:1px solid #ededf1; margin:10px 0; "></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><span style="font-size:13px; font-weight:700;">Stage total</span><span class="mono tnum" style="font-size:22px; font-weight:800;">$12,400.00</span></div>
+        </div>
+
+        <!-- over threshold co-sign -->
+        <div style="background:#fffaf2; border:1px solid #fadcb4; border-radius:12px; padding:16px;">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:8px;"><span style="width:24px;height:24px;border-radius:50%;background:#ea8a0d;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">!</span><span style="font-size:13px; font-weight:700; color:#b45309;">Needs admin co-sign</span></div>
+          <div style="font-size:12.5px; line-height:1.55; color:#7a5a2a;">This quote is over the <strong>$10,000</strong> threshold. A Wahala admin must co-sign before it can be sent to the client.</div>
+        </div>
+
+        <button style="width:100%; border:0; padding:13px; border-radius:9px; background:#f1f2f4; color:#b4b9c1; font:600 14px 'Hanken Grotesk'; cursor:not-allowed;">Send quote — awaiting co-sign</button>
+        <button style="width:100%; padding:11px; border-radius:9px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; border:0; cursor:pointer;">Request admin co-sign →</button>
+        <div class="mono" style="font-size:10.5px; color:#b4b9c1; text-align:center; line-height:1.5;">Account owners can send quotes under threshold directly.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME G : ACCEPTANCE (client, mobile) ============ -->
+<div style="position:absolute; left:0; top:5820px; width:1180px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">07 — Acceptance</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Client · mobile · formal, logged · accept against line items</span>
+  </div>
+  <div style="display:flex; gap:48px; align-items:flex-start;">
+    <!-- phone -->
+    <div style="width:390px; flex-shrink:0; background:#0c0d10; border-radius:42px; padding:11px; box-shadow:0 30px 70px -30px rgba(0,0,0,.5);">
+      <div style="background:#fff; border-radius:32px; overflow:hidden;">
+        <!-- status bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 24px 6px;"><span class="mono" style="font-size:12px; font-weight:600;">9:41</span><span style="font-size:11px; color:#9aa0aa;">●●● ⌃ ▮</span></div>
+        <!-- app top -->
+        <div style="padding:8px 22px 16px; border-bottom:1px solid #f2f3f5;">
+          <div style="display:flex; align-items:center; gap:8px; color:#9aa0aa; font-size:13px; margin-bottom:12px;"><span>‹</span><span class="mono" style="font-size:11px;">Website Refresh</span></div>
+          <div style="display:flex; align-items:center; gap:11px;"><h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em;">Discovery &amp; scope</h2></div>
+          <div style="margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#dcf3f0; color:#0f766e;"><span style="width:7px;height:7px;border-radius:50%;background:#0d9488;"></span>Delivered — your acceptance needed</span></div>
+        </div>
+        <!-- checklist -->
+        <div style="padding:18px 22px 14px;">
+          <div class="mono" style="font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:12px;">Check each item was delivered</div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:flex-start; gap:11px;"><span style="width:20px;height:20px;border-radius:6px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">✓</span><span style="font-size:13.5px; line-height:1.4;">Stakeholder interviews (×6) &amp; synthesis</span></div>
+            <div style="display:flex; align-items:flex-start; gap:11px;"><span style="width:20px;height:20px;border-radius:6px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">✓</span><span style="font-size:13.5px; line-height:1.4;">Information architecture &amp; sitemap</span></div>
+            <div style="display:flex; align-items:flex-start; gap:11px;"><span style="width:20px;height:20px;border-radius:6px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">✓</span><span style="font-size:13.5px; line-height:1.4;">Scope document &amp; phased roadmap</span></div>
+          </div>
+        </div>
+        <!-- amount -->
+        <div style="margin:6px 22px 0; padding:13px 0; border-top:1px solid #f2f3f5; display:flex; justify-content:space-between; align-items:baseline;"><span style="font-size:13px; color:#5a6069;">Stage total · paid</span><span class="mono tnum" style="font-size:17px; font-weight:800;">$4,200.00</span></div>
+        <!-- actions -->
+        <div style="padding:14px 22px 26px;">
+          <button style="width:100%; border:0; padding:15px; border-radius:11px; background:#16a34a; color:#fff; font:700 15px 'Hanken Grotesk'; cursor:pointer;">Accept delivery</button>
+          <button style="width:100%; margin-top:10px; padding:13px; border-radius:11px; background:#fff; color:#b91c1c; font:600 14px 'Hanken Grotesk'; border:1px solid #f0caca; cursor:pointer;">Request revision</button>
+          <div class="mono" style="font-size:10px; color:#b4b9c1; text-align:center; margin-top:13px; line-height:1.5;">Acceptance is final &amp; recorded against your name and the time.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- confirm dialog -->
+    <div style="flex:1; padding-top:30px;">
+      <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:16px;">The accept confirmation — designed with weight</div>
+      <div style="max-width:420px; background:#fff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 24px 60px -24px rgba(0,0,0,.35); padding:28px; border:1px solid #ededf1;">
+        <div style="width:46px; height:46px; border-radius:13px; background:#dcf5e3; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800;">✓</div>
+        <h3 style="margin:18px 0 0; font-size:19px; font-weight:800; letter-spacing:-.02em;">Accept this delivery?</h3>
+        <p style="margin:9px 0 0; font-size:14px; line-height:1.6; color:#5a6069;">You're confirming all 3 line items of <strong style="color:#16181d;">Discovery &amp; scope</strong> were delivered as scoped. This is final and will be logged as accepted by <strong style="color:#16181d;">you</strong> on 29 Jun.</p>
+        <div style="display:flex; gap:10px; margin-top:22px;">
+          <button style="flex:1; padding:13px; border-radius:10px; background:#fff; color:#16181d; font:600 14px 'Hanken Grotesk'; border:1px solid #d7d9df; cursor:pointer;">Cancel</button>
+          <button style="flex:1; border:0; padding:13px; border-radius:10px; background:#16a34a; color:#fff; font:700 14px 'Hanken Grotesk'; cursor:pointer;">Yes, accept</button>
+        </div>
+      </div>
+      <!-- request revision variant -->
+      <div style="max-width:420px; margin-top:22px; background:#fff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.06); padding:22px; border:1px solid #ededf1;">
+        <div style="display:flex; align-items:center; gap:10px;"><span style="width:32px;height:32px;border-radius:9px;background:#fbe3e3;color:#dc2626;display:flex;align-items:center;justify-content:center;font-weight:800;">↺</span><h3 style="margin:0; font-size:15px; font-weight:800; letter-spacing:-.01em;">Request revision instead</h3></div>
+        <textarea style="width:100%; height:58px; margin-top:13px; padding:11px 13px; border:1px solid #d7d9df; border-radius:9px; font:400 13.5px 'Hanken Grotesk'; color:#3a3f47; resize:none;" placeholder="Tell Wahala what needs changing…">The sitemap is missing the support portal section we discussed.</textarea>
+        <button style="width:100%; margin-top:11px; border:0; padding:12px; border-radius:9px; background:#fff; color:#b91c1c; font:600 13.5px 'Hanken Grotesk'; border:1px solid #f0caca; cursor:pointer;">Send revision request →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME H : PAYMENT HAND-OFF (client) ============ -->
+<div style="position:absolute; left:1300px; top:5820px; width:1240px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">08 — Payment hand-off</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Client · Stripe hosted checkout · the pay-gate moment + success</span>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:36px;">
+    <!-- pre-checkout -->
+    <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:32px 34px;">
+      <div style="display:flex; align-items:center; gap:11px;"><h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em;">Pay to begin work</h2><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#f1ebfe; color:#6d28d9;"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed;"></span>Approved</span></div>
+      <p style="margin:10px 0 0; font-size:14px; line-height:1.6; color:#5a6069;">You approved <strong style="color:#16181d;">Stage 2 — Build &amp; integrate</strong>. Pay in full to unlock work on this stage.</p>
+      <div style="margin-top:20px; border:1px solid #ededf1; border-radius:11px; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #f2f3f5; font-size:13px;"><span style="color:#5a6069;">Offline sync, push, capture flow</span><span class="mono tnum" style="color:#5a6069;">$6,700.00</span></div>
+        <div style="display:flex; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #f2f3f5; font-size:13px;"><span style="color:#5a6069;">SSO + staging integration</span><span class="mono tnum" style="color:#5a6069;">$1,800.00</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; padding:14px 16px; background:#fbfbfc;"><span style="font-size:13px; font-weight:700;">Total due</span><span class="mono tnum" style="font-size:20px; font-weight:800;">$8,500.00</span></div>
+      </div>
+      <button style="width:100%; margin-top:18px; border:0; padding:14px; border-radius:10px; background:#16181d; color:#fff; font:600 15px 'Hanken Grotesk'; cursor:pointer;">Continue to secure checkout →</button>
+      <div style="display:flex; align-items:center; justify-content:center; gap:7px; margin-top:13px;"><span style="font-size:13px;">🔒</span><span class="mono" style="font-size:10.5px; color:#b4b9c1; line-height:1.5; text-align:center;">Payment is processed by Stripe. Wahala never sees or stores your card.</span></div>
+    </div>
+    <!-- success -->
+    <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:32px 34px; display:flex; flex-direction:column;">
+      <div style="text-align:center; margin:auto 0;">
+        <div style="width:64px; height:64px; border-radius:18px; background:#e1f4f9; color:#0891b2; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; margin:0 auto 20px;">✓</div>
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; font-size:12px; font-weight:600; background:#e1f4f9; color:#0e7490;"><span style="width:7px;height:7px;border-radius:50%;background:#0891b2;"></span>Paid</span>
+        <h2 style="margin:16px 0 0; font-size:23px; font-weight:800; letter-spacing:-.02em;">Payment received</h2>
+        <p style="margin:10px auto 0; max-width:300px; font-size:14px; line-height:1.6; color:#5a6069;"><strong class="tnum" style="color:#16181d;">$8,500.00</strong> paid. Stage 2 is now cleared — Wahala will begin work and you'll see progress here.</p>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:22px;">
+          <button style="padding:11px 18px; border-radius:9px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; border:0; cursor:pointer;">View stage</button>
+          <button style="padding:11px 18px; border-radius:9px; background:#fff; color:#16181d; font:600 13.5px 'Hanken Grotesk'; border:1px solid #d7d9df; cursor:pointer;">Receipt</button>
+        </div>
+      </div>
+      <div class="mono" style="font-size:10.5px; color:#b4b9c1; text-align:center; margin-top:14px;">Logged · Meridian Co. paid Stage 2 · 18 Jun 11:02</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME I : TASKS ============ -->
+<div style="position:absolute; left:0; top:7180px; width:1380px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">09 — Tasks (delivery)</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Staff view · assignees · internal tasks hidden from client · "on you" items</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:30px 36px 36px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <div><h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em;">Tasks · Build &amp; integrate</h2><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:4px;">7 tasks · 3 internal (hidden from client)</div></div>
+      <div style="display:flex; gap:8px; align-items:center;"><span style="display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; background:#16181d; color:#cfd2da;">Staff view</span><button style="border:0; padding:8px 14px; border-radius:8px; background:#16181d; color:#fff; font:600 13px 'Hanken Grotesk'; cursor:pointer;">+ Task</button></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:0; margin-top:18px;">
+      <!-- header -->
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; padding:0 14px 10px; border-bottom:1px solid #ededf1;"><span class="mono" style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#b4b9c1;">Task</span><span class="mono" style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#b4b9c1;">Assignee</span><span class="mono" style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#b4b9c1;">Status</span><span class="mono" style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#b4b9c1;">Visibility</span></div>
+      <!-- rows -->
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; align-items:center; padding:13px 14px; border-bottom:1px solid #f2f3f5;"><span style="font-size:13.5px; font-weight:600;">Build offline sync engine</span><span style="display:flex; align-items:center; gap:8px; font-size:13px;"><span style="width:26px;height:26px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">JE</span>Joel</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:7px; padding:3px 10px 3px 8px; border-radius:999px; font-size:11.5px; font-weight:600; background:#fcefdc; color:#b45309;"><span style="width:6px;height:6px;border-radius:50%;background:#d97706;"></span>Doing</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#eef0fe; color:#2536c4;">Client-visible</span></div>
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; align-items:center; padding:13px 14px; border-bottom:1px solid #f2f3f5;"><span style="font-size:13.5px; font-weight:600;">Push notification service</span><span style="display:flex; align-items:center; gap:8px; font-size:13px;"><span style="width:26px;height:26px;border-radius:50%;background:#dcf3f0;color:#0f766e;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">KN</span>Kemi</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:7px; padding:3px 10px 3px 8px; border-radius:999px; font-size:11.5px; font-weight:600; background:#dcf5e3; color:#15803d;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;"></span>Done</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#eef0fe; color:#2536c4;">Client-visible</span></div>
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; align-items:center; padding:13px 14px; border-bottom:1px solid #f2f3f5;"><span style="font-size:13.5px; font-weight:600;">Provide IdP tenant credentials</span><span style="display:flex; align-items:center; gap:8px; font-size:13px;"><span style="width:26px;height:26px;border-radius:50%;background:#fff7ed;color:#b45309;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1px solid #fadcb4;">M</span>Meridian</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:7px; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>On you</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#eef0fe; color:#2536c4;">Client-visible</span></div>
+      <!-- internal -->
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; align-items:center; padding:13px 14px; border-bottom:1px solid #f2f3f5; background:#fafafb;"><span style="font-size:13.5px; font-weight:600; color:#3a3f47;">Kickoff call recording + notes</span><span style="display:flex; align-items:center; gap:8px; font-size:13px;"><span style="width:26px;height:26px;border-radius:50%;background:#16181d;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">AO</span>Ada</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:7px; padding:3px 10px 3px 8px; border-radius:999px; font-size:11.5px; font-weight:600; background:#dcf5e3; color:#15803d;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;"></span>Done</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal</span></div>
+      <div style="display:grid; grid-template-columns:1fr 150px 150px 130px; gap:16px; align-items:center; padding:13px 14px; background:#fafafb;"><span style="font-size:13.5px; font-weight:600; color:#3a3f47;">Margin review &amp; cost tracking</span><span style="display:flex; align-items:center; gap:8px; font-size:13px;"><span style="width:26px;height:26px;border-radius:50%;background:#16181d;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">AO</span>Ada</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:7px; padding:3px 10px 3px 8px; border-radius:999px; font-size:11.5px; font-weight:600; background:#f1f2f4; color:#4b5159;"><span style="width:6px;height:6px;border-radius:50%;background:#6b7280;"></span>To do</span><span style="display:inline-flex; width:fit-content; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal</span></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:9px; align-items:center;"><span style="font-size:13px;">👁</span><span style="font-size:12.5px; color:#9aa0aa;">Engineers see only tasks assigned to them. Clients never see <strong style="color:#5a6069;">Internal</strong> rows — recordings, cost &amp; margin stay staff-only.</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME J : FILES ============ -->
+<div style="position:absolute; left:1560px; top:7180px; width:1180px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">10 — Files / assets</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Per-file visibility · client-visible vs internal-only</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:30px 34px 34px;">
+    <h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em;">Files</h2>
+    <div style="margin-top:16px; border:1.5px dashed #d7d9df; border-radius:12px; padding:22px; text-align:center; background:#fbfbfc;">
+      <div style="font-size:22px;">⬆</div>
+      <div style="font-size:13.5px; font-weight:600; margin-top:6px;">Drop files here or <span style="color:#2536c4;">browse</span></div>
+      <div class="mono" style="font-size:10.5px; color:#b4b9c1; margin-top:4px;">New uploads default to client-visible</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:18px;">
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 14px; border:1px solid #ededf1; border-radius:10px;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#fbe3e3;color:#b91c1c;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;" class="mono">PDF</div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">Scope-document-v2.pdf</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">2.4 MB · Ada Obi · 14 Jun</div></div>
+        <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#eef0fe; color:#2536c4;">Client-visible</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 14px; border:1px solid #ededf1; border-radius:10px;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#dcf3f0;color:#0f766e;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;" class="mono">FIG</div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">Sitemap-final.fig</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">8.1 MB · Tunde U. · 15 Jun</div></div>
+        <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#eef0fe; color:#2536c4;">Client-visible</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 14px; border:1px solid #e7e8ec; border-radius:10px; background:#fafafb;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#16181d;color:#cfd2da;font-size:11px;display:flex;align-items:center;justify-content:center;">⊘</div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#3a3f47;">Kickoff-call-recording.mp4</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">142 MB · Ada Obi · 12 Jun</div></div>
+        <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal only</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 14px; border:1px solid #e7e8ec; border-radius:10px; background:#fafafb;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#16181d;color:#cfd2da;font-size:11px;display:flex;align-items:center;justify-content:center;">⊘</div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#3a3f47;">AI-meeting-digest.md</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">12 KB · System · 12 Jun</div></div>
+        <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:600; background:#16181d; color:#cfd2da;">⊘ Internal only</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME K : MESSAGES / COMMS ============ -->
+<div style="position:absolute; left:0; top:9100px; width:1320px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">11 — Messages / comms</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Threaded · attributed · waiting-on you vs Wahala</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); overflow:hidden; display:grid; grid-template-columns:300px 1fr; min-height:540px;">
+    <!-- thread list -->
+    <div style="border-right:1px solid #ededf1; padding:18px 0;">
+      <div style="padding:0 18px 12px;"><h2 style="margin:0; font-size:17px; font-weight:800; letter-spacing:-.02em;">Threads</h2></div>
+      <div style="padding:13px 18px; border-left:3px solid #16181d; background:#fbfbfc;">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:700;">Build &amp; integrate</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#b45309;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>You</span></div>
+        <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ada: Can you confirm the IdP tenant…</div>
+      </div>
+      <div style="padding:13px 18px; border-left:3px solid transparent;">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:600;">Discovery &amp; scope</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
+        <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Joel: Delivered for your acceptance.</div>
+      </div>
+      <div style="padding:13px 18px; border-left:3px solid transparent;">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:600;">General</span></div>
+        <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ada: Welcome to your portal 👋</div>
+      </div>
+    </div>
+    <!-- thread view -->
+    <div style="display:flex; flex-direction:column;">
+      <div style="padding:16px 24px; border-bottom:1px solid #ededf1; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-size:15px; font-weight:700;">Build &amp; integrate</div><div class="mono" style="font-size:11px; color:#9aa0aa;">Mobile App · Stage 2</div></div>
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:7px;height:7px;border-radius:50%;background:#ea8a0d;"></span>Waiting on you</span>
+      </div>
+      <div style="flex:1; padding:22px 24px; display:flex; flex-direction:column; gap:18px;">
+        <div style="display:flex; gap:12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">JE</div>
+          <div><div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:13px; font-weight:700;">Joel Eze</span><span class="mono" style="font-size:10px; color:#9aa0aa;">Wahala · 16 Jun 09:40</span></div><div style="margin-top:5px; background:#f4f5f7; border-radius:11px; padding:11px 14px; font-size:13.5px; line-height:1.5; max-width:480px;">We're set to start once payment clears. Before kickoff — can you confirm the IdP tenant and a contact for SSO?</div></div>
+        </div>
+        <div style="display:flex; gap:12px; flex-direction:row-reverse;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#16181d;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">AO</div>
+          <div style="text-align:right;"><div style="display:flex; align-items:baseline; gap:8px; flex-direction:row-reverse;"><span style="font-size:13px; font-weight:700;">Ada (Meridian)</span><span class="mono" style="font-size:10px; color:#9aa0aa;">16 Jun 10:15</span></div><div style="margin-top:5px; background:#eef0fe; border-radius:11px; padding:11px 14px; font-size:13.5px; line-height:1.5; max-width:480px; text-align:left;">Payment is going through now. I'll send tenant details by end of day.</div></div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">JE</div>
+          <div><div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:13px; font-weight:700;">Joel Eze</span><span class="mono" style="font-size:10px; color:#9aa0aa;">Wahala · 18 Jun 14:22</span></div><div style="margin-top:5px; background:#f4f5f7; border-radius:11px; padding:11px 14px; font-size:13.5px; line-height:1.5; max-width:480px;">Payment received, work has started 🎉 Still need those IdP credentials to wire up SSO when you get a sec.</div></div>
+        </div>
+      </div>
+      <div style="padding:14px 24px; border-top:1px solid #ededf1; display:flex; gap:10px; align-items:center;">
+        <input placeholder="Reply to Wahala…" style="flex:1; padding:11px 14px; border:1px solid #d7d9df; border-radius:9px; font:400 14px 'Hanken Grotesk';" />
+        <button style="border:0; padding:11px 18px; border-radius:9px; background:#16181d; color:#fff; font:600 13.5px 'Hanken Grotesk'; cursor:pointer;">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME L : CLIENT ACCOUNT HUB ============ -->
+<div style="position:absolute; left:1440px; top:9100px; width:1340px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">12 — Client account hub</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">The durable home for one organization</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:30px 36px 36px;">
+    <!-- header -->
+    <div style="display:flex; align-items:center; gap:16px; padding-bottom:22px; border-bottom:1px solid #ededf1;">
+      <div style="width:56px; height:56px; border-radius:14px; background:#16181d; color:#fff; font-size:22px; font-weight:800; display:flex; align-items:center; justify-content:center;">M</div>
+      <div style="flex:1;"><h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-.025em;">Meridian Co.</h2><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:3px;">Client since Mar 2025 · 3 projects · 9 stages</div></div>
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 16px 8px 8px; border:1px solid #e7e8ec; border-radius:10px;"><div style="width:34px;height:34px;border-radius:50%;background:#16181d;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;">AO</div><div><div style="font-size:13px; font-weight:700;">Ada Obi</div><div class="mono" style="font-size:10.5px; color:#9aa0aa;">Account owner</div></div></div>
+    </div>
+    <!-- tabs -->
+    <div style="display:flex; gap:24px; margin:18px 0 22px; border-bottom:1px solid #ededf1;">
+      <span style="font-size:13.5px; font-weight:700; padding-bottom:11px; border-bottom:2px solid #16181d;">Overview</span>
+      <span style="font-size:13.5px; color:#9aa0aa; padding-bottom:11px;">People</span>
+      <span style="font-size:13.5px; color:#9aa0aa; padding-bottom:11px;">Work history</span>
+      <span style="font-size:13.5px; color:#9aa0aa; padding-bottom:11px;">Files</span>
+      <span style="font-size:13.5px; color:#9aa0aa; padding-bottom:11px;">Messages</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:32px;">
+      <!-- work history -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:13px;">Work history</div>
+        <div style="display:flex; flex-direction:column;">
+          <div style="display:flex; gap:13px;"><div style="display:flex;flex-direction:column;align-items:center;"><span style="width:10px;height:10px;border-radius:50%;background:#16a34a;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600;">Website Refresh · Discovery &amp; scope</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;margin-top:2px;">Accepted · 14 Jun · $4,200.00</div></div></div>
+          <div style="display:flex; gap:13px;"><div style="display:flex;flex-direction:column;align-items:center;"><span style="width:10px;height:10px;border-radius:50%;background:#d97706;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600;">Mobile App · Build &amp; integrate</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;margin-top:2px;">In progress · paid 18 Jun · $8,500.00</div></div></div>
+          <div style="display:flex; gap:13px;"><div style="display:flex;flex-direction:column;align-items:center;"><span style="width:10px;height:10px;border-radius:50%;background:#16a34a;"></span><span style="width:1.5px;flex:1;background:#e7e8ec;"></span></div><div style="padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600;">Mobile App · Discovery &amp; scope</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;margin-top:2px;">Accepted · 14 Jun · $3,000.00</div></div></div>
+          <div style="display:flex; gap:13px;"><div style="display:flex;flex-direction:column;align-items:center;"><span style="width:10px;height:10px;border-radius:50%;background:#16a34a;"></span></div><div><div style="font-size:13.5px; font-weight:600;">Brand System · Identity sprint</div><div class="mono" style="font-size:10.5px;color:#9aa0aa;margin-top:2px;">Accepted · 02 May · $6,000.00</div></div></div>
+        </div>
+      </div>
+      <!-- side: people + totals -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div style="background:#fbfbfc; border:1px solid #ededf1; border-radius:12px; padding:18px;">
+          <div class="mono" style="font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:11px;">Lifetime</div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><span style="font-size:13px; color:#5a6069;">Accepted &amp; paid</span><span class="mono tnum" style="font-size:20px; font-weight:800;">$21,700</span></div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px;"><span style="font-size:13px; color:#5a6069;">In flight</span><span class="mono tnum" style="font-size:13px; font-weight:600;">$8,500</span></div>
+        </div>
+        <div style="background:#fbfbfc; border:1px solid #ededf1; border-radius:12px; padding:18px;">
+          <div class="mono" style="font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:12px;">People</div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#16181d;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">AC</div><div style="font-size:12.5px;"><strong>Ada Chen</strong> · <span style="color:#9aa0aa;">Client admin</span></div></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#f4f5f7;color:#767b85;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">RB</div><div style="font-size:12.5px;"><strong>Rob B.</strong> · <span style="color:#9aa0aa;">Billing</span></div></div>
+            <div style="display:flex; align-items:center; gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#f4f5f7;color:#767b85;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">SK</div><div style="font-size:12.5px;"><strong>Sara K.</strong> · <span style="color:#9aa0aa;">Read-only</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME M : BUILD NOTE (§12) ============ -->
+<div style="position:absolute; left:0; top:11000px; width:1560px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#2536c4;">13 — Build note</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Next.js App Router · server components vs client islands</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:40px 48px 44px;">
+    <h2 style="margin:0; font-size:23px; font-weight:800; letter-spacing:-.025em;">Component spec — mapping to the stack</h2>
+    <p style="margin:10px 0 0; max-width:760px; font-size:14.5px; line-height:1.65; color:#5a6069;">Pages are React Server Components on Cloudflare Workers: they fetch from D1, compute the role-and-state action set on the server, and stream HTML. Only the small interactive pieces ship JS as <strong style="color:#16181d;">client islands</strong> — keeping the Workers bundle lean and the security model server-authoritative.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:30px;">
+      <!-- routes -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:14px;">Routes → page type</div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; gap:14px; align-items:flex-start; padding:11px 14px; border:1px solid #ededf1; border-radius:9px;"><span class="mono" style="font-size:12px; color:#2536c4; width:230px; flex-shrink:0;">/login</span><span style="font-size:12.5px; color:#5a6069;">RSC shell · <strong style="color:#16181d;">island:</strong> email form (idle/sending/sent/error)</span></div>
+          <div style="display:flex; gap:14px; align-items:flex-start; padding:11px 14px; border:1px solid #ededf1; border-radius:9px;"><span class="mono" style="font-size:12px; color:#2536c4; width:230px; flex-shrink:0;">/dashboard</span><span style="font-size:12.5px; color:#5a6069;">RSC · role-branched (staff vs client). Static lists, no island.</span></div>
+          <div style="display:flex; gap:14px; align-items:flex-start; padding:11px 14px; border:1px solid #ededf1; border-radius:9px;"><span class="mono" style="font-size:12px; color:#2536c4; width:230px; flex-shrink:0;">/dashboard/projects/:id</span><span style="font-size:12.5px; color:#5a6069;">RSC · stage list. <strong style="color:#16181d;">island:</strong> "New stage" drawer (staff)</span></div>
+          <div style="display:flex; gap:14px; align-items:flex-start; padding:11px 14px; border:1.5px solid #c9d0fb; background:#fafbff; border-radius:9px;"><span class="mono" style="font-size:12px; color:#2536c4; width:230px; flex-shrink:0;">/dashboard/stages/:id</span><span style="font-size:12.5px; color:#5a6069;">RSC renders state + history. <strong style="color:#16181d;">islands:</strong> the action set, confirm dialogs, acceptance checklist, pay button</span></div>
+        </div>
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin:24px 0 14px;">API the islands call</div>
+        <div style="background:#16181d; border-radius:10px; padding:16px 18px;">
+          <div class="mono" style="font-size:12px; color:#cfd2da; line-height:1.9;"><span style="color:#7aa2ff;">POST</span> /api/stages/:id/:action<br/><span style="color:#7c828d;">send_quote · approve_quote · reject_quote</span><br/><span style="color:#7c828d;">mark_paid · start_work · deliver</span><br/><span style="color:#7c828d;">accept · request_revision</span></div>
+        </div>
+      </div>
+      <!-- components -->
+      <div>
+        <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa; margin-bottom:14px;">Components → server or island</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">StatusBadge, Stepper, Money, HistoryTimeline</span><span style="font-size:11px; font-weight:700; color:#0f766e; background:#dcf3f0; padding:3px 9px; border-radius:6px;">server</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">WaitingOn, VisibilityMarker, PeopleCard</span><span style="font-size:11px; font-weight:700; color:#0f766e; background:#dcf3f0; padding:3px 9px; border-radius:6px;">server</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">ActionBar (the allowed-action set)</span><span style="font-size:11px; font-weight:700; color:#2536c4; background:#eef0fe; padding:3px 9px; border-radius:6px;">island</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">ConfirmDialog (pay / accept / reject / co-sign)</span><span style="font-size:11px; font-weight:700; color:#2536c4; background:#eef0fe; padding:3px 9px; border-radius:6px;">island</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">LineItemEditor (quote builder)</span><span style="font-size:11px; font-weight:700; color:#2536c4; background:#eef0fe; padding:3px 9px; border-radius:6px;">island</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border:1px solid #ededf1; border-radius:9px;"><span style="font-size:13px; font-weight:600;">AcceptanceChecklist, FileUpload, MessageComposer</span><span style="font-size:11px; font-weight:700; color:#2536c4; background:#eef0fe; padding:3px 9px; border-radius:6px;">island</span></div>
+        </div>
+        <div style="margin-top:22px; padding:16px 18px; background:#fffaf2; border:1px solid #fadcb4; border-radius:11px;">
+          <div style="font-size:13px; font-weight:700; color:#b45309; margin-bottom:6px;">Server-authoritative rules</div>
+          <div style="font-size:12.5px; line-height:1.6; color:#7a5a2a;">The RSC computes the action set from role + state + threshold and tenant-scopes every query. Islands render only what they're handed — they never decide permissions or filter visibility client-side. The pay-gate, co-sign, and internal/visible split are enforced before HTML is sent.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

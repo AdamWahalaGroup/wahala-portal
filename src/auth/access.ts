@@ -1,0 +1,75 @@
+/**
+ * Access scope — the single definition of "which tenants/projects may this user
+ * touch." Computed once per request (in getAuthContext) and consumed by both the
+ * scoped-query layer (src/db/scoped.ts) and the service-layer point checks, so
+ * there is exactly ONE place that decides reach:
+ *
+ *   wahala_admin   → all orgs
+ *   account_owner  → orgs they own (organizations.account_owner_user_id)
+ *   lead/engineer  → only projects they lead or are a roster member of
+ *   client roles   → their own org
+ *
+ * The boolean checks (`canAccessOrg`/`canAccessProject`) are PURE so they're
+ * unit-tested; only `computeAccessScope` touches the DB.
+ */
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/db";
+
+type UserRow = typeof schema.users.$inferSelect;
+
+export type AccessScope =
+  | { kind: "all" }
+  | { kind: "orgs"; orgIds: string[] }
+  | { kind: "projects"; projectIds: string[]; orgIds: string[] };
+
+/** Resolve a user's access scope (queries the roster/ownership). */
+export async function computeAccessScope(user: UserRow): Promise<AccessScope> {
+  const db = getDb();
+
+  if (user.userType === "client") {
+    return { kind: "orgs", orgIds: user.organizationId ? [user.organizationId] : [] };
+  }
+
+  // Wahala staff
+  if (user.role === "wahala_admin") return { kind: "all" };
+
+  if (user.role === "account_owner") {
+    const owned = await db
+      .select({ id: schema.organizations.id })
+      .from(schema.organizations)
+      .where(eq(schema.organizations.accountOwnerUserId, user.id));
+    return { kind: "orgs", orgIds: owned.map((o) => o.id) };
+  }
+
+  // lead_engineer / engineer → projects they lead or are a member of
+  const [members, led] = await Promise.all([
+    db
+      .select({ projectId: schema.projectMembers.projectId, organizationId: schema.projectMembers.organizationId })
+      .from(schema.projectMembers)
+      .where(eq(schema.projectMembers.userId, user.id)),
+    db
+      .select({ id: schema.projects.id, organizationId: schema.projects.organizationId })
+      .from(schema.projects)
+      .where(eq(schema.projects.leadEngineerUserId, user.id)),
+  ]);
+
+  const projectIds = [...new Set([...members.map((m) => m.projectId), ...led.map((p) => p.id)])];
+  const orgIds = [...new Set([...members.map((m) => m.organizationId), ...led.map((p) => p.organizationId)])];
+  return { kind: "projects", projectIds, orgIds };
+}
+
+/** May the caller reach anything in this org? (pure) */
+export function canAccessOrg(scope: AccessScope, orgId: string): boolean {
+  if (scope.kind === "all") return true;
+  return scope.orgIds.includes(orgId);
+}
+
+/** May the caller reach this specific project? (pure) */
+export function canAccessProject(
+  scope: AccessScope,
+  project: { id: string; organizationId: string },
+): boolean {
+  if (scope.kind === "all") return true;
+  if (scope.kind === "orgs") return scope.orgIds.includes(project.organizationId);
+  return scope.projectIds.includes(project.id);
+}

@@ -60,6 +60,7 @@ export type StageErrorCode =
   | "FORBIDDEN"
   | "INVALID_STATE"
   | "PAY_GATE"
+  | "CONFLICT" // lost an optimistic-concurrency (compare-and-swap) race
   | "VALIDATION";
 
 export class StageError extends Error {

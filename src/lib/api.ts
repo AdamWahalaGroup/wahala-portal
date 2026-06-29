@@ -32,6 +32,7 @@ const STAGE_ERROR_STATUS: Record<StageErrorCode, number> = {
   FORBIDDEN: 403,
   INVALID_STATE: 409, // wrong state for this action
   PAY_GATE: 409, // would start before payment
+  CONFLICT: 409, // someone else changed the row first (CAS)
   VALIDATION: 400,
 };
 

@@ -5,8 +5,10 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
+import { canAccessOrg } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { buildAudit } from "@/services/audit";
+import { securityLog } from "@/lib/security-log";
 
 type Project = typeof schema.projects.$inferSelect;
 
@@ -27,8 +29,26 @@ export async function createProject(
   });
   if (!org) throw new StageError("NOT_FOUND", "Organization not found.");
 
+  if (!canAccessOrg(ctx.accessScope, org.id)) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "create_project",
+      resource: `org:${org.id}`,
+      reason: "out_of_scope",
+    });
+    throw new StageError("NOT_FOUND", "Organization not found.");
+  }
+
   const isOwner = ctx.user.id === org.accountOwnerUserId;
   if (!(ctx.isAdmin || (ctx.user.role === "account_owner" && isOwner))) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "create_project",
+      resource: `org:${org.id}`,
+      reason: "not_admin_or_owner",
+    });
     throw new StageError("FORBIDDEN", "Only a Wahala admin or the Account Owner can create a project.");
   }
 

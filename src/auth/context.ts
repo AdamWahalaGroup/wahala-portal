@@ -10,6 +10,7 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { readSessionCookie, getSessionUserId } from "@/auth/session";
+import { computeAccessScope, type AccessScope } from "@/auth/access";
 
 export type AuthUser = typeof schema.users.$inferSelect;
 
@@ -18,8 +19,9 @@ export type AuthContext = {
   isStaff: boolean; // Wahala team member (organizationId === null)
   isAdmin: boolean; // wahala_admin
   organizationId: string | null; // the user's tenant; null for staff
-  canSeeAllOrgs: boolean; // Phase 0: staff see every org's data
-  canSeeInternal: boolean; // Phase 0: staff see internal-flagged rows; clients never do
+  accessScope: AccessScope; // which orgs/projects this user may reach (the scoping seam)
+  canSeeAllOrgs: boolean; // derived: accessScope.kind === "all"
+  canSeeInternal: boolean; // staff see internal-flagged rows; clients never do
 };
 
 /** Resolve the current auth context, or null if not signed in. */
@@ -37,12 +39,14 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   if (!user || user.status === "disabled") return null;
 
   const isStaff = user.userType === "wahala";
+  const accessScope = await computeAccessScope(user);
   return {
     user,
     isStaff,
     isAdmin: user.role === "wahala_admin",
     organizationId: user.organizationId,
-    canSeeAllOrgs: isStaff,
+    accessScope,
+    canSeeAllOrgs: accessScope.kind === "all",
     canSeeInternal: isStaff,
   };
 }

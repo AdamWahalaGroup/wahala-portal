@@ -9,6 +9,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
+import { canAccessProject } from "@/auth/access";
 import { canActOnStage, type PolicyActor, type StageResource } from "@/auth/policy";
 import {
   ACTION_TRANSITION,
@@ -17,11 +18,33 @@ import {
   StageError,
   type StageAction,
 } from "@/domain/stage-machine";
-import { buildAudit } from "@/services/audit";
+import { buildAudit, type AuditInput } from "@/services/audit";
+import { securityLog } from "@/lib/security-log";
 import { adminApprovalThresholdCents } from "@/auth/server-env";
 
 type Stage = typeof schema.stages.$inferSelect;
 type StageUpdate = Partial<typeof schema.stages.$inferInsert>;
+type Db = ReturnType<typeof getDb>;
+
+/**
+ * Audit a successful transition. Best-effort: the state change is the source of
+ * truth; on the rare audit-write failure we log rather than fail the request.
+ * (D1 has no interactive transactions, so the CAS update + audit are two steps;
+ * the audit only runs after the CAS has already applied.)
+ */
+async function recordTransition(db: Db, ctx: AuthContext | null, audit: AuditInput): Promise<void> {
+  try {
+    await db.insert(schema.auditLog).values(buildAudit(audit));
+  } catch (err) {
+    securityLog({
+      actorUserId: ctx?.user.id ?? null,
+      role: ctx?.user.role,
+      action: `audit_write_failed:${audit.action}`,
+      resource: `${audit.entityType}:${audit.entityId}`,
+      reason: String(err),
+    });
+  }
+}
 
 function actorFromCtx(ctx: AuthContext): PolicyActor {
   return {
@@ -42,8 +65,15 @@ async function loadStageContext(ctx: AuthContext, stageId: string) {
   });
   if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
 
-  // Defense in depth: a client may never even load another org's stage.
-  if (!ctx.canSeeAllOrgs && stage.organizationId !== ctx.organizationId) {
+  // Tenant + project scope: the caller may never even load a stage out of scope.
+  if (!canAccessProject(ctx.accessScope, { id: stage.projectId, organizationId: stage.organizationId })) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "load_stage",
+      resource: `stage:${stage.id}`,
+      reason: "out_of_scope",
+    });
     throw new StageError("NOT_FOUND", "Stage not found.");
   }
 
@@ -108,7 +138,16 @@ export async function applyStageAction(
     action === "send_quote" &&
     requiresAdminApproval(stage.totalAmountCents, adminApprovalThresholdCents());
   const decision = canActOnStage(actorFromCtx(ctx), action, resource, { overThreshold });
-  if (!decision.allowed) throw new StageError("FORBIDDEN", decision.reason);
+  if (!decision.allowed) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: `stage.${action}`,
+      resource: `stage:${stageId}`,
+      reason: decision.reason,
+    });
+    throw new StageError("FORBIDDEN", decision.reason);
+  }
 
   // Assert legal transition + the hard pay-gate.
   const { from, to } = assertStageAction(action, stage.status, stage);
@@ -116,19 +155,29 @@ export async function applyStageAction(
   const fields = actionFields(action, ctx, stage, extra);
   const set: StageUpdate = { ...fields, status: to, updatedAt: new Date() };
 
-  await db.batch([
-    db.update(schema.stages).set(set).where(eq(schema.stages.id, stage.id)),
-    db.insert(schema.auditLog).values(
-      buildAudit({
-        organizationId: stage.organizationId,
-        actorUserId: ctx.user.id,
-        action: `stage.${action}`,
-        entityType: "stage",
-        entityId: stage.id,
-        metadata: { from, to, totalAmountCents: stage.totalAmountCents },
-      }),
-    ),
-  ]);
+  // Compare-and-swap: only transition if the stage is STILL in `from`. A concurrent
+  // request that already moved it leaves this UPDATE matching 0 rows → CONFLICT.
+  const updated = await db
+    .update(schema.stages)
+    .set(set)
+    .where(and(eq(schema.stages.id, stage.id), eq(schema.stages.status, from)))
+    .returning({ id: schema.stages.id });
+
+  if (updated.length === 0) {
+    throw new StageError(
+      "CONFLICT",
+      "This stage was just changed by someone else — reload and try again.",
+    );
+  }
+
+  await recordTransition(db, ctx, {
+    organizationId: stage.organizationId,
+    actorUserId: ctx.user.id,
+    action: `stage.${action}`,
+    entityType: "stage",
+    entityId: stage.id,
+    metadata: { from, to, totalAmountCents: stage.totalAmountCents },
+  });
 
   return { ...stage, ...set } as Stage;
 }
@@ -158,28 +207,37 @@ export async function markStagePaidBySystem(stageId: string, stripeRef: string):
   const stage = await db.query.stages.findFirst({ where: eq(schema.stages.id, stageId) });
   if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
 
-  const { from, to } = assertStageAction("mark_paid", stage.status, stage);
+  // Idempotent: a webhook retry on an already-paid (or not-yet-approved) stage is a no-op.
+  if (stage.status !== "approved") return stage;
+
   const set: StageUpdate = {
-    status: to,
+    status: "paid",
     paidAt: new Date(),
     stripeRef,
     updatedAt: new Date(),
   };
 
-  await db.batch([
-    db.update(schema.stages).set(set).where(eq(schema.stages.id, stage.id)),
-    db.insert(schema.auditLog).values(
-      buildAudit({
-        organizationId: stage.organizationId,
-        actorUserId: null,
-        action: "stage.mark_paid",
-        entityType: "stage",
-        entityId: stage.id,
-        metadata: { from, to, stripeRef, via: "stripe_webhook" },
-      }),
-    ),
-  ]);
+  // Compare-and-swap on `approved` — also the idempotency guard for webhook retries.
+  const updated = await db
+    .update(schema.stages)
+    .set(set)
+    .where(and(eq(schema.stages.id, stageId), eq(schema.stages.status, "approved")))
+    .returning({ id: schema.stages.id });
 
+  if (updated.length === 0) {
+    // Lost the race / already paid — return current state (idempotent, not an error).
+    const fresh = await db.query.stages.findFirst({ where: eq(schema.stages.id, stageId) });
+    return fresh ?? stage;
+  }
+
+  await recordTransition(db, null, {
+    organizationId: stage.organizationId,
+    actorUserId: null,
+    action: "stage.mark_paid",
+    entityType: "stage",
+    entityId: stageId,
+    metadata: { from: "approved", to: "paid", stripeRef, via: "stripe_webhook" },
+  });
   return { ...stage, ...set } as Stage;
 }
 
@@ -229,8 +287,12 @@ export async function getStageDetail(ctx: AuthContext, stageId: string): Promise
     .orderBy(schema.auditLog.createdAt);
 
   const actorIds = [...new Set(auditRows.map((r) => r.actorUserId).filter(Boolean))] as string[];
+  // Only the columns we render — never pull whole user rows (email/role) here.
   const actors = actorIds.length
-    ? await db.select().from(schema.users).where(inArray(schema.users.id, actorIds))
+    ? await db
+        .select({ id: schema.users.id, name: schema.users.name })
+        .from(schema.users)
+        .where(inArray(schema.users.id, actorIds))
     : [];
   const nameById = new Map(actors.map((u) => [u.id, u.name]));
 
@@ -264,7 +326,14 @@ export async function createStage(
     where: eq(schema.projects.id, input.projectId),
   });
   if (!project) throw new StageError("NOT_FOUND", "Project not found.");
-  if (!ctx.canSeeAllOrgs && project.organizationId !== ctx.organizationId) {
+  if (!canAccessProject(ctx.accessScope, { id: project.id, organizationId: project.organizationId })) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "create_stage",
+      resource: `project:${project.id}`,
+      reason: "out_of_scope",
+    });
     throw new StageError("NOT_FOUND", "Project not found.");
   }
 
@@ -275,6 +344,13 @@ export async function createStage(
   // Authorize: Wahala admin, or the org's Account Owner.
   const isOwner = ctx.user.id === org?.accountOwnerUserId;
   if (!(ctx.isAdmin || (ctx.user.role === "account_owner" && isOwner))) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "create_stage",
+      resource: `project:${project.id}`,
+      reason: "not_admin_or_owner",
+    });
     throw new StageError("FORBIDDEN", "Only a Wahala admin or the Account Owner can create a stage.");
   }
 

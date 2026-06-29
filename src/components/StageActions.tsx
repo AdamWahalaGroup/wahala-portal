@@ -26,6 +26,7 @@ export function StageActions({ stageId, actions }: { stageId: string; actions: s
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
         setError(data.message ?? `Action failed (${res.status}).`);
+        if (res.status === 409) router.refresh(); // stage moved under us — resync state
       } else {
         router.refresh();
       }

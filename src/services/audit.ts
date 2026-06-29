@@ -7,7 +7,7 @@
  */
 import { schema } from "@/db";
 
-type AuditInput = {
+export type AuditInput = {
   organizationId: string;
   actorUserId: string | null;
   action: string; // e.g. "stage.paid", "stage.accepted"
