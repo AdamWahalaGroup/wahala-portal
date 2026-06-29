@@ -7,6 +7,7 @@ import { listClients } from "@/services/clients";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { OnboardClientForm } from "@/components/OnboardClientForm";
+import { DeleteClientButton } from "@/components/DeleteClientButton";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function ClientsPage() {
                 key={c.org.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 230px 120px",
+                  gridTemplateColumns: "1fr 220px 110px 40px",
                   gap: 14,
                   alignItems: "center",
                   padding: "14px 16px",
@@ -98,6 +99,9 @@ export default async function ClientsPage() {
                 </div>
                 <div style={{ justifySelf: "start" }}>
                   <StatusPill status={c.contact?.status} />
+                </div>
+                <div style={{ justifySelf: "end" }}>
+                  {ctx.isAdmin && <DeleteClientButton orgId={c.org.id} name={c.org.name} />}
                 </div>
               </div>
             ))}

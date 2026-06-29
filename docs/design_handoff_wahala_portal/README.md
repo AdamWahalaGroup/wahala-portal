@@ -137,13 +137,19 @@ Build these as shared components first; every screen composes them.
 Reference only — the design-system panel (brand lockup, color, type, components).
 
 ### 02 — Login (`/login`)
-- **Purpose:** Magic-link sign-in (no passwords).
-- **Layout:** Centered card, brand top-left, `h1` "Sign in", subcopy, email field
-  (mono uppercase label), full-width Ink "Send magic link" button, footer hint.
+- **Purpose:** Sign-in via **Google SSO** or magic-link (no passwords).
+- **Layout:** Centered card, brand top-left, `h1` "Sign in", subcopy, a
+  **"Continue with Google"** button (white, `#D7D9DF` border, Google glyph) at the
+  top, an "or" divider, then the email field (mono uppercase label) + full-width
+  Ink "Send magic link" button, footer hint.
 - **States:** **idle** (form), **sent** ("Check your email", ✉ in `#EEF0FE`
-  rounded square, resend), **error** (red card: "We couldn't send that link"). The
-  error is an intentional designed state.
-- **Island:** the email form (handles idle/sending/sent/error).
+  rounded square, resend), **error** (red card: "We couldn't send that link"; also
+  surfaces `?error=` messages from the SSO redirect). The error is an intentional
+  designed state.
+- **Auth note:** a `@wahalagroup.com` Google login auto-provisions as a **Wahala
+  admin** (no dedicated UI — affects which views the user lands in).
+- **Island:** the email form (idle/sending/sent/error); Google button kicks the
+  OAuth redirect.
 
 ### 03 — Client dashboard (`/dashboard`, client role)
 - **Purpose:** Client sees what's **on them**, what's on Wahala, and their projects.
@@ -245,6 +251,34 @@ Reference only — the design-system panel (brand lockup, color, type, component
 
 ### 13 — Build note
 Reference only — the Server/Island mapping below, rendered visually.
+
+### 14 — Clients · staff onboarding (`/dashboard/clients`)
+- **Purpose:** Staff-only. An admin onboards a prospect, captures intake, and
+  invites them in; tracks each client **Invited → Accepted**.
+- **Layout:** staff ink sidebar (note the **org switcher** "Wahala Group · all
+  clients" and a **Clients** nav item) + main column.
+- **Main:** header ("Clients" + subcopy) with an Ink **+ Onboard client** button;
+  a status filter row (All / Invited / Accepted with counts); a **clients table**
+  (grid `1fr 150px 110px 30px 16px`: company w/ avatar + email, primary contact,
+  status pill — Accepted = green, Invited = amber/"waiting"-style, a **delete**
+  (trash) action, chevron); and a right **Onboard a client** panel (Company,
+  Primary contact + Email, **Intake notes — "what they're looking for"** textarea,
+  Ink **Invite client** button that sends a magic-link invite, with a note that
+  they show as *Invited* until they accept).
+- **Delete client (frame 14b):** each row has an admin-only **delete** action that
+  opens a **destructive confirm modal** (red trash tile, "Delete this client?",
+  copy warning it removes the org + all projects/stages/history, an optional
+  type-the-company-name guard, Cancel + red "Delete client"). Primary use: an admin
+  resetting test data so they can re-create the same client/org and re-run the full
+  flow. *The type-to-confirm guard is optional — drop it if it slows down repeated
+  testing.*
+- **Islands:** the onboard form (create + invite), the status filter, the delete
+  confirm.
+- **API:** `POST /api/clients` (create + invite), `DELETE /api/clients/:id`
+  (cascade-delete org + children; admin-only).
+- **Constraint:** staff-only screen; respects tenant isolation (this is the
+  pre-org, staff-side view). Partially covers the staff "see your clients" need
+  until the full **account hub (frame 12)** ships.
 
 ---
 

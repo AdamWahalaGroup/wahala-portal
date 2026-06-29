@@ -142,3 +142,38 @@ export async function onboardClient(
 
   return { organizationId, userId, inviteLink };
 }
+
+/**
+ * Delete a client org and EVERYTHING under it (admin only) — for resetting test
+ * data. Deletes in FK-dependency order so the cascade never trips a constraint.
+ * Staff users (no org) are never touched; only this org's client users go.
+ */
+export async function deleteOrganization(ctx: AuthContext, orgId: string): Promise<void> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_org", resource: `org:${orgId}`, reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can delete a client.");
+  }
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, orgId) });
+  if (!org) throw new StageError("NOT_FOUND", "Organization not found.");
+
+  const taskIds = db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.organizationId, orgId));
+  const stageIds = db.select({ id: schema.stages.id }).from(schema.stages).where(eq(schema.stages.organizationId, orgId));
+
+  await db.batch([
+    db.delete(schema.taskAssignments).where(inArray(schema.taskAssignments.taskId, taskIds)),
+    db.delete(schema.tasks).where(eq(schema.tasks.organizationId, orgId)),
+    db.delete(schema.stageLineItems).where(inArray(schema.stageLineItems.stageId, stageIds)),
+    db.delete(schema.stages).where(eq(schema.stages.organizationId, orgId)),
+    db.delete(schema.changeOrders).where(eq(schema.changeOrders.organizationId, orgId)),
+    db.delete(schema.assets).where(eq(schema.assets.organizationId, orgId)),
+    db.delete(schema.messages).where(eq(schema.messages.organizationId, orgId)),
+    db.delete(schema.projectMembers).where(eq(schema.projectMembers.organizationId, orgId)),
+    db.delete(schema.projects).where(eq(schema.projects.organizationId, orgId)),
+    db.delete(schema.auditLog).where(eq(schema.auditLog.organizationId, orgId)),
+    db.delete(schema.users).where(eq(schema.users.organizationId, orgId)),
+    db.delete(schema.organizations).where(eq(schema.organizations.id, orgId)),
+  ]);
+
+  securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_org", resource: `org:${orgId}`, reason: "admin_cascade_delete" });
+}

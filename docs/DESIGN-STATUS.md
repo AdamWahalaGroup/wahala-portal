@@ -12,7 +12,7 @@
 
 **Legend:** ✅ built · 🟡 partial · ⬜ not built · 🔼 new/changed vs the original handoff
 
-_Last updated: after the Tasks (delivery) screen._
+_Last updated: after the Clients cascade-delete capability._
 
 ---
 
@@ -40,7 +40,7 @@ _Last updated: after the Tasks (delivery) screen._
 
 | Item | Status | Route | What it is |
 |------|--------|-------|-----------|
-| 🔼 **Clients** | ✅ built | `/dashboard/clients` | Staff-only. Admin onboards a prospect (company, primary contact, **intake notes** "what they're looking for"), hits **Invite** (magic-link email), and sees each client as **Invited → Accepted**. Needs a design frame — currently uses the existing tokens (cards, status pills, sidebar nav item "Clients"). |
+| 🔼 **Clients** (handoff frame 14 / 14b) | ✅ built | `/dashboard/clients` | Staff-only. Admin onboards a prospect (company, contact, **intake notes**), **Invite** (magic-link email), tracks **Invited → Accepted**, and can **delete a client** — admin-only **cascade** delete (removes the org + all its projects/stages/tasks/history) behind a destructive confirm modal. For resetting test data. |
 | 🔼 **"Continue with Google"** | ✅ built | `/login` | Google SSO button + "or" divider; surfaces `?error=` messages. |
 | 🔼 Staff auto-provisioning | ✅ built | (no UI) | A `@wahalagroup.com` Google login auto-becomes a Wahala admin. No screen, but affects who sees the staff views. |
 
