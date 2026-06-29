@@ -1,83 +1,145 @@
 /**
- * Project detail — its stages (tenant-scoped) and, for staff/owners, a form to
- * add a new draft stage. Each stage links to its lifecycle page.
+ * Project detail — people (owner / lead / roster) + the numbered stage list.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
+import { getProjectDetail } from "@/services/projects";
+import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
+import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Money } from "@/components/Money";
+import { PeopleCard, Avatar } from "@/components/People";
 import { CreateStageForm } from "@/components/CreateStageForm";
-import { formatCents } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-const wrap: React.CSSProperties = {
-  fontFamily: "system-ui, sans-serif",
-  maxWidth: 760,
-  margin: "0 auto",
-  padding: "48px 24px",
-  lineHeight: 1.5,
-};
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
 
   const { id } = await params;
+  const detail = await getProjectDetail(ctx, id).catch((e) => {
+    if (e instanceof StageError && e.code === "NOT_FOUND") notFound();
+    throw e;
+  });
   const sdb = scopedDb(ctx);
-  const project = await sdb.getProject(id);
-  if (!project) notFound();
+  const [stages, accountOwner] = await Promise.all([sdb.listStages(id), sdb.accountOwner()]);
 
-  const stages = await sdb.listStages(id);
+  const { project } = detail;
+  const activeStageId = stages.find((s) => s.status !== "accepted" && s.status !== "rejected")?.id;
   const canCreateStage = ctx.isStaff && (ctx.isAdmin || ctx.user.role === "account_owner");
 
   return (
-    <main style={wrap}>
-      <Link href="/dashboard" style={{ fontSize: 14 }}>
-        ← Dashboard
-      </Link>
+    <AppShell
+      active="projects"
+      user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
+      orgName={detail.organizationName}
+      accountOwner={ctx.isStaff ? null : accountOwner}
+    >
+      <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+        <Link href="/dashboard">Projects</Link> / {project.name}
+      </div>
 
-      <h1 style={{ margin: "10px 0 2px" }}>{project.name}</h1>
-      <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
-        {project.status}
-        {project.workType ? <> · {project.workType}</> : null}
-      </p>
-      {project.description && <p style={{ color: "#444" }}>{project.description}</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>{project.name}</h1>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--ink-soft)",
+            background: "var(--surface)",
+            borderRadius: 999,
+            padding: "4px 11px",
+            textTransform: "capitalize",
+          }}
+        >
+          {project.status}
+        </span>
+      </div>
+      {project.description && <p style={{ margin: "8px 0 0", color: "var(--ink-soft)", fontSize: 14.5 }}>{project.description}</p>}
+      {project.workType && (
+        <div className="kicker" style={{ marginTop: 10 }}>
+          Work type · {project.workType}
+        </div>
+      )}
 
-      <section style={{ marginTop: 28 }}>
-        <h2 style={{ fontSize: 18 }}>
-          Stages <span style={{ color: "#999", fontWeight: 400 }}>({stages.length})</span>
-        </h2>
-        {stages.length === 0 ? (
-          <p style={{ color: "#888" }}>No stages yet.</p>
-        ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {stages.map((s) => (
-              <li
-                key={s.id}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #eee", padding: "10px 0", gap: 12 }}
-              >
-                <Link href={`/dashboard/stages/${s.id}`} style={{ fontWeight: 600 }}>
-                  {s.name}
-                </Link>
-                <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ color: "#444", fontSize: 14 }}>{formatCents(s.totalAmountCents)}</span>
-                  <StatusBadge status={s.status} />
+      {/* People */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 28, marginTop: 22, alignItems: "center" }}>
+        {detail.accountOwner && <PeopleCard name={detail.accountOwner.name} role="Account owner" variant="owner" />}
+        {detail.leadEngineer && <PeopleCard name={detail.leadEngineer.name} role="Lead engineer" variant="lead" />}
+        {detail.roster.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="kicker">Roster</div>
+            <div style={{ display: "flex" }}>
+              {detail.roster.map((m, i) => (
+                <span key={m.id} style={{ marginLeft: i === 0 ? 0 : -8, border: "2px solid var(--white)", borderRadius: "50%" }}>
+                  <Avatar name={m.name} size={30} />
                 </span>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stages */}
+      <section style={{ marginTop: 30 }}>
+        <div className="kicker" style={{ marginBottom: 12 }}>
+          Stages ({stages.length})
+        </div>
+        {stages.length === 0 ? (
+          <p style={{ color: "var(--muted)" }}>No stages yet.</p>
+        ) : (
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            {stages.map((s, i) => {
+              const active = s.id === activeStageId;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/stages/${s.id}`}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "28px 1fr auto auto 16px",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "14px 16px",
+                    borderTop: i === 0 ? "none" : "1px solid var(--border-soft)",
+                    textDecoration: "none",
+                    color: "inherit",
+                    ...(active ? { background: "#f3f5ff", boxShadow: "inset 2px 0 0 var(--cobalt)" } : {}),
+                  }}
+                >
+                  <span className="mono" style={{ fontSize: 13, color: "var(--muted-line)" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{s.name}</div>
+                    {s.scopeDescription && (
+                      <div className="kicker" style={{ marginTop: 2, textTransform: "none", letterSpacing: 0, fontSize: 12, color: "var(--muted)" }}>
+                        {s.scopeDescription}
+                      </div>
+                    )}
+                  </div>
+                  <StatusBadge status={s.status} />
+                  <Money cents={s.totalAmountCents} style={{ fontWeight: 700, fontSize: 15 }} />
+                  <span style={{ color: "var(--muted-line)", textAlign: "right" }}>›</span>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </section>
 
       {canCreateStage && (
-        <section style={{ marginTop: 28, padding: 16, border: "1px solid #eee", borderRadius: 12 }}>
-          <h2 style={{ fontSize: 15, margin: "0 0 10px" }}>New stage</h2>
+        <section style={{ marginTop: 24, background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 18 }}>
+          <div className="kicker" style={{ marginBottom: 10 }}>
+            New stage
+          </div>
           <CreateStageForm projectId={project.id} />
         </section>
       )}
-    </main>
+    </AppShell>
   );
 }

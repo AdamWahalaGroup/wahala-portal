@@ -14,7 +14,7 @@
  * Low-level conditions (`tenant`, `projectScope`, `visible`) are exposed so new
  * readers compose the same filters; concrete readers below are the ergonomic surface.
  */
-import { and, eq, inArray, sql, type SQL, type AnyColumn } from "drizzle-orm";
+import { and, desc, eq, inArray, sql, type SQL, type AnyColumn } from "drizzle-orm";
 import type { AuthContext } from "@/auth/context";
 import { getDb, schema } from "@/db";
 
@@ -55,6 +55,18 @@ export class ScopedDb {
     return this.db.query.organizations.findFirst({
       where: eq(schema.organizations.id, this.ctx.organizationId),
     });
+  }
+
+  /** The caller's org's Account Owner (name only). Clients only; null for staff. */
+  async accountOwner() {
+    const org = await this.currentOrganization();
+    if (!org?.accountOwnerUserId) return null;
+    const rows = await this.db
+      .select({ id: schema.users.id, name: schema.users.name })
+      .from(schema.users)
+      .where(eq(schema.users.id, org.accountOwnerUserId))
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   /** Organizations the caller may act within. */
@@ -116,6 +128,15 @@ export class ScopedDb {
         ),
       )
       .orderBy(schema.stages.sequence);
+  }
+
+  /** All stages in the caller's scope (across their projects), newest first. */
+  async listAllStages() {
+    return this.db
+      .select()
+      .from(schema.stages)
+      .where(and(this.tenant(schema.stages), this.projectScope(schema.stages.projectId)))
+      .orderBy(desc(schema.stages.updatedAt));
   }
 
   /** A single stage the caller may see, or null. */

@@ -1,29 +1,26 @@
-const COLORS: Record<string, string> = {
-  draft: "#6b7280",
-  quoted: "#2563eb",
-  approved: "#7c3aed",
-  paid: "#0891b2",
-  in_progress: "#d97706",
-  delivered: "#0d9488",
-  accepted: "#16a34a",
-  needs_revision: "#dc2626",
-  rejected: "#b91c1c",
-};
+import { STATUS_STYLES } from "@/lib/theme";
+import type { StageStatus } from "@/domain/stage-machine";
 
-export function StatusBadge({ status }: { status: string }) {
+/** Status pill — soft tint bg + dark text + solid dot (status by text AND dot, WCAG AA). */
+export function StatusBadge({ status }: { status: StageStatus | string }) {
+  const s = STATUS_STYLES[status as StageStatus] ?? STATUS_STYLES.draft;
   return (
     <span
       style={{
-        background: COLORS[status] ?? "#6b7280",
-        color: "#fff",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "4px 11px 4px 9px",
         borderRadius: 999,
-        padding: "2px 10px",
-        fontSize: 12,
-        textTransform: "capitalize",
+        background: s.bg,
+        color: s.text,
+        fontWeight: 600,
+        fontSize: 12.5,
         whiteSpace: "nowrap",
       }}
     >
-      {status.replace(/_/g, " ")}
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: s.dot, flex: "none" }} />
+      {s.label}
     </span>
   );
 }

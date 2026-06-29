@@ -264,6 +264,8 @@ export function availableActions(
 export type StageDetail = {
   stage: Stage;
   resource: StageResource;
+  organizationName: string;
+  people: { accountOwner: string | null; leadEngineer: string | null };
   lineItems: (typeof schema.stageLineItems.$inferSelect)[];
   audit: { action: string; createdAt: Date; actorName: string; from?: string; to?: string }[];
   actions: StageAction[];
@@ -307,7 +309,27 @@ export async function getStageDetail(ctx: AuthContext, stageId: string): Promise
     };
   });
 
-  return { stage, resource, lineItems, audit, actions: availableActions(ctx, stage, resource) };
+  const peopleIds = [resource.accountOwnerUserId, resource.projectLeadUserId].filter(Boolean) as string[];
+  const peopleRows = peopleIds.length
+    ? await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, peopleIds))
+    : [];
+  const pName = new Map(peopleRows.map((u) => [u.id, u.name]));
+  const orgRow = await db.query.organizations.findFirst({
+    where: eq(schema.organizations.id, stage.organizationId),
+  });
+
+  return {
+    stage,
+    resource,
+    organizationName: orgRow?.name ?? "—",
+    people: {
+      accountOwner: resource.accountOwnerUserId ? pName.get(resource.accountOwnerUserId) ?? null : null,
+      leadEngineer: resource.projectLeadUserId ? pName.get(resource.projectLeadUserId) ?? null : null,
+    },
+    lineItems,
+    audit,
+    actions: availableActions(ctx, stage, resource),
+  };
 }
 
 /** Create a draft stage with itemized line items. Owner/admin only. */
