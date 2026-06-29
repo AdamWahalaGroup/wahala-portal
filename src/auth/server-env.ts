@@ -32,3 +32,13 @@ export function adminApprovalThresholdCents(): number {
   const n = Number(vars().ADMIN_APPROVAL_THRESHOLD_CENTS);
   return Number.isFinite(n) && n > 0 ? n : 500_000;
 }
+
+/** Google OAuth client id (var ok — not secret) for SSO. */
+export function googleClientId(): string {
+  return vars().GOOGLE_CLIENT_ID ?? "";
+}
+
+/** Google OAuth client secret (set via `wrangler secret put`). */
+export function googleClientSecret(): string {
+  return vars().GOOGLE_CLIENT_SECRET ?? "";
+}

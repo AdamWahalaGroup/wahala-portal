@@ -14,3 +14,8 @@ DEV_AUTH=true
 EMAIL_FROM=login@wahala-services.com
 # Quote total (cents) above which a Wahala admin must co-sign quotes.
 ADMIN_APPROVAL_THRESHOLD_CENTS=500000
+
+# Google SSO (OAuth) — from Google Cloud Console (Web application client).
+# Client id can be a var; set the SECRET in prod via `wrangler secret put GOOGLE_CLIENT_SECRET`.
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxx
