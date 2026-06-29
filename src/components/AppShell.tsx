@@ -3,10 +3,11 @@ import { Brand } from "@/components/Brand";
 import { Avatar } from "@/components/People";
 
 const NAV = [
-  { key: "home", label: "Home", href: "/dashboard" as string | null },
-  { key: "projects", label: "Projects", href: "/dashboard" as string | null },
-  { key: "files", label: "Files", href: null },
-  { key: "messages", label: "Messages", href: null },
+  { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false },
+  { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true },
+  { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false },
+  { key: "files", label: "Files", href: null, staffOnly: false },
+  { key: "messages", label: "Messages", href: null, staffOnly: false },
 ] as const;
 
 type NavKey = (typeof NAV)[number]["key"];
@@ -51,7 +52,7 @@ export function AppShell({
         </div>
 
         <nav style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 2 }}>
-          {NAV.map((item) => {
+          {NAV.filter((item) => !item.staffOnly || user.isStaff).map((item) => {
             const isActive = item.key === active;
             const inner = (
               <span

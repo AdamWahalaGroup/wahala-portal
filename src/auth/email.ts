@@ -35,3 +35,18 @@ export async function sendMagicLinkEmail(to: string, url: string): Promise<void>
 <p style="color:#666;font-size:13px">This link expires in 15 minutes and can be used once. If you didn't request it, you can ignore this email.</p>`,
   });
 }
+
+/** Invitation email — a magic link that accepts the invite and signs the client in. */
+export async function sendInviteEmail(to: string, url: string, orgName: string): Promise<void> {
+  const { env } = getCloudflareContext();
+  const email = env.EMAIL as unknown as EmailSendable;
+  await email.send({
+    to,
+    from: { email: emailFrom(), name: "Wahala Portal" },
+    subject: "You're invited to Wahala Portal",
+    text: `You've been invited to the ${orgName} client portal on Wahala Portal.\n\nAccept your invitation and sign in:\n${url}\n\nThis link expires in 15 minutes. If you weren't expecting this, you can ignore it.`,
+    html: `<p>You've been invited to the <strong>${orgName}</strong> client portal on <strong>Wahala Portal</strong>.</p>
+<p><a href="${url}">Accept your invitation &amp; sign in</a></p>
+<p style="color:#666;font-size:13px">This link expires in 15 minutes. If you weren't expecting this, you can ignore it.</p>`,
+  });
+}

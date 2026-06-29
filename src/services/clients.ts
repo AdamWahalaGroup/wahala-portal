@@ -1,0 +1,144 @@
+/**
+ * Client onboarding — Wahala admins onboard a prospect (org + primary contact),
+ * then invite them. The contact starts "invited" and flips to "active" (= Accepted)
+ * on first sign-in. Clients never self-signup.
+ */
+import { and, eq, inArray } from "drizzle-orm";
+import { getDb, schema } from "@/db";
+import type { AuthContext } from "@/auth/context";
+import { StageError } from "@/domain/stage-machine";
+import { buildAudit } from "@/services/audit";
+import { securityLog } from "@/lib/security-log";
+import { createMagicToken } from "@/auth/magic-link";
+import { sendInviteEmail } from "@/auth/email";
+import { isDevAuth } from "@/auth/server-env";
+
+export type ClientListItem = {
+  org: { id: string; name: string; status: string; intakeNotes: string | null; createdAt: Date };
+  contact: { name: string; email: string; status: "invited" | "active" | "disabled" } | null;
+};
+
+/** Client orgs the caller may see, each with its primary contact + invite status. */
+export async function listClients(ctx: AuthContext): Promise<ClientListItem[]> {
+  const db = getDb();
+  const scope = ctx.accessScope;
+
+  let orgs: (typeof schema.organizations.$inferSelect)[];
+  if (scope.kind === "all") {
+    orgs = await db.select().from(schema.organizations);
+  } else if (scope.orgIds.length === 0) {
+    return [];
+  } else {
+    orgs = await db.select().from(schema.organizations).where(inArray(schema.organizations.id, scope.orgIds));
+  }
+  if (orgs.length === 0) return [];
+
+  const orgIds = orgs.map((o) => o.id);
+  const clientUsers = await db
+    .select({
+      organizationId: schema.users.organizationId,
+      name: schema.users.name,
+      email: schema.users.email,
+      status: schema.users.status,
+      role: schema.users.role,
+    })
+    .from(schema.users)
+    .where(and(eq(schema.users.userType, "client"), inArray(schema.users.organizationId, orgIds)));
+
+  const byOrg = new Map<string, typeof clientUsers>();
+  for (const u of clientUsers) {
+    if (!u.organizationId) continue;
+    const arr = byOrg.get(u.organizationId) ?? [];
+    arr.push(u);
+    byOrg.set(u.organizationId, arr);
+  }
+
+  return orgs
+    .map((o) => {
+      const users = byOrg.get(o.id) ?? [];
+      const contact = users.find((u) => u.role === "client_admin") ?? users[0] ?? null;
+      return {
+        org: { id: o.id, name: o.name, status: o.status, intakeNotes: o.intakeNotes, createdAt: o.createdAt },
+        contact: contact ? { name: contact.name, email: contact.email, status: contact.status } : null,
+      };
+    })
+    .sort((a, b) => +new Date(b.org.createdAt) - +new Date(a.org.createdAt));
+}
+
+/**
+ * Onboard a prospect: create the org + primary client contact (invited), set the
+ * onboarding admin as Account Owner, and send/return the invite link. Admin only.
+ */
+export async function onboardClient(
+  ctx: AuthContext,
+  input: { organizationName: string; contactName: string; contactEmail: string; intakeNotes?: string },
+  origin: string,
+): Promise<{ organizationId: string; userId: string; inviteLink?: string }> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "onboard_client", reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can onboard a client.");
+  }
+
+  const organizationName = input.organizationName?.trim();
+  const contactName = input.contactName?.trim();
+  const contactEmail = input.contactEmail?.trim().toLowerCase();
+  if (!organizationName || !contactName || !contactEmail || !contactEmail.includes("@")) {
+    throw new StageError("VALIDATION", "Company, contact name, and a valid contact email are required.");
+  }
+
+  const db = getDb();
+  const existing = await db.query.users.findFirst({ where: eq(schema.users.email, contactEmail) });
+  if (existing) throw new StageError("VALIDATION", "A user with that email already exists.");
+
+  const organizationId = crypto.randomUUID();
+  const userId = crypto.randomUUID();
+  const now = new Date();
+
+  await db.batch([
+    db.insert(schema.organizations).values({
+      id: organizationId,
+      name: organizationName,
+      status: "prospect",
+      intakeNotes: input.intakeNotes?.trim() || null,
+      accountOwnerUserId: ctx.user.id, // onboarding admin becomes the Account Owner
+      ownerAssignedAt: now,
+      ownerAcceptedAt: now,
+    }),
+    db.insert(schema.users).values({
+      id: userId,
+      organizationId,
+      userType: "client",
+      role: "client_admin",
+      name: contactName,
+      email: contactEmail,
+      status: "invited",
+    }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId,
+        actorUserId: ctx.user.id,
+        action: "client.onboarded",
+        entityType: "organization",
+        entityId: organizationId,
+        metadata: { organizationName, contactEmail },
+      }),
+    ),
+  ]);
+
+  // Invite = a magic link the client clicks to accept + sign in.
+  const token = await createMagicToken({ userId, email: contactEmail });
+  const url = new URL(`/api/auth/verify?token=${token}`, origin).toString();
+  let inviteLink: string | undefined;
+  if (isDevAuth()) {
+    inviteLink = url;
+    console.log(`[invite] ${contactEmail}: ${url}`);
+  } else {
+    try {
+      await sendInviteEmail(contactEmail, url, organizationName);
+    } catch (err) {
+      console.error("[invite] email send failed:", err);
+    }
+  }
+
+  return { organizationId, userId, inviteLink };
+}

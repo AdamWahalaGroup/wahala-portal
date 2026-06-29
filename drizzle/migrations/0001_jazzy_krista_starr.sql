@@ -1,0 +1,1 @@
+ALTER TABLE `organizations` ADD `intake_notes` text;

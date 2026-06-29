@@ -57,6 +57,8 @@ export const organizations = sqliteTable("organizations", {
   status: text("status", { enum: ["prospect", "active", "archived"] })
     .notNull()
     .default("prospect"),
+  // Free-text intake captured at onboarding: what the prospect is looking for.
+  intakeNotes: text("intake_notes"),
   // dedicated Account Owner ("throat to choke") — must accept before work begins
   accountOwnerUserId: text("account_owner_user_id"),
   ownerAssignedAt: integer("owner_assigned_at", { mode: "timestamp" }),

@@ -1,0 +1,97 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "9px 11px",
+  fontSize: 14,
+  border: "1px solid var(--border)",
+  borderRadius: 9,
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+};
+
+/** Onboard a prospect + send an invite. POSTs to /api/clients (admin only). */
+export function OnboardClientForm() {
+  const router = useRouter();
+  const [org, setOrg] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    setInviteLink(null);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          organizationName: org.trim(),
+          contactName: name.trim(),
+          contactEmail: email.trim(),
+          intakeNotes: notes.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; inviteLink?: string };
+      if (!res.ok) {
+        setError(data.message ?? `Failed (${res.status}).`);
+        return;
+      }
+      setDone(`Invited ${email.trim()} to ${org.trim()}.`);
+      setInviteLink(data.inviteLink ?? null);
+      setOrg("");
+      setName("");
+      setEmail("");
+      setNotes("");
+      router.refresh();
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} style={{ display: "grid", gap: 10, maxWidth: 480 }}>
+      <input style={input} placeholder="Company / client name" value={org} onChange={(e) => setOrg(e.target.value)} required />
+      <div style={{ display: "flex", gap: 10 }}>
+        <input style={input} placeholder="Primary contact name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input style={input} type="email" placeholder="Contact email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <textarea
+        style={{ ...input, minHeight: 74 }}
+        placeholder="What are they looking for? (intake notes)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+      />
+      <div>
+        <button
+          type="submit"
+          disabled={busy}
+          style={{ border: "none", borderRadius: 9, padding: "10px 16px", fontSize: 14, fontWeight: 600, background: "var(--ink)", color: "var(--white)", cursor: busy ? "default" : "pointer" }}
+        >
+          {busy ? "Inviting…" : "Invite client"}
+        </button>
+      </div>
+      {error && <p style={{ color: "#b00020", fontSize: 13.5, margin: 0 }}>{error}</p>}
+      {done && <p style={{ color: "#0a7d28", fontSize: 13.5, margin: 0 }}>{done}</p>}
+      {inviteLink && (
+        <p style={{ fontSize: 13, margin: 0 }}>
+          <span className="kicker">dev invite link</span>
+          <br />
+          <a href={inviteLink}>{inviteLink}</a>
+        </p>
+      )}
+    </form>
+  );
+}
