@@ -1,0 +1,228 @@
+/**
+ * Tasks — the delivery layer. Wahala (admin / project lead) adds tasks to a stage
+ * and assigns them; engineers update status; a task assigned to the client surfaces
+ * as their "on you" item. Clients are READ-ONLY and never see internal-flagged tasks.
+ *
+ * Visibility is enforced here (and is the first screen to exercise the rule):
+ * a client read only ever returns client_visible tasks.
+ */
+import { and, eq, inArray } from "drizzle-orm";
+import { getDb, schema } from "@/db";
+import type { AuthContext } from "@/auth/context";
+import { canAccessProject } from "@/auth/access";
+import { StageError } from "@/domain/stage-machine";
+import { buildAudit } from "@/services/audit";
+import { securityLog } from "@/lib/security-log";
+
+export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+export const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done", "cancelled"];
+
+export type TaskView = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  visibility: "client_visible" | "internal";
+  assignee: { name: string; type: "wahala" | "client" | "ai" } | null;
+};
+
+export type AssignablePerson = { id: string; name: string; type: "wahala" | "client" };
+
+/** Load a stage + its project, tenant/project-scoped (throws NOT_FOUND out of scope). */
+async function loadStageProject(ctx: AuthContext, stageId: string) {
+  const db = getDb();
+  const stage = await db.query.stages.findFirst({
+    where: eq(schema.stages.id, stageId),
+    with: { project: true },
+  });
+  if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
+  if (!canAccessProject(ctx.accessScope, { id: stage.projectId, organizationId: stage.organizationId })) {
+    securityLog({
+      actorUserId: ctx.user.id,
+      role: ctx.user.role,
+      action: "load_stage_tasks",
+      resource: `stage:${stageId}`,
+      reason: "out_of_scope",
+    });
+    throw new StageError("NOT_FOUND", "Stage not found.");
+  }
+  return stage;
+}
+
+/** Admin, or the project's lead engineer, may add/assign tasks. */
+function canManageTasks(ctx: AuthContext, leadEngineerUserId: string | null | undefined): boolean {
+  return ctx.isAdmin || (!!leadEngineerUserId && ctx.user.id === leadEngineerUserId);
+}
+
+/** Tasks for a stage — visibility-scoped (clients never see internal tasks). */
+export async function listTasksForStage(ctx: AuthContext, stageId: string): Promise<TaskView[]> {
+  await loadStageProject(ctx, stageId);
+  const db = getDb();
+
+  const conds = [eq(schema.tasks.stageId, stageId)];
+  if (!ctx.canSeeInternal) conds.push(eq(schema.tasks.visibility, "client_visible"));
+  const rows = await db.select().from(schema.tasks).where(and(...conds)).orderBy(schema.tasks.createdAt);
+  if (rows.length === 0) return [];
+
+  const taskIds = rows.map((r) => r.id);
+  const assignments = await db
+    .select()
+    .from(schema.taskAssignments)
+    .where(inArray(schema.taskAssignments.taskId, taskIds));
+  const assigneeUserIds = [...new Set(assignments.map((a) => a.assigneeUserId).filter(Boolean))] as string[];
+  const users = assigneeUserIds.length
+    ? await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, assigneeUserIds))
+    : [];
+  const nameById = new Map(users.map((u) => [u.id, u.name]));
+
+  const firstByTask = new Map<string, (typeof assignments)[number]>();
+  for (const a of assignments) if (!firstByTask.has(a.taskId)) firstByTask.set(a.taskId, a);
+
+  return rows.map((r) => {
+    const a = firstByTask.get(r.id);
+    const assignee = a
+      ? {
+          name: a.assigneeUserId ? nameById.get(a.assigneeUserId) ?? "—" : a.assigneeType === "ai" ? "AI" : "—",
+          type: a.assigneeType,
+        }
+      : null;
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      status: r.status as TaskStatus,
+      visibility: r.visibility as "client_visible" | "internal",
+      assignee,
+    };
+  });
+}
+
+/** People a staff member can assign a stage's task to: the roster + client contacts. */
+export async function assignableForStage(ctx: AuthContext, stageId: string): Promise<AssignablePerson[]> {
+  const stage = await loadStageProject(ctx, stageId);
+  if (!ctx.isStaff) return [];
+  const db = getDb();
+
+  const members = await db
+    .select({ userId: schema.projectMembers.userId })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.projectId, stage.projectId));
+  const wahalaIds = new Set<string>(members.map((m) => m.userId));
+  if (stage.project?.leadEngineerUserId) wahalaIds.add(stage.project.leadEngineerUserId);
+  wahalaIds.add(ctx.user.id);
+
+  const wahala = wahalaIds.size
+    ? await db
+        .select({ id: schema.users.id, name: schema.users.name, userType: schema.users.userType })
+        .from(schema.users)
+        .where(inArray(schema.users.id, [...wahalaIds]))
+    : [];
+  const clients = await db
+    .select({ id: schema.users.id, name: schema.users.name })
+    .from(schema.users)
+    .where(and(eq(schema.users.organizationId, stage.organizationId), eq(schema.users.userType, "client")));
+
+  return [
+    ...wahala.filter((u) => u.userType === "wahala").map((u) => ({ id: u.id, name: u.name, type: "wahala" as const })),
+    ...clients.map((u) => ({ id: u.id, name: u.name, type: "client" as const })),
+  ];
+}
+
+/** Create a task on a stage (admin / project lead only). */
+export async function createTask(
+  ctx: AuthContext,
+  input: { stageId: string; title: string; description?: string; visibility?: string; assigneeUserId?: string },
+): Promise<void> {
+  const stage = await loadStageProject(ctx, input.stageId);
+  if (!canManageTasks(ctx, stage.project?.leadEngineerUserId)) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "create_task", resource: `stage:${input.stageId}`, reason: "not_admin_or_lead" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or the project's lead can add tasks.");
+  }
+  const title = input.title?.trim();
+  if (!title) throw new StageError("VALIDATION", "Task title is required.");
+  const visibility = input.visibility === "internal" ? "internal" : "client_visible";
+
+  const db = getDb();
+  const taskId = crypto.randomUUID();
+  const stmts: unknown[] = [
+    db.insert(schema.tasks).values({
+      id: taskId,
+      organizationId: stage.organizationId,
+      projectId: stage.projectId,
+      stageId: input.stageId,
+      title,
+      description: input.description?.trim() || null,
+      status: "todo",
+      visibility,
+      createdByUserId: ctx.user.id,
+    }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: stage.organizationId,
+        actorUserId: ctx.user.id,
+        action: "task.created",
+        entityType: "task",
+        entityId: taskId,
+        metadata: { title, visibility },
+      }),
+    ),
+  ];
+
+  if (input.assigneeUserId) {
+    const u = await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeUserId) });
+    if (u && (u.organizationId === stage.organizationId || u.userType === "wahala")) {
+      stmts.push(
+        db.insert(schema.taskAssignments).values({
+          taskId,
+          assigneeUserId: u.id,
+          assigneeType: u.userType === "client" ? "client" : "wahala",
+        }),
+      );
+    }
+  }
+
+  await db.batch(stmts as unknown as Parameters<typeof db.batch>[0]);
+}
+
+/** Update a task's status (admin, project lead, or the assignee — staff only). */
+export async function updateTaskStatus(ctx: AuthContext, taskId: string, status: string): Promise<void> {
+  if (!TASK_STATUSES.includes(status as TaskStatus)) {
+    throw new StageError("VALIDATION", "Unknown task status.");
+  }
+  const db = getDb();
+  const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId), with: { project: true } });
+  if (!task) throw new StageError("NOT_FOUND", "Task not found.");
+  if (!canAccessProject(ctx.accessScope, { id: task.projectId, organizationId: task.organizationId })) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "task_status", resource: `task:${taskId}`, reason: "out_of_scope" });
+    throw new StageError("NOT_FOUND", "Task not found.");
+  }
+
+  const isLead = task.project?.leadEngineerUserId === ctx.user.id;
+  let isAssignee = false;
+  if (ctx.isStaff && !ctx.isAdmin && !isLead) {
+    const a = await db
+      .select({ id: schema.taskAssignments.id })
+      .from(schema.taskAssignments)
+      .where(and(eq(schema.taskAssignments.taskId, taskId), eq(schema.taskAssignments.assigneeUserId, ctx.user.id)))
+      .limit(1);
+    isAssignee = a.length > 0;
+  }
+  if (!ctx.isStaff || !(ctx.isAdmin || isLead || isAssignee)) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "task_status", resource: `task:${taskId}`, reason: "not_permitted" });
+    throw new StageError("FORBIDDEN", "You can't change this task's status.");
+  }
+
+  await db.batch([
+    db.update(schema.tasks).set({ status: status as TaskStatus, updatedAt: new Date() }).where(eq(schema.tasks.id, taskId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: task.organizationId,
+        actorUserId: ctx.user.id,
+        action: "task.status",
+        entityType: "task",
+        entityId: taskId,
+        metadata: { status },
+      }),
+    ),
+  ]);
+}

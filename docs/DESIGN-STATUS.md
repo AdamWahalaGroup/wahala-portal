@@ -12,7 +12,7 @@
 
 **Legend:** ✅ built · 🟡 partial · ⬜ not built · 🔼 new/changed vs the original handoff
 
-_Last updated: after the SSO + client-onboarding work (commit `f9bfddb`)._
+_Last updated: after the Tasks (delivery) screen._
 
 ---
 
@@ -28,7 +28,7 @@ _Last updated: after the SSO + client-onboarding work (commit `f9bfddb`)._
 | 06 | Quote / scope builder | 🟡 | (inline on project) | Only a basic create-stage form (name, amount, line items) exists — **not** the designed reorderable LineItemEditor with the over-threshold co-sign banner. |
 | 07 | Acceptance (mobile) | 🟡 | (on stage detail) | The accept action + ConfirmDialog exist on the stage screen; the **dedicated mobile acceptance screen** (phone frame, checklist) is not built. |
 | 08 | Payment hand-off | ⬜ | — | Pending Stripe. The pay-gate logic exists; no checkout/return UI. |
-| 09 | Tasks (delivery) | ⬜ | — | Scoped reader exists; no Tasks screen yet. |
+| 09 | Tasks (delivery) | ✅ | (on stage detail) | Built as a section on the stage screen: table (Task / Assignee / Status / Visibility), staff add-task + inline status controls, clients read-only; **internal tasks hidden from clients**. |
 | 10 | Files / assets | ⬜ | — | R2 is bound; no upload/list UI. |
 | 11 | Messages / comms | ⬜ | — | Not built. |
 | 12 | Client account hub | ⬜ | — | Not built (the Clients list below is the closest staff-side piece). |

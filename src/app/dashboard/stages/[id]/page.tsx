@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getStageDetail } from "@/services/stages";
+import { listTasksForStage, assignableForStage } from "@/services/tasks";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -16,6 +17,7 @@ import { StageActions } from "@/components/StageActions";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { WaitingOn } from "@/components/WaitingOn";
 import { PeopleCard } from "@/components/People";
+import { TasksClient } from "@/components/TasksClient";
 import { waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,12 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
     throw e;
   });
   const { stage, people, lineItems, audit, actions } = detail;
+
+  const [tasks, assignable] = await Promise.all([
+    listTasksForStage(ctx, id),
+    ctx.isStaff ? assignableForStage(ctx, id) : Promise.resolve([]),
+  ]);
+  const canManageTasks = ctx.isAdmin || detail.resource.projectLeadUserId === ctx.user.id;
 
   const paid = PAID_OR_BEYOND.has(stage.status);
   const party = waitingParty(stage.status);
@@ -176,6 +184,14 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                 <span style={{ color: "var(--ink)" }}>⊘</span> Internal tasks &amp; recordings on this stage are hidden from the client.
               </div>
             )}
+          </section>
+
+          {/* Tasks */}
+          <section style={{ marginTop: 28 }}>
+            <div className="kicker" style={{ marginBottom: 12 }}>
+              Tasks ({tasks.length})
+            </div>
+            <TasksClient tasks={tasks} assignable={assignable} stageId={stage.id} canManage={canManageTasks} />
           </section>
         </div>
 
