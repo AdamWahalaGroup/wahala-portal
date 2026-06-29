@@ -45,6 +45,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
     ctx.isStaff &&
     stage.status === "draft" &&
     (ctx.isAdmin || (ctx.user.role === "account_owner" && ctx.user.id === detail.resource.accountOwnerUserId));
+  const canAcceptScreen = !ctx.isStaff && stage.status === "delivered";
 
   const paid = PAID_OR_BEYOND.has(stage.status);
   const party = waitingParty(stage.status);
@@ -237,7 +238,26 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                 Edit quote
               </Link>
             )}
-            <StageActions stageId={stage.id} actions={actions} />
+            {canAcceptScreen ? (
+              <Link
+                href={`/dashboard/stages/${stage.id}/accept`}
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  background: "#16a34a",
+                  color: "var(--white)",
+                  borderRadius: 9,
+                  padding: "11px 16px",
+                  fontSize: 14.5,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                Review &amp; accept
+              </Link>
+            ) : (
+              <StageActions stageId={stage.id} actions={actions} />
+            )}
             <p style={{ margin: "12px 0 0", fontSize: 12, color: "var(--muted)" }}>
               Only actions your role allows in this state are shown.
             </p>

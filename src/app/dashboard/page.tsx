@@ -95,7 +95,7 @@ export default async function Dashboard() {
                     <StatusBadge status={s.status} />
                     <Money cents={s.totalAmountCents} style={{ fontWeight: 700, fontSize: 15 }} />
                     <Link
-                      href={`/dashboard/stages/${s.id}`}
+                      href={!ctx.isStaff && s.status === "delivered" ? `/dashboard/stages/${s.id}/accept` : `/dashboard/stages/${s.id}`}
                       style={{
                         background: "var(--ink)",
                         color: "var(--white)",

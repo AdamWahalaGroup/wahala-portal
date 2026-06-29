@@ -128,7 +128,7 @@ export async function applyStageAction(
   ctx: AuthContext,
   stageId: string,
   action: StageAction,
-  extra: { stripeRef?: string } = {},
+  extra: { stripeRef?: string; note?: string } = {},
 ): Promise<Stage> {
   const db = getDb();
   const { stage, resource } = await loadStageContext(ctx, stageId);
@@ -176,7 +176,7 @@ export async function applyStageAction(
     action: `stage.${action}`,
     entityType: "stage",
     entityId: stage.id,
-    metadata: { from, to, totalAmountCents: stage.totalAmountCents },
+    metadata: { from, to, totalAmountCents: stage.totalAmountCents, ...(extra.note?.trim() ? { note: extra.note.trim() } : {}) },
   });
 
   return { ...stage, ...set } as Stage;

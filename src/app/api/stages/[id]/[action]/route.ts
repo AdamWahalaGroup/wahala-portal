@@ -25,9 +25,10 @@ export async function POST(
       throw new ApiError(400, "validation", `Unknown stage action "${action}".`);
     }
 
-    const body = await readJson<{ stripeRef?: string }>(req);
+    const body = await readJson<{ stripeRef?: string; note?: string }>(req);
     const stage = await applyStageAction(ctx, id, normalized as StageAction, {
       stripeRef: body.stripeRef,
+      note: body.note,
     });
     return NextResponse.json({ stage });
   } catch (e) {

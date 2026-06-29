@@ -7,7 +7,7 @@ const NAV = [
   { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false },
   { key: "files", label: "Files", href: null, staffOnly: false },
-  { key: "messages", label: "Messages", href: null, staffOnly: false },
+  { key: "messages", label: "Messages", href: "/dashboard/messages" as string | null, staffOnly: false },
 ] as const;
 
 type NavKey = (typeof NAV)[number]["key"];
