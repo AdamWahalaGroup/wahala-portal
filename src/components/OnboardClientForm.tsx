@@ -23,14 +23,12 @@ export function OnboardClientForm({ staff, currentUserId }: { staff: { id: strin
   const [agent, setAgent] = useState(currentUserId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setDone(null);
     setInviteLink(null);
     try {
       const res = await fetch("/api/clients", {
@@ -49,7 +47,8 @@ export function OnboardClientForm({ staff, currentUserId }: { staff: { id: strin
         setError(data.message ?? `Failed (${res.status}).`);
         return;
       }
-      setDone(`Invited ${email.trim()} to ${org.trim()}.`);
+      // No inline success text — the new client row that appears in the list below
+      // (with its Invited pill) is the confirmation. We just clear the form + refresh.
       setInviteLink(data.inviteLink ?? null);
       setOrg("");
       setName("");
@@ -96,7 +95,6 @@ export function OnboardClientForm({ staff, currentUserId }: { staff: { id: strin
         </button>
       </div>
       {error && <p style={{ color: "#b00020", fontSize: 13.5, margin: 0 }}>{error}</p>}
-      {done && <p style={{ color: "#0a7d28", fontSize: 13.5, margin: 0 }}>{done}</p>}
       {inviteLink && (
         <p style={{ fontSize: 13, margin: 0 }}>
           <span className="kicker">dev invite link</span>
