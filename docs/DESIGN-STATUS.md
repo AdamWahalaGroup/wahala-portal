@@ -12,7 +12,7 @@
 
 **Legend:** ✅ built · 🟡 partial · ⬜ not built · 🔼 new/changed vs the original handoff
 
-_Last updated: after the Clients cascade-delete capability._
+_Last updated: after the Files (R2) screen._
 
 ---
 
@@ -29,7 +29,7 @@ _Last updated: after the Clients cascade-delete capability._
 | 07 | Acceptance (mobile) | 🟡 | (on stage detail) | The accept action + ConfirmDialog exist on the stage screen; the **dedicated mobile acceptance screen** (phone frame, checklist) is not built. |
 | 08 | Payment hand-off | ⬜ | — | Pending Stripe. The pay-gate logic exists; no checkout/return UI. |
 | 09 | Tasks (delivery) | ✅ | (on stage detail) | Built as a section on the stage screen: table (Task / Assignee / Status / Visibility), staff add-task + inline status controls, clients read-only; **internal tasks hidden from clients**. |
-| 10 | Files / assets | ⬜ | — | R2 is bound; no upload/list UI. |
+| 10 | Files / assets | ✅ | (on project detail) | Built as a section on the project screen: staff upload to **R2** (visibility choice), type tile + size·uploader·date meta + VisibilityMarker, download, staff delete. **Internal files hidden from clients — enforced on the list AND on direct download** (no URL bypass). |
 | 11 | Messages / comms | ⬜ | — | Not built. |
 | 12 | Client account hub | ⬜ | — | Not built (the Clients list below is the closest staff-side piece). |
 | 13 | Build note | — | — | Reference only; the server/island split is followed. |

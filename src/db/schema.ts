@@ -243,6 +243,7 @@ export const assets = sqliteTable(
     fileName: text("file_name").notNull(),
     r2Key: text("r2_key").notNull(),
     mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
     type: text("type", {
       enum: ["document", "image", "recording", "transcript", "summary", "other"],
     })

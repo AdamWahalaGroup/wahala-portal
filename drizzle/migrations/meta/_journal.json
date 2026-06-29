@@ -15,6 +15,13 @@
       "when": 1782751178961,
       "tag": "0001_jazzy_krista_starr",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782755756592,
+      "tag": "0002_thin_kylun",
+      "breakpoints": true
     }
   ]
 }

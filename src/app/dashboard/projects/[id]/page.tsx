@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
 import { getProjectDetail } from "@/services/projects";
+import { listFilesForProject } from "@/services/files";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -13,6 +14,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Money } from "@/components/Money";
 import { PeopleCard, Avatar } from "@/components/People";
 import { CreateStageForm } from "@/components/CreateStageForm";
+import { FilesClient } from "@/components/FilesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     throw e;
   });
   const sdb = scopedDb(ctx);
-  const [stages, accountOwner] = await Promise.all([sdb.listStages(id), sdb.accountOwner()]);
+  const [stages, accountOwner, files] = await Promise.all([
+    sdb.listStages(id),
+    sdb.accountOwner(),
+    listFilesForProject(ctx, id),
+  ]);
 
   const { project } = detail;
   const activeStageId = stages.find((s) => s.status !== "accepted" && s.status !== "rejected")?.id;
@@ -130,6 +136,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             })}
           </div>
         )}
+      </section>
+
+      {/* Files */}
+      <section style={{ marginTop: 30 }}>
+        <div className="kicker" style={{ marginBottom: 12 }}>
+          Files ({files.length})
+        </div>
+        <FilesClient files={files} projectId={project.id} canManage={ctx.isStaff} />
       </section>
 
       {canCreateStage && (
