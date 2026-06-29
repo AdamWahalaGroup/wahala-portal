@@ -11,6 +11,7 @@ const input: React.CSSProperties = {
   borderRadius: 9,
   boxSizing: "border-box",
   fontFamily: "inherit",
+  background: "var(--white)", // stand out against the grey onboard panel
 };
 
 /** Onboard a prospect + send an invite. POSTs to /api/clients (admin only). */
@@ -63,12 +64,10 @@ export function OnboardClientForm({ staff, currentUserId }: { staff: { id: strin
   }
 
   return (
-    <form onSubmit={submit} style={{ display: "grid", gap: 10, maxWidth: 480 }}>
+    <form onSubmit={submit} style={{ display: "grid", gap: 10 }}>
       <input style={input} placeholder="Company / client name" value={org} onChange={(e) => setOrg(e.target.value)} required />
-      <div style={{ display: "flex", gap: 10 }}>
-        <input style={input} placeholder="Primary contact name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <input style={input} type="email" placeholder="Contact email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </div>
+      <input style={input} placeholder="Primary contact name" value={name} onChange={(e) => setName(e.target.value)} required />
+      <input style={input} type="email" placeholder="Contact email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <textarea
         style={{ ...input, minHeight: 74 }}
         placeholder="What are they looking for? (intake notes)"
