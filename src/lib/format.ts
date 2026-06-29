@@ -15,4 +15,6 @@ export const ACTION_LABELS: Record<string, string> = {
   accept: "Accept",
   request_revision: "Request revision",
   redraft: "Re-draft",
+  // History-only (not a button): logged when an owner asks an admin to co-sign.
+  cosign_requested: "requested admin co-sign",
 };

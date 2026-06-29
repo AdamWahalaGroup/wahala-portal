@@ -340,7 +340,7 @@ export async function createStage(
     name: string;
     scopeDescription?: string;
     totalAmountCents: number;
-    lineItems?: { description: string; estimateNote?: string }[];
+    lineItems?: { description: string; estimateNote?: string; amountCents?: number }[];
   },
 ): Promise<Stage> {
   const db = getDb();
@@ -412,6 +412,7 @@ export async function createStage(
         stageId,
         description: li.description,
         estimateNote: li.estimateNote ?? null,
+        amountCents: li.amountCents ?? 0,
         sortOrder: i,
       }),
     );
@@ -421,4 +422,91 @@ export async function createStage(
 
   const created = await db.query.stages.findFirst({ where: eq(schema.stages.id, stageId) });
   return created!;
+}
+
+/** Quote authoring is restricted to a Wahala admin or the org's Account Owner. */
+function assertCanQuote(ctx: AuthContext, resource: StageResource, action: string): void {
+  const isOwner = ctx.user.id === resource.accountOwnerUserId;
+  if (ctx.isAdmin || (ctx.user.role === "account_owner" && isOwner)) return;
+  securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_admin_or_owner" });
+  throw new StageError("FORBIDDEN", "Only a Wahala admin or the Account Owner can edit this quote.");
+}
+
+/**
+ * Save the itemized quote on a DRAFT stage (the frame-06 builder). Replaces the
+ * stage's line items wholesale (the editor sends the full set each save) and
+ * recomputes the stage total = sum of line-item amounts, plus the over-threshold
+ * admin-co-sign flag. Draft-only; admin or Account Owner. Does NOT send the quote.
+ */
+export async function saveQuoteDraft(
+  ctx: AuthContext,
+  stageId: string,
+  input: {
+    name: string;
+    scopeDescription?: string;
+    lineItems: { description: string; estimateNote?: string; amountCents: number }[];
+  },
+): Promise<Stage> {
+  const db = getDb();
+  const { stage, resource } = await loadStageContext(ctx, stageId);
+  if (stage.status !== "draft") throw new StageError("INVALID_STATE", "Only a draft quote can be edited.");
+  assertCanQuote(ctx, resource, "save_quote");
+
+  const name = input.name?.trim();
+  if (!name) throw new StageError("VALIDATION", "A stage name is required.");
+
+  const items = (input.lineItems ?? [])
+    .map((li, i) => ({
+      description: li.description?.trim() ?? "",
+      estimateNote: li.estimateNote?.trim() || null,
+      amountCents: Math.max(0, Math.round(Number(li.amountCents) || 0)),
+      sortOrder: i,
+    }))
+    .filter((li) => li.description.length > 0);
+
+  const totalAmountCents = items.reduce((sum, li) => sum + li.amountCents, 0);
+  const requiresApproval = requiresAdminApproval(totalAmountCents, adminApprovalThresholdCents());
+
+  // Replace line items + update the stage atomically. CAS on `draft` so a concurrent
+  // send/transition can't be clobbered by a stale save.
+  const stmts: unknown[] = [
+    db.delete(schema.stageLineItems).where(eq(schema.stageLineItems.stageId, stageId)),
+    db
+      .update(schema.stages)
+      .set({
+        name,
+        scopeDescription: input.scopeDescription?.trim() || null,
+        totalAmountCents,
+        requiresAdminApproval: requiresApproval,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(schema.stages.id, stageId), eq(schema.stages.status, "draft"))),
+  ];
+  items.forEach((li) => {
+    stmts.push(db.insert(schema.stageLineItems).values({ stageId, ...li }));
+  });
+  await db.batch(stmts as unknown as Parameters<typeof db.batch>[0]);
+
+  const updated = await db.query.stages.findFirst({ where: eq(schema.stages.id, stageId) });
+  return updated!;
+}
+
+/**
+ * Record that the Account Owner has asked a Wahala admin to co-sign an over-threshold
+ * quote (they can't send it themselves). It's a logged request — it shows in the
+ * stage History, where any admin opening the stage can review and send.
+ */
+export async function requestQuoteCosign(ctx: AuthContext, stageId: string): Promise<void> {
+  const db = getDb();
+  const { stage, resource } = await loadStageContext(ctx, stageId);
+  if (stage.status !== "draft") throw new StageError("INVALID_STATE", "Only a draft quote needs co-sign.");
+  assertCanQuote(ctx, resource, "request_cosign");
+  await recordTransition(db, ctx, {
+    organizationId: stage.organizationId,
+    actorUserId: ctx.user.id,
+    action: "stage.cosign_requested",
+    entityType: "stage",
+    entityId: stageId,
+    metadata: { totalAmountCents: stage.totalAmountCents },
+  });
 }

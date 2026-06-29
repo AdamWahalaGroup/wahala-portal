@@ -41,6 +41,10 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
     ctx.isStaff ? assignableForStage(ctx, id) : Promise.resolve([]),
   ]);
   const canManageTasks = ctx.isAdmin || detail.resource.projectLeadUserId === ctx.user.id;
+  const canQuote =
+    ctx.isStaff &&
+    stage.status === "draft" &&
+    (ctx.isAdmin || (ctx.user.role === "account_owner" && ctx.user.id === detail.resource.accountOwnerUserId));
 
   const paid = PAID_OR_BEYOND.has(stage.status);
   const party = waitingParty(stage.status);
@@ -157,12 +161,15 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                       >
                         {checked ? "✓" : ""}
                       </span>
-                      <span style={{ fontSize: 14.5 }}>
+                      <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>
                         {li.description}
                         {li.estimateNote && (
                           <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>
                         )}
                       </span>
+                      {li.amountCents > 0 && (
+                        <Money cents={li.amountCents} style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }} />
+                      )}
                     </li>
                   );
                 })}
@@ -211,6 +218,25 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
             <div className="kicker" style={{ marginBottom: 12 }}>
               Your next action
             </div>
+            {canQuote && (
+              <Link
+                href={`/dashboard/stages/${stage.id}/quote`}
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  background: "var(--ink)",
+                  color: "var(--white)",
+                  borderRadius: 9,
+                  padding: "10px 16px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  marginBottom: 9,
+                }}
+              >
+                Edit quote
+              </Link>
+            )}
             <StageActions stageId={stage.id} actions={actions} />
             <p style={{ margin: "12px 0 0", fontSize: 12, color: "var(--muted)" }}>
               Only actions your role allows in this state are shown.

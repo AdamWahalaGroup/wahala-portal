@@ -13,7 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Money } from "@/components/Money";
 import { PeopleCard, Avatar } from "@/components/People";
-import { CreateStageForm } from "@/components/CreateStageForm";
+import { NewStageButton } from "@/components/NewStageButton";
 import { FilesClient } from "@/components/FilesClient";
 
 export const dynamic = "force-dynamic";
@@ -92,11 +92,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {/* Stages */}
       <section style={{ marginTop: 30 }}>
-        <div className="kicker" style={{ marginBottom: 12 }}>
-          Stages ({stages.length})
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+          <div className="kicker">Stages ({stages.length})</div>
+          {canCreateStage && <NewStageButton projectId={project.id} />}
         </div>
         {stages.length === 0 ? (
-          <p style={{ color: "var(--muted)" }}>No stages yet.</p>
+          <p style={{ color: "var(--muted)" }}>No stages yet. Add one to build its quote.</p>
         ) : (
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             {stages.map((s, i) => {
@@ -146,14 +147,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <FilesClient files={files} projectId={project.id} canManage={ctx.isStaff} />
       </section>
 
-      {canCreateStage && (
-        <section style={{ marginTop: 24, background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 18 }}>
-          <div className="kicker" style={{ marginBottom: 10 }}>
-            New stage
-          </div>
-          <CreateStageForm projectId={project.id} />
-        </section>
-      )}
     </AppShell>
   );
 }

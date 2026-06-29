@@ -163,6 +163,8 @@ export const stageLineItems = sqliteTable(
     stageId: text("stage_id").notNull().references(() => stages.id),
     description: text("description").notNull(),
     estimateNote: text("estimate_note"),
+    // Per-item price; the stage total is the sum of its line items' amounts.
+    amountCents: integer("amount_cents").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
     accepted: integer("accepted", { mode: "boolean" }).notNull().default(false), // per-item acceptance (future)
     createdAt: createdAt(),

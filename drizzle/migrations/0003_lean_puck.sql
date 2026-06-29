@@ -1,0 +1,1 @@
+ALTER TABLE `stage_line_items` ADD `amount_cents` integer DEFAULT 0 NOT NULL;
