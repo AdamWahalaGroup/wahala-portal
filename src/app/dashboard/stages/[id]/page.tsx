@@ -18,6 +18,7 @@ import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { WaitingOn } from "@/components/WaitingOn";
 import { PeopleCard } from "@/components/People";
 import { TasksClient } from "@/components/TasksClient";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
       orgName={detail.organizationName}
       accountOwner={ctx.isStaff ? null : people.accountOwner ? { name: people.accountOwner } : null}
     >
+      <AutoRefresh enabled={!["accepted", "rejected"].includes(stage.status)} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
           <Link href="/dashboard">Projects</Link> /{" "}

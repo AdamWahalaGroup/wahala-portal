@@ -1,6 +1,7 @@
 /**
  * Clients (staff) — onboard prospects + see each client's invite status.
  */
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { listClients, listWahalaStaff } from "@/services/clients";
@@ -70,7 +71,7 @@ export default async function ClientsPage() {
                 key={c.org.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 220px 110px 40px",
+                  gridTemplateColumns: "1fr 200px 100px 36px 16px",
                   gap: 14,
                   alignItems: "center",
                   padding: "14px 16px",
@@ -78,7 +79,12 @@ export default async function ClientsPage() {
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{c.org.name}</div>
+                  <Link
+                    href={`/dashboard/clients/${c.org.id}`}
+                    style={{ fontWeight: 700, fontSize: 15, color: "inherit", textDecoration: "none" }}
+                  >
+                    {c.org.name}
+                  </Link>
                   {c.org.intakeNotes && (
                     <div
                       className="kicker"
@@ -106,6 +112,13 @@ export default async function ClientsPage() {
                 <div style={{ justifySelf: "end" }}>
                   {ctx.isAdmin && <DeleteClientButton orgId={c.org.id} name={c.org.name} />}
                 </div>
+                <Link
+                  href={`/dashboard/clients/${c.org.id}`}
+                  style={{ justifySelf: "end", color: "var(--muted-line)", textDecoration: "none", fontSize: 16 }}
+                  aria-label={`Open ${c.org.name}`}
+                >
+                  ›
+                </Link>
               </div>
             ))}
           </div>

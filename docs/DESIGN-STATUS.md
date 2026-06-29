@@ -31,7 +31,7 @@ _Last updated: after the client welcome (frame 15) + assign-agent-at-invite._
 | 09 | Tasks (delivery) | ✅ | (on stage detail) | Built as a section on the stage screen: table (Task / Assignee / Status / Visibility), staff add-task + inline status controls, clients read-only; **internal tasks hidden from clients**. |
 | 10 | Files / assets | ✅ | (on project detail) | Built as a section on the project screen: staff upload to **R2** (visibility choice), type tile + size·uploader·date meta + VisibilityMarker, download, staff delete. **Internal files hidden from clients — enforced on the list AND on direct download** (no URL bypass). |
 | 11 | Messages / comms | ⬜ | — | Not built. |
-| 12 | Client account hub | ⬜ | — | Not built (the Clients list below is the closest staff-side piece). |
+| 12 | Client account hub | ✅ | `/dashboard/clients/[orgId]` | Built. Staff-only org home: header (logo tile, "Client since · N projects · N stages", account-owner card), tab row (Overview / Work history / People; Files + Messages shown "soon"), a **work-history timeline** (status-colored nodes, project · stage, mono "Label · date · $amount") + side cards (**Lifetime totals**: paid / accepted / open pipeline, **People**). Reached by clicking a row in the Clients list. |
 | 13 | Build note | — | — | Reference only; the server/island split is followed. |
 
 ---
@@ -51,7 +51,7 @@ _Last updated: after the client welcome (frame 15) + assign-agent-at-invite._
 - **Status colors, type, spacing** were implemented to the handoff tokens (see `src/lib/theme.ts` + `src/app/globals.css`).
 - **ConfirmDialog** is currently inline inside the ActionBar island (`src/components/StageActions.tsx`) rather than a standalone component — same behavior, used for accept / reject / request-revision / mark-paid.
 - **Sidebar nav** gained a staff-only **Clients** entry; Files/Messages remain present-but-"soon".
-- The client **account hub (frame 12)** is still aspirational; the new **Clients** list partially covers the "see your clients" need from the staff side.
+- **Live updates:** the Clients list, the stage detail screen, and the dashboard now **auto-refresh** (poll every ~8s, only while something is pending and the tab is visible) so cross-session changes — e.g. a client accepting an invite, or a stage transition by the other party — appear without a manual refresh. (Polling, not realtime push; true instant updates would need a Durable Object.)
 
 ---
 

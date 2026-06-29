@@ -12,6 +12,7 @@ import { WaitingOn } from "@/components/WaitingOn";
 import { Money } from "@/components/Money";
 import { CreateProjectForm } from "@/components/CreateProjectForm";
 import { ClientWelcome } from "@/components/ClientWelcome";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { onYouCta, waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function Dashboard() {
       orgName={org?.name ?? (ctx.isStaff ? "Wahala Group" : null)}
       accountOwner={accountOwner}
     >
+      <AutoRefresh enabled={onYou.length > 0 || isNewClient} />
       {isNewClient ? (
         <ClientWelcome firstName={firstName} agent={accountOwner} />
       ) : (
