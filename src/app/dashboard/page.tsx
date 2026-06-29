@@ -54,7 +54,7 @@ export default async function Dashboard() {
     >
       <AutoRefresh enabled={onYou.length > 0 || isNewClient} />
       {isNewClient ? (
-        <ClientWelcome firstName={firstName} agent={accountOwner} />
+        <ClientWelcome firstName={firstName} agent={accountOwner} orgId={ctx.organizationId} />
       ) : (
         <>
       <div className="kicker">{ctx.isStaff ? "Wahala staff" : org?.name ?? "Client"}</div>

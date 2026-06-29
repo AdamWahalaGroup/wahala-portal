@@ -2,6 +2,7 @@
  * Client welcome / empty state (design frame 15) — what a customer lands on right
  * after accepting their invite, before any project exists.
  */
+import Link from "next/link";
 import { Avatar } from "@/components/People";
 
 const OFFERINGS = [
@@ -14,13 +15,18 @@ const OFFERINGS = [
 export function ClientWelcome({
   firstName,
   agent,
+  orgId,
 }: {
   firstName: string;
   agent: { name: string; email: string } | null;
+  orgId: string | null;
 }) {
   const agentFirst = agent?.name.split(/\s+/)[0] ?? "your Wahala agent";
-  const mailto = (subject: string) =>
-    agent?.email ? `mailto:${agent.email}?subject=${encodeURIComponent(subject)}` : undefined;
+  // "Message {agent}" opens the in-app account thread (the durable client↔Wahala line),
+  // which exists before any project. Falls back to the Messages page if no org.
+  const messageHref = orgId
+    ? `/dashboard/messages?thread=${encodeURIComponent(`account:${orgId}`)}`
+    : "/dashboard/messages";
 
   return (
     <div>
@@ -77,12 +83,12 @@ export function ClientWelcome({
               {agentFirst} will reach out with next steps to scope your first project — or message them anytime.
             </p>
           </div>
-          <a
-            href={mailto("Hello from the Wahala portal") ?? "#"}
+          <Link
+            href={messageHref}
             style={{ background: "var(--ink)", color: "var(--white)", borderRadius: 9, padding: "9px 14px", fontSize: 13.5, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}
           >
             Message {agentFirst}
-          </a>
+          </Link>
         </section>
       )}
     </div>

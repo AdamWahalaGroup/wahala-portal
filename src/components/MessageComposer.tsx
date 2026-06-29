@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 /** Thread composer (design frame 11): input + optional "needs a reply" flag + Send. */
-export function MessageComposer({ projectId, isStaff }: { projectId: string; isStaff: boolean }) {
+export function MessageComposer({ threadKey, isStaff }: { threadKey: string; isStaff: boolean }) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [needsReply, setNeedsReply] = useState(false);
@@ -21,7 +21,7 @@ export function MessageComposer({ projectId, isStaff }: { projectId: string; isS
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          projectId,
+          threadKey,
           body: text,
           // Flag the ball as in the OTHER party's court when "needs a reply" is set.
           waitingOn: needsReply ? (isStaff ? "client" : "wahala") : "none",
