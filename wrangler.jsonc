@@ -20,7 +20,11 @@
     "ADMIN_APPROVAL_THRESHOLD_CENTS": "1000000",
     // Email domains whose Google SSO logins auto-become Wahala admins (the team).
     // Everyone else is invite-only. Comma-separated.
-    "STAFF_SSO_DOMAINS": "wahalagroup.com"
+    "STAFF_SSO_DOMAINS": "wahalagroup.com",
+    // "Draft a project with AI" — which LLM backend + model. Provider is a var so
+    // swapping (e.g. to anthropic) is config; the secret is OPENAI_API_KEY.
+    "AI_PROVIDER": "openai",
+    "AI_DRAFT_MODEL": "gpt-4o-mini"
   },
 
   // Serve the portal on a branded hostname. custom_domain makes Cloudflare create

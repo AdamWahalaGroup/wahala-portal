@@ -59,6 +59,9 @@ export const organizations = sqliteTable("organizations", {
     .default("prospect"),
   // Free-text intake captured at onboarding: what the prospect is looking for.
   intakeNotes: text("intake_notes"),
+  // Durable per-client markdown memory for AI features: grounds future drafts and is
+  // appended to as projects are drafted. Editable by staff on the account hub.
+  aiContextMd: text("ai_context_md"),
   // dedicated Account Owner ("throat to choke") — must accept before work begins
   accountOwnerUserId: text("account_owner_user_id"),
   ownerAssignedAt: integer("owner_assigned_at", { mode: "timestamp" }),
@@ -94,6 +97,9 @@ export const projects = sqliteTable(
     name: text("name").notNull(),
     description: text("description"),
     workType: text("work_type"), // free category; not assumed to be software
+    // AI draft's memory artifact for this project (## Read / ## Inferred / ## Assumptions
+    // / ## Open questions). Lets later lightweight AI calls skip re-reading the source docs.
+    aiContextMd: text("ai_context_md"),
     status: text("status", {
       enum: ["discovery", "active", "paused", "completed", "archived"],
     })

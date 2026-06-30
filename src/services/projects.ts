@@ -9,6 +9,8 @@ import { canAccessOrg, canAccessProject } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
+import { createStage } from "@/services/stages";
+import { accountKey, postMessage } from "@/services/messages";
 
 type Project = typeof schema.projects.$inferSelect;
 
@@ -125,4 +127,72 @@ export async function createProject(
 
   const created = await db.query.projects.findFirst({ where: eq(schema.projects.id, id) });
   return created!;
+}
+
+/**
+ * Persist an AI-drafted project: project row (+ ai_context_md) → N draft stages with
+ * epic-grouped deliverables (no prices) → optional first message on the account thread
+ * → append a dated section to the per-client AI memory. RBAC is enforced by the inner
+ * createProject/createStage calls.
+ */
+export async function createDraftedProject(
+  ctx: AuthContext,
+  input: {
+    organizationId: string;
+    name: string;
+    description?: string;
+    workType?: string;
+    aiContextMd?: string;
+    stages: { name: string; scopeDescription?: string; deliverables: { epic: string; description: string }[] }[];
+    clientMessage?: string;
+    postToThread?: boolean;
+  },
+): Promise<{ projectId: string }> {
+  const project = await createProject(ctx, {
+    organizationId: input.organizationId,
+    name: input.name,
+    description: input.description,
+    workType: input.workType,
+  });
+
+  const db = getDb();
+  if (input.aiContextMd?.trim()) {
+    await db
+      .update(schema.projects)
+      .set({ aiContextMd: input.aiContextMd.trim() })
+      .where(eq(schema.projects.id, project.id));
+  }
+
+  for (const s of input.stages) {
+    await createStage(ctx, {
+      projectId: project.id,
+      name: s.name,
+      scopeDescription: s.scopeDescription,
+      totalAmountCents: 0,
+      lineItems: s.deliverables.map((d) => ({ description: d.description, groupLabel: d.epic })),
+    });
+  }
+
+  // Append (or seed) the per-client AI memory with a dated section for this project.
+  const orgRow = await db.query.organizations.findFirst({
+    where: eq(schema.organizations.id, input.organizationId),
+  });
+  const appended = appendClientMemo(orgRow?.aiContextMd ?? null, input.name, input.description);
+  await db
+    .update(schema.organizations)
+    .set({ aiContextMd: appended })
+    .where(eq(schema.organizations.id, input.organizationId));
+
+  if (input.postToThread && input.clientMessage?.trim()) {
+    await postMessage(ctx, { threadKey: accountKey(input.organizationId), body: input.clientMessage.trim() });
+  }
+
+  return { projectId: project.id };
+}
+
+function appendClientMemo(existing: string | null, projectName: string, description: string | undefined): string {
+  const iso = new Date().toISOString().slice(0, 10);
+  const block = `## ${projectName} — drafted ${iso}\n${(description ?? "").trim()}`.trim();
+  const prior = existing?.trim();
+  return prior ? `${prior}\n\n${block}\n` : `# Client memory\n\n${block}\n`;
 }

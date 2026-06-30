@@ -44,6 +44,25 @@ export function googleClientSecret(): string {
 }
 
 /**
+ * AI draft provider — which LLM backend powers "Draft a project with AI". Kept as a
+ * var so switching providers (e.g. openai → anthropic) is config, not a code change.
+ * The provider-specific call lives behind AiDraftProvider in src/services/ai.
+ */
+export function aiProvider(): string {
+  return (vars().AI_PROVIDER ?? "openai").trim().toLowerCase();
+}
+
+/** Lightweight model used for the single project-draft pass (vision + structured output). */
+export function aiDraftModel(): string {
+  return vars().AI_DRAFT_MODEL?.trim() || "gpt-4o-mini";
+}
+
+/** OpenAI API key (set via `wrangler secret put OPENAI_API_KEY`). Empty if unconfigured. */
+export function openaiApiKey(): string {
+  return vars().OPENAI_API_KEY ?? "";
+}
+
+/**
  * Email domains whose Google SSO logins are auto-provisioned as Wahala staff
  * admins (the internal team). Everyone else is invite-only. Comma-separated;
  * defaults to wahalagroup.com.

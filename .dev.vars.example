@@ -21,3 +21,10 @@ GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
 # Google SSO logins from these domains auto-become Wahala admins (comma-separated).
 STAFF_SSO_DOMAINS=wahalagroup.com
+
+# AI — "Draft a project with AI" (design frames 18–20). Provider lives behind an
+# AiDraftProvider interface (src/services/ai/), so swapping later is a config change.
+# Set the secret with: npx wrangler secret put OPENAI_API_KEY
+OPENAI_API_KEY=sk-xxx
+AI_PROVIDER=openai
+AI_DRAFT_MODEL=gpt-4o-mini
