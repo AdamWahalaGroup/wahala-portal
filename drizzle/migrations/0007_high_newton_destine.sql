@@ -1,0 +1,1 @@
+ALTER TABLE `deliverable_notes` ADD `visibility` text DEFAULT 'client_visible' NOT NULL;

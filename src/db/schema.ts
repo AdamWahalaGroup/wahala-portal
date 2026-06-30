@@ -187,6 +187,8 @@ export const deliverableNotes = sqliteTable(
     stageLineItemId: text("stage_line_item_id").notNull().references(() => stageLineItems.id),
     authorUserId: text("author_user_id").references(() => users.id),
     body: text("body").notNull(),
+    // Staff choose per note: client_visible (the customer sees it) or internal (staff only).
+    visibility: text("visibility", { enum: VISIBILITY }).notNull().default("client_visible"),
     createdAt: createdAt(),
   },
   (t) => [index("deliverable_notes_item_idx").on(t.stageLineItemId)],

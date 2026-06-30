@@ -843,31 +843,46 @@
 <div style="position:absolute; left:0; top:9100px; width:1320px;">
   <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
     <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">11 — Messages / comms</span>
-    <span class="mono" style="font-size:12px; color:#c4c8cf;">Account thread + per-project threads · attributed · viewer-aware waiting-on</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">Projects nested under the company · pick a project to scope, pick the company for an account-wide thread</span>
   </div>
   <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); overflow:hidden; display:grid; grid-template-columns:300px 1fr; min-height:540px;">
     <!-- thread list -->
-    <div style="border-right:1px solid #ededf1; padding:18px 0;">
+    <div style="border-right:1px solid #ededf1; padding:18px 0; display:flex; flex-direction:column;">
       <div style="padding:0 18px 12px;"><h2 style="margin:0; font-size:17px; font-weight:800; letter-spacing:-.02em;">Threads</h2></div>
-      <div style="padding:13px 18px; border-left:3px solid transparent;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Meridian Co.</span><span style="font-size:9.5px; font-weight:700; color:#2536c4; background:#eef0fe; padding:1px 6px; border-radius:5px; flex-shrink:0;">Account</span></span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa; flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
-        <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ada: Welcome to your portal 👋</div>
+      <div style="display:flex; gap:6px; padding:0 18px 14px;">
+        <span style="font-size:11px; font-weight:700; color:#16181d; background:#f1f2f4; padding:3px 9px; border-radius:6px;">All</span>
+        <span style="font-size:11px; font-weight:600; color:#9aa0aa; padding:3px 9px; border-radius:6px;">Waiting on you</span>
+        <span style="font-size:11px; font-weight:600; color:#9aa0aa; padding:3px 9px; border-radius:6px;">Unread</span>
       </div>
-      <div style="padding:13px 18px; border-left:3px solid #16181d; background:#fbfbfc;">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:700;">Build &amp; integrate</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#b45309;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>You</span></div>
-        <div class="mono" style="font-size:10px; color:#c4c8cf; margin-top:2px;">Mobile App · Stage 2</div>
+
+      <!-- ░░ COMPANY GROUP : Meridian Co. (expanded) ░░ -->
+      <!-- company / account level — selecting this opens a thread that spans every project -->
+      <div style="padding:11px 18px; border-left:3px solid transparent; cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="font-size:9px; color:#b4b9c1;">▾</span><span style="width:18px;height:18px;border-radius:5px;background:#16181d;color:#fff;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">M</span><span style="font-size:13.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Meridian Co.</span><span style="font-size:9.5px; font-weight:700; color:#2536c4; background:#eef0fe; padding:1px 6px; border-radius:5px; flex-shrink:0;">Account</span></span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa; flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
+        <div style="font-size:11.5px; color:#9aa0aa; margin-top:3px; padding-left:25px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Account-wide thread · spans 2 projects</div>
+      </div>
+      <!-- projects nested under the company -->
+      <div style="padding:12px 18px 12px 34px; border-left:3px solid #16181d; background:#fbfbfc; cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="width:6px;height:6px;border-radius:2px;background:#2b3ee6;flex-shrink:0;"></span><span style="font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Mobile App</span><span style="font-size:9px; font-weight:700; color:#5a6069; background:#f1f2f4; padding:1px 6px; border-radius:5px; flex-shrink:0;">Project</span></span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#b45309; flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#ea8a0d;"></span>You</span></div>
+        <div class="mono" style="font-size:9.5px; color:#c4c8cf; margin-top:2px;">Build &amp; integrate · Stage 2</div>
         <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ada: Can you confirm the IdP tenant…</div>
       </div>
-      <div style="padding:13px 18px; border-left:3px solid transparent;">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:600;">Discovery &amp; scope</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
-        <div class="mono" style="font-size:10px; color:#c4c8cf; margin-top:2px;">Website Refresh · Stage 1</div>
+      <div style="padding:12px 18px 12px 34px; border-left:3px solid transparent; cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="width:6px;height:6px;border-radius:2px;background:#16a34a;flex-shrink:0;"></span><span style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Website Refresh</span><span style="font-size:9px; font-weight:700; color:#5a6069; background:#f1f2f4; padding:1px 6px; border-radius:5px; flex-shrink:0;">Project</span></span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa; flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
+        <div class="mono" style="font-size:9.5px; color:#c4c8cf; margin-top:2px;">Discovery &amp; scope · Stage 1</div>
         <div style="font-size:12px; color:#9aa0aa; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Joel: Delivered for your acceptance.</div>
+      </div>
+
+      <!-- ░░ COMPANY GROUP : Northwind Ltd (collapsed) ░░ -->
+      <div style="padding:11px 18px; border-left:3px solid transparent; cursor:pointer; border-top:1px solid #f1f2f4; margin-top:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="font-size:9px; color:#b4b9c1;">▸</span><span style="width:18px;height:18px;border-radius:5px;background:#767b85;color:#fff;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">N</span><span style="font-size:13.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Northwind Ltd</span><span style="font-size:9.5px; font-weight:700; color:#2536c4; background:#eef0fe; padding:1px 6px; border-radius:5px; flex-shrink:0;">Account</span></span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:#9aa0aa; flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#9aa0aa;"></span>Wahala</span></div>
+        <div style="font-size:11.5px; color:#9aa0aa; margin-top:3px; padding-left:25px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Account-wide thread · spans 1 project</div>
       </div>
     </div>
     <!-- thread view -->
     <div style="display:flex; flex-direction:column;">
       <div style="padding:16px 24px; border-bottom:1px solid #ededf1; display:flex; align-items:center; justify-content:space-between;">
-        <div><div style="font-size:15px; font-weight:700;">Build &amp; integrate</div><div class="mono" style="font-size:11px; color:#9aa0aa;">Meridian Co. · Mobile App · Stage 2</div></div>
+        <div><div style="display:flex; align-items:center; gap:7px; font-size:15px; font-weight:700;"><span style="color:#767b85;">Meridian Co.</span><span style="color:#c4c8cf; font-weight:400;">›</span><span>Mobile App</span></div><div class="mono" style="font-size:11px; color:#9aa0aa; margin-top:2px;">Project thread · 2 stages · this view is scoped to Mobile App</div></div>
         <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:600; background:#fff7ed; color:#b45309; border:1px solid #fadcb4;"><span style="width:7px;height:7px;border-radius:50%;background:#ea8a0d;"></span>Waiting on you</span>
       </div>
       <div style="flex:1; padding:22px 24px; display:flex; flex-direction:column; gap:18px;">

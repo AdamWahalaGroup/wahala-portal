@@ -269,18 +269,40 @@ Reference only — the design-system panel (brand lockup, color, type, component
   `AI-meeting-digest.md`) get the `⊘ Internal only` marker + tinted row.
 
 ### 11 — Messages / comms (`/dashboard/messages`)
-- **Purpose:** Threaded, attributed comms. **Two thread levels:** an **Account
-  thread** per client org (the durable client↔Wahala line, exists before any
-  project) + one thread per **project**.
-- **Layout:** 300px thread list — each row = waiting-on dot + title; **account
-  threads carry a small cobalt "Account" tag**; project threads show a mono
-  org/project sub-line; last-message snippet. Thread view: header (title + Account
-  tag / org-project meta) with a **viewer-aware WaitingOn pill** ("Waiting on you"
-  amber vs "Waiting on Wahala / the client" grey, phrased for the viewer); message
-  bubbles — Wahala left/`#F4F5F7`, client right/`#EEF0FE`, each with avatar + name +
-  mono "{org} · {date time}"; a **composer** (textarea + Ink Send, a "Needs a reply
-  from {them}" checkbox that flags the thread, ⌘/Ctrl-Enter to send).
-- **Islands:** thread view + composer.
+- **Purpose:** Threaded, attributed comms organized as a **company → project
+  hierarchy**. The thread list is a tree: each **client org (company / "Account"
+  level)** is a top-level group, with its **projects nested and indented
+  underneath**. Selecting a level sets the scope:
+  - **Company / Account level** → opens an **account-wide thread that spans every
+    project** for that org (the durable client↔Wahala line, exists before any
+    project).
+  - **Project level** → scopes the view to **just that project's messages**.
+  - Staff (admin) see **multiple companies** in the list (each its own collapsible
+    group). A client sees **only their own company** at top with their projects
+    nested under it — same tree, single root.
+- **Layout:** 300px thread list. Company rows: disclosure caret (`▾`/`▸`), a small
+  ink avatar tile (initial), bold org name, cobalt **"Account"** tag (`#2536C4` on
+  `#EEF0FE`), right-aligned waiting-on chip; sub-line "Account-wide thread · spans N
+  projects" (indented under the name). Project rows are **indented (`padding-left`
+  ~34px) with a `border-left:3px` selection rail** (`#16181D` + `#FBFBFC` bg when
+  active): small square status dot, project name, grey **"Project"** tag (`#5A6069`
+  on `#F1F2F4`), waiting-on chip; mono "{stage} · Stage N" sub-line; last-message
+  snippet. A filter-chip row sits under the "Threads" heading: **All / Waiting on
+  you / Unread** (active chip = `#16181D` on `#F1F2F4`). Company groups are
+  separated by a hairline top border.
+- **Thread view:** header shows a **breadcrumb reflecting the selected level** —
+  e.g. greyed `Meridian Co. ›` + bold `Mobile App` for a project, or just the org
+  name for the account level — with a mono scope caption ("Project thread · N
+  stages · this view is scoped to {project}" vs an account-wide caption). A
+  **viewer-aware WaitingOn pill** ("Waiting on you" amber vs "Waiting on Wahala /
+  the client" grey, phrased for the viewer). Message bubbles — Wahala
+  left/`#F4F5F7`, client right/`#EEF0FE`, each with avatar + name + mono "{org} ·
+  {date time}". A **composer** (textarea + Ink Send, a "Needs a reply from {them}"
+  checkbox that flags the thread, ⌘/Ctrl-Enter to send).
+- **Behavior:** account-level (company) threads aggregate / are filterable across
+  all of that org's projects; project-level threads filter to a single project.
+  The same filter chips apply at whatever level is selected.
+- **Islands:** thread tree (expand/collapse + selection) + thread view + composer.
 
 ### 12 — Client account hub
 - **Purpose:** The durable home for one organization.

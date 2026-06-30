@@ -14,7 +14,7 @@ import { StageError } from "@/domain/stage-machine";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 
-export type DeliverableNote = { id: string; author: string; body: string; createdAt: Date };
+export type DeliverableNote = { id: string; author: string; body: string; createdAt: Date; visibility: "client_visible" | "internal" };
 export type DeliverableView = {
   id: string;
   groupLabel: string | null;
@@ -41,7 +41,12 @@ export async function listDeliverablesForStage(ctx: AuthContext, stageId: string
   const notes = await db
     .select()
     .from(schema.deliverableNotes)
-    .where(inArray(schema.deliverableNotes.stageLineItemId, itemIds))
+    .where(
+      and(
+        inArray(schema.deliverableNotes.stageLineItemId, itemIds),
+        ctx.canSeeInternal ? undefined : eq(schema.deliverableNotes.visibility, "client_visible"), // clients never see internal notes
+      ),
+    )
     .orderBy(schema.deliverableNotes.createdAt);
 
   const authorIds = [...new Set(notes.map((n) => n.authorUserId).filter(Boolean))] as string[];
@@ -53,7 +58,7 @@ export async function listDeliverablesForStage(ctx: AuthContext, stageId: string
   const byItem = new Map<string, DeliverableNote[]>();
   for (const n of notes) {
     const arr = byItem.get(n.stageLineItemId) ?? [];
-    arr.push({ id: n.id, author: n.authorUserId ? nameById.get(n.authorUserId) ?? "—" : "—", body: n.body, createdAt: n.createdAt });
+    arr.push({ id: n.id, author: n.authorUserId ? nameById.get(n.authorUserId) ?? "—" : "—", body: n.body, createdAt: n.createdAt, visibility: n.visibility as "client_visible" | "internal" });
     byItem.set(n.stageLineItemId, arr);
   }
 
@@ -116,11 +121,34 @@ export async function setDeliverableCompleted(ctx: AuthContext, deliverableId: s
   await audit(stage.organizationId, ctx.user.id, completed ? "deliverable.completed" : "deliverable.reopened", deliverableId, { description: item.description });
 }
 
-/** Append a progress note to a deliverable (client-visible). */
-export async function addDeliverableNote(ctx: AuthContext, deliverableId: string, body: string): Promise<void> {
+/** Append a progress note to a deliverable, client-visible or internal. */
+export async function addDeliverableNote(ctx: AuthContext, deliverableId: string, body: string, visibility?: string): Promise<void> {
   const { stage } = await loadForManage(ctx, deliverableId);
   const b = body?.trim();
   if (!b) throw new StageError("VALIDATION", "A note can't be empty.");
-  await getDb().insert(schema.deliverableNotes).values({ stageLineItemId: deliverableId, authorUserId: ctx.user.id, body: b });
-  await audit(stage.organizationId, ctx.user.id, "deliverable.note", deliverableId, { note: b });
+  const vis = visibility === "internal" ? "internal" : "client_visible";
+  await getDb().insert(schema.deliverableNotes).values({ stageLineItemId: deliverableId, authorUserId: ctx.user.id, body: b, visibility: vis });
+  await audit(stage.organizationId, ctx.user.id, "deliverable.note", deliverableId, { note: b, visibility: vis });
+}
+
+/** Edit a note's body / visibility (assigned staff). */
+export async function editDeliverableNote(ctx: AuthContext, deliverableId: string, noteId: string, body: string, visibility?: string): Promise<void> {
+  await loadForManage(ctx, deliverableId);
+  const b = body?.trim();
+  if (!b) throw new StageError("VALIDATION", "A note can't be empty.");
+  const vis = visibility === "internal" ? "internal" : "client_visible";
+  const res = await getDb()
+    .update(schema.deliverableNotes)
+    .set({ body: b, visibility: vis })
+    .where(and(eq(schema.deliverableNotes.id, noteId), eq(schema.deliverableNotes.stageLineItemId, deliverableId)))
+    .returning({ id: schema.deliverableNotes.id });
+  if (res.length === 0) throw new StageError("NOT_FOUND", "Note not found.");
+}
+
+/** Delete a note (assigned staff). */
+export async function deleteDeliverableNote(ctx: AuthContext, deliverableId: string, noteId: string): Promise<void> {
+  await loadForManage(ctx, deliverableId);
+  await getDb()
+    .delete(schema.deliverableNotes)
+    .where(and(eq(schema.deliverableNotes.id, noteId), eq(schema.deliverableNotes.stageLineItemId, deliverableId)));
 }
