@@ -340,7 +340,7 @@ export async function createStage(
     name: string;
     scopeDescription?: string;
     totalAmountCents: number;
-    lineItems?: { description: string; estimateNote?: string; amountCents?: number }[];
+    lineItems?: { description: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
   },
 ): Promise<Stage> {
   const db = getDb();
@@ -410,6 +410,7 @@ export async function createStage(
     stmts.push(
       db.insert(schema.stageLineItems).values({
         stageId,
+        groupLabel: li.groupLabel?.trim() || null,
         description: li.description,
         estimateNote: li.estimateNote ?? null,
         amountCents: li.amountCents ?? 0,
@@ -434,9 +435,10 @@ function assertCanQuote(ctx: AuthContext, resource: StageResource, action: strin
 
 /**
  * Save the itemized quote on a DRAFT stage (the frame-06 builder). Replaces the
- * stage's line items wholesale (the editor sends the full set each save) and
- * recomputes the stage total = sum of line-item amounts, plus the over-threshold
- * admin-co-sign flag. Draft-only; admin or Account Owner. Does NOT send the quote.
+ * stage's deliverables (line items) wholesale (the editor sends the full set each
+ * save). The stage carries an AUTHOR-SET fixed price; per-item amounts are optional/
+ * illustrative and need not sum to it. Re-derives the over-threshold co-sign flag
+ * from the fixed price. Draft-only; admin or Account Owner. Does NOT send the quote.
  */
 export async function saveQuoteDraft(
   ctx: AuthContext,
@@ -444,7 +446,8 @@ export async function saveQuoteDraft(
   input: {
     name: string;
     scopeDescription?: string;
-    lineItems: { description: string; estimateNote?: string; amountCents: number }[];
+    totalAmountCents?: number;
+    lineItems: { description: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
   },
 ): Promise<Stage> {
   const db = getDb();
@@ -457,6 +460,7 @@ export async function saveQuoteDraft(
 
   const items = (input.lineItems ?? [])
     .map((li, i) => ({
+      groupLabel: li.groupLabel?.trim() || null,
       description: li.description?.trim() ?? "",
       estimateNote: li.estimateNote?.trim() || null,
       amountCents: Math.max(0, Math.round(Number(li.amountCents) || 0)),
@@ -464,7 +468,9 @@ export async function saveQuoteDraft(
     }))
     .filter((li) => li.description.length > 0);
 
-  const totalAmountCents = items.reduce((sum, li) => sum + li.amountCents, 0);
+  // Stage price is author-set (fixed); fall back to the item sum only if not provided.
+  const itemsSum = items.reduce((sum, li) => sum + li.amountCents, 0);
+  const totalAmountCents = input.totalAmountCents != null ? Math.max(0, Math.round(input.totalAmountCents)) : itemsSum;
   const requiresApproval = requiresAdminApproval(totalAmountCents, adminApprovalThresholdCents());
 
   // Replace line items + update the stage atomically. CAS on `draft` so a concurrent

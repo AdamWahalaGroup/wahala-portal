@@ -47,6 +47,7 @@ export default async function AcceptPage({ params }: { params: Promise<{ id: str
           description: li.description,
           estimateNote: li.estimateNote,
           amountCents: li.amountCents,
+          groupLabel: li.groupLabel,
         }))}
         totalCents={stage.totalAmountCents}
         canAccept={actions.includes("accept")}

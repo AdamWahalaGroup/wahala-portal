@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents } from "@/lib/format";
 
-type Row = { id: string; description: string; estimateNote: string; amount: string };
+type Row = { id: string; group: string; description: string; estimateNote: string; amount: string };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -18,7 +18,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 let seq = 0;
-const newRow = (): Row => ({ id: `r${seq++}`, description: "", estimateNote: "", amount: "" });
+const newRow = (group = ""): Row => ({ id: `r${seq++}`, group, description: "", estimateNote: "", amount: "" });
 
 /** Dollars string ("2,500" / "2500.50") → integer cents. NaN/blank → 0. */
 function toCents(s: string): number {
@@ -33,6 +33,7 @@ export function QuoteBuilder({
   initialName,
   initialScope,
   initialItems,
+  initialTotalCents,
   thresholdCents,
   isAdmin,
 }: {
@@ -40,17 +41,20 @@ export function QuoteBuilder({
   projectId: string;
   initialName: string;
   initialScope: string;
-  initialItems: { description: string; estimateNote: string | null; amountCents: number }[];
+  initialItems: { description: string; estimateNote: string | null; amountCents: number; groupLabel: string | null }[];
+  initialTotalCents: number;
   thresholdCents: number;
   isAdmin: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [scope, setScope] = useState(initialScope);
+  const [price, setPrice] = useState(initialTotalCents ? String(initialTotalCents / 100) : "");
   const [rows, setRows] = useState<Row[]>(
     initialItems.length
       ? initialItems.map((li) => ({
           id: `r${seq++}`,
+          group: li.groupLabel ?? "",
           description: li.description,
           estimateNote: li.estimateNote ?? "",
           amount: li.amountCents ? String(li.amountCents / 100) : "",
@@ -63,10 +67,13 @@ export function QuoteBuilder({
   const [saved, setSaved] = useState(false);
   const [cosignRequested, setCosignRequested] = useState(false);
 
-  const totalCents = useMemo(
+  // The stage price is author-set (the fixed chunk price). The item sum is just a hint.
+  const totalCents = toCents(price);
+  const itemsSum = useMemo(
     () => rows.reduce((sum, r) => sum + (r.description.trim() ? toCents(r.amount) : 0), 0),
     [rows],
   );
+  const nDeliverables = rows.filter((r) => r.description.trim()).length;
   const overThreshold = totalCents > thresholdCents;
   const canSend = !overThreshold || isAdmin;
 
@@ -74,8 +81,8 @@ export function QuoteBuilder({
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
     setSaved(false);
   }
-  function addRow() {
-    setRows((prev) => [...prev, newRow()]);
+  function addRow(group = "") {
+    setRows((prev) => [...prev, newRow(group)]);
     setSaved(false);
   }
   function removeRow(id: string) {
@@ -102,9 +109,15 @@ export function QuoteBuilder({
       body: JSON.stringify({
         name: name.trim(),
         scopeDescription: scope.trim(),
+        totalAmountCents: toCents(price),
         lineItems: rows
           .filter((r) => r.description.trim())
-          .map((r) => ({ description: r.description.trim(), estimateNote: r.estimateNote.trim(), amountCents: toCents(r.amount) })),
+          .map((r) => ({
+            groupLabel: r.group.trim(),
+            description: r.description.trim(),
+            estimateNote: r.estimateNote.trim(),
+            amountCents: toCents(r.amount),
+          })),
       }),
     });
     if (!res.ok) {
@@ -204,9 +217,13 @@ export function QuoteBuilder({
           />
         </label>
 
-        <div className="kicker" style={{ margin: "24px 0 10px" }}>
-          Line items
+        <div className="kicker" style={{ margin: "24px 0 4px" }}>
+          Deliverables
         </div>
+        <p style={{ margin: "0 0 10px", fontSize: 12.5, color: "var(--muted)" }}>
+          What this phase delivers. Tag each with an <strong>epic</strong> to group them; per-item amounts are optional
+          (the stage price is set on the right).
+        </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {rows.map((r, i) => (
             <div
@@ -215,8 +232,8 @@ export function QuoteBuilder({
               onDrop={() => moveTo(i)}
               style={{
                 display: "grid",
-                gridTemplateColumns: "20px 1fr 130px 28px",
-                alignItems: "center",
+                gridTemplateColumns: "20px 132px minmax(0,1fr) 110px 28px",
+                alignItems: "start",
                 gap: 8,
                 opacity: dragIdx === i ? 0.4 : 1,
               }}
@@ -226,10 +243,16 @@ export function QuoteBuilder({
                 onDragStart={() => setDragIdx(i)}
                 onDragEnd={() => setDragIdx(null)}
                 title="Drag to reorder"
-                style={{ cursor: "grab", color: "var(--muted-line)", fontSize: 16, textAlign: "center", userSelect: "none" }}
+                style={{ cursor: "grab", color: "var(--muted-line)", fontSize: 16, textAlign: "center", userSelect: "none", paddingTop: 9 }}
               >
                 ⠿
               </span>
+              <input
+                style={{ ...inputStyle, fontSize: 12.5, padding: "9px 9px" }}
+                placeholder="Epic (optional)"
+                value={r.group}
+                onChange={(e) => patchRow(r.id, "group", e.target.value)}
+              />
               <div>
                 <input
                   style={inputStyle}
@@ -255,8 +278,8 @@ export function QuoteBuilder({
               <button
                 type="button"
                 onClick={() => removeRow(r.id)}
-                aria-label="Remove line item"
-                style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
+                aria-label="Remove deliverable"
+                style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 16, lineHeight: 1, paddingTop: 9 }}
               >
                 ✕
               </button>
@@ -265,7 +288,7 @@ export function QuoteBuilder({
         </div>
         <button
           type="button"
-          onClick={addRow}
+          onClick={() => addRow(rows[rows.length - 1]?.group ?? "")}
           style={{
             marginTop: 10,
             width: "100%",
@@ -279,20 +302,31 @@ export function QuoteBuilder({
             cursor: "pointer",
           }}
         >
-          + Add line item
+          + Add deliverable
         </button>
       </div>
 
       {/* Summary rail */}
       <aside style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 24 }}>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 18, boxShadow: "var(--shadow-card)" }}>
-          <div className="kicker">Quote total</div>
-          <div className="tabular" style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4 }}>
-            {formatCents(totalCents)}
+          <div className="kicker">Stage price</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 4 }}>
+            <span className="tabular" style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)" }}>$</span>
+            <input
+              className="tabular"
+              inputMode="decimal"
+              placeholder="0"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setSaved(false);
+              }}
+              style={{ ...inputStyle, fontSize: 28, fontWeight: 800, letterSpacing: "-.02em", padding: "2px 4px", border: "1px solid transparent", background: "transparent" }}
+            />
           </div>
-          <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-            {rows.filter((r) => r.description.trim()).length} line item
-            {rows.filter((r) => r.description.trim()).length === 1 ? "" : "s"} · due in full before work begins
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
+            {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"}
+            {itemsSum > 0 ? ` · items add up to ${formatCents(itemsSum)}` : ""}
           </div>
         </div>
 

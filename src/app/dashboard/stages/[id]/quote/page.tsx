@@ -65,7 +65,9 @@ export default async function QuoteBuilderPage({ params }: { params: Promise<{ i
           description: li.description,
           estimateNote: li.estimateNote,
           amountCents: li.amountCents,
+          groupLabel: li.groupLabel,
         }))}
+        initialTotalCents={stage.totalAmountCents}
         thresholdCents={adminApprovalThresholdCents()}
         isAdmin={ctx.isAdmin}
       />

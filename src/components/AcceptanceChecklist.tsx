@@ -4,7 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents } from "@/lib/format";
 
-type Item = { id: string; description: string; estimateNote: string | null; amountCents: number };
+type Item = { id: string; description: string; estimateNote: string | null; amountCents: number; groupLabel: string | null };
+
+/** Group deliverables by epic label, preserving first-seen order. */
+function groupItems(items: Item[]): { label: string; items: Item[] }[] {
+  const groups: { label: string; items: Item[] }[] = [];
+  for (const li of items) {
+    const label = li.groupLabel ?? "";
+    let g = groups.find((x) => x.label === label);
+    if (!g) {
+      g = { label, items: [] };
+      groups.push(g);
+    }
+    g.items.push(li);
+  }
+  return groups;
+}
 
 /** Mobile acceptance (design frame 07): formally accept a delivered stage, or
  *  request a revision with a note. Both are logged via the stage action endpoints. */
@@ -78,41 +93,52 @@ export function AcceptanceChecklist({
         Review what was delivered against the scope you agreed to.
       </p>
 
-      {/* Checklist */}
-      <ul style={{ listStyle: "none", margin: "22px 0 0", padding: 0 }}>
-        {items.map((li) => (
-          <li
-            key={li.id}
-            style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--border-soft)" }}
-          >
-            <span
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 7,
-                flex: "none",
-                background: "#16a34a",
-                color: "var(--white)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-              }}
-            >
-              ✓
-            </span>
-            <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>
-              {li.description}
-              {li.estimateNote && <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>}
-            </span>
-            {li.amountCents > 0 && (
-              <span className="tabular" style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }}>
-                {formatCents(li.amountCents)}
-              </span>
+      {/* Checklist, grouped by epic */}
+      <div style={{ margin: "22px 0 0" }}>
+        {groupItems(items).map((g) => (
+          <div key={g.label || "_general"} style={{ marginBottom: g.label ? 12 : 0 }}>
+            {g.label && (
+              <div className="kicker" style={{ color: "var(--cobalt)", margin: "10px 0 2px" }}>
+                {g.label}
+              </div>
             )}
-          </li>
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {g.items.map((li) => (
+                <li
+                  key={li.id}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--border-soft)" }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 7,
+                      flex: "none",
+                      background: "#16a34a",
+                      color: "var(--white)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                    }}
+                  >
+                    ✓
+                  </span>
+                  <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>
+                    {li.description}
+                    {li.estimateNote && <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>}
+                  </span>
+                  {li.amountCents > 0 && (
+                    <span className="tabular" style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }}>
+                      {formatCents(li.amountCents)}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
 
       {/* Paid total */}
       <div

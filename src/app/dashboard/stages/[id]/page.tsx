@@ -25,6 +25,21 @@ export const dynamic = "force-dynamic";
 
 const PAID_OR_BEYOND = new Set(["paid", "in_progress", "delivered", "accepted"]);
 
+/** Group deliverables (line items) by their epic label, preserving first-seen order. */
+function groupDeliverables<T extends { groupLabel: string | null }>(items: T[]): { label: string; items: T[] }[] {
+  const groups: { label: string; items: T[] }[] = [];
+  for (const li of items) {
+    const label = li.groupLabel ?? "";
+    let g = groups.find((x) => x.label === label);
+    if (!g) {
+      g = { label, items: [] };
+      groups.push(g);
+    }
+    g.items.push(li);
+  }
+  return groups;
+}
+
 export default async function StagePage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
@@ -123,58 +138,67 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
             <p style={{ marginTop: 22, color: "var(--ink-soft)", fontSize: 14.5 }}>{stage.scopeDescription}</p>
           )}
 
-          {/* Line items = the acceptance checklist */}
+          {/* Deliverables = the acceptance checklist, grouped by epic */}
           <section style={{ marginTop: 22 }}>
             <div className="kicker" style={{ marginBottom: 10 }}>
-              Line items ({lineItems.length})
+              Deliverables ({lineItems.length})
             </div>
             {lineItems.length === 0 ? (
-              <p style={{ color: "var(--muted)", fontSize: 14 }}>No line items.</p>
+              <p style={{ color: "var(--muted)", fontSize: 14 }}>No deliverables yet.</p>
             ) : (
-              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                {lineItems.map((li) => {
-                  const checked = stage.status === "accepted";
-                  return (
-                    <li
-                      key={li.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "11px 0",
-                        borderBottom: "1px solid var(--border-soft)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 19,
-                          height: 19,
-                          borderRadius: 6,
-                          flex: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 12,
-                          background: checked ? "#16a34a" : "var(--white)",
-                          color: "var(--white)",
-                          border: checked ? "none" : "1.5px solid #d7d9df",
-                        }}
-                      >
-                        {checked ? "✓" : ""}
-                      </span>
-                      <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>
-                        {li.description}
-                        {li.estimateNote && (
-                          <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>
-                        )}
-                      </span>
-                      {li.amountCents > 0 && (
-                        <Money cents={li.amountCents} style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }} />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+              groupDeliverables(lineItems).map((g) => (
+                <div key={g.label || "_general"} style={{ marginBottom: g.label ? 14 : 0 }}>
+                  {g.label && (
+                    <div className="kicker" style={{ color: "var(--cobalt)", margin: "8px 0 2px" }}>
+                      {g.label}
+                    </div>
+                  )}
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                    {g.items.map((li) => {
+                      const checked = stage.status === "accepted";
+                      return (
+                        <li
+                          key={li.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            padding: "11px 0",
+                            borderBottom: "1px solid var(--border-soft)",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 19,
+                              height: 19,
+                              borderRadius: 6,
+                              flex: "none",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 12,
+                              background: checked ? "#16a34a" : "var(--white)",
+                              color: "var(--white)",
+                              border: checked ? "none" : "1.5px solid #d7d9df",
+                            }}
+                          >
+                            {checked ? "✓" : ""}
+                          </span>
+                          <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>
+                            {li.description}
+                            {li.estimateNote && (
+                              <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>
+                            )}
+                          </span>
+                          {li.amountCents > 0 && (
+                            <Money cents={li.amountCents} style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }} />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))
             )}
             {ctx.isStaff && (
               <div

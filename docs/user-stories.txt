@@ -1,0 +1,379 @@
+﻿Phase 1 User Stories
+Private Beta Foundation  ($65,000)
+Epic 1: Authentication & Identity
+Story 1.1 – User Registration
+As a new user, I need to create an account so I can securely access the Talden platform.
+Acceptance Criteria
+* User can register with name, email, and password.
+* Email must be unique.
+* Password must meet security requirements.
+* User receives a confirmation or verification flow if enabled.
+* User account is created in the identity system.
+* Failed registration attempts return clear validation messages.
+________________
+
+
+Story 1.2 – User Login
+As a registered user, I need to log in securely so I can access my workspace.
+Acceptance Criteria
+* User can log in with email and password.
+* Invalid credentials are rejected.
+* Successful login creates a valid session.
+* User is routed to the correct organization/workspace after login.
+* Login activity is logged.
+________________
+
+
+Story 1.3 – Password Reset
+As a user, I need to reset my password so I can regain access if I forget it.
+Acceptance Criteria
+* User can request a password reset by email.
+* Reset link/token expires after a configured period.
+* User can set a new password.
+* Old password no longer works after reset.
+* Password reset activity is logged.
+________________
+
+
+Story 1.4 – Session Management
+As a user, I need my session to be managed securely so my account remains protected.
+Acceptance Criteria
+* Sessions expire after a configured period.
+* User can manually log out.
+* Expired sessions require re-authentication.
+* Session tokens are securely stored.
+* Unauthorized users cannot access protected pages or APIs.
+________________
+
+
+Story 1.5 – Role-Based Access Control
+As an organization admin, I need users to have roles so access can be controlled by responsibility.
+Acceptance Criteria
+* System supports defined roles such as Owner, Admin, Member, and Viewer.
+* Permissions are enforced in the UI and API.
+* Users cannot access functionality outside their role.
+* Role changes take effect without requiring a code change.
+* Role changes are logged.
+________________
+
+
+Epic 2: Organization & Tenant Management
+Story 2.1 – Organization Creation
+As a platform user, I need an organization created for my company so my team can work in an isolated workspace.
+Acceptance Criteria
+* Organization can be created during onboarding or by an administrator.
+* Organization has a unique ID.
+* Organization has a name and basic metadata.
+* Organization data is isolated from other organizations.
+* Organization creation is logged.
+________________
+
+
+Story 2.2 – Workspace Isolation
+As a Talden customer, I need my organization’s data isolated so no other customer can access my matters, documents, prompts, or users.
+Acceptance Criteria
+* All records are associated with an organization/tenant ID.
+* Users only see data belonging to their organization.
+* API requests enforce tenant boundaries.
+* Cross-tenant access attempts are blocked.
+* Automated tests validate tenant isolation.
+________________
+
+
+Story 2.3 – User Invitations
+As an organization admin, I need to invite users so my team can access the platform.
+Acceptance Criteria
+* Admin can invite a user by email.
+* Invite includes assigned role.
+* Invite link expires after a configured period.
+* Invited user can accept and create an account.
+* Invite status is visible to admins.
+* Invitations are logged.
+________________
+
+
+Story 2.4 – Membership Management
+As an organization admin, I need to manage members so I can control who has access.
+Acceptance Criteria
+* Admin can view organization members.
+* Admin can change a user’s role.
+* Admin can deactivate or remove a user.
+* Removed users lose access immediately.
+* Membership changes are logged.
+________________
+
+
+Story 2.5 – Permission Framework
+As the platform, I need a consistent permission framework so access rules are enforced across the product.
+Acceptance Criteria
+* Permissions are defined by role.
+* Permissions are enforced at the API level.
+* UI hides or disables unavailable actions.
+* Permission failures return clear errors.
+* Permission rules are documented.
+________________
+
+
+Epic 3: Matter Persistence
+Story 3.1 – Create Matter
+As a user, I need to create a matter so I can organize legal work around a client, case, or project.
+Acceptance Criteria
+* User can create a matter with required fields.
+* Matter is saved to persistent storage.
+* Matter is assigned to the correct organization.
+* Matter appears in the user’s workspace.
+* Matter creation is logged.
+________________
+
+
+Story 3.2 – Matter Workspace
+As a user, I need a persistent matter workspace so I can return to my work over time.
+Acceptance Criteria
+* User can open an existing matter.
+* Matter state persists between sessions.
+* Workspace includes matter details, documents, prompts, and generated outputs.
+* Only authorized users can access the workspace.
+* Workspace activity is logged.
+________________
+
+
+Story 3.3 – Document Persistence
+As a user, I need uploaded and generated documents to persist so I can review and reuse them later.
+Acceptance Criteria
+* User can upload documents to a matter.
+* Uploaded documents are stored securely.
+* Generated documents are saved to the matter.
+* Documents remain available after logout/login.
+* Document metadata is saved.
+________________
+
+
+Story 3.4 – Metadata Management
+As the platform, I need to store metadata for matters and documents so activity can be tracked and organized.
+Acceptance Criteria
+* Matter metadata includes owner, organization, status, created date, and updated date.
+* Document metadata includes file name, type, source, created date, and related matter.
+* Metadata is searchable/filterable where applicable.
+* Metadata updates are logged.
+________________
+
+
+Epic 4: Audit & Activity Logging
+Story 4.1 – User Activity History
+As an admin, I need to see user activity so I can understand how the platform is being used.
+Acceptance Criteria
+* System logs login, logout, matter access, document upload, document generation, and admin actions.
+* Logs include user, timestamp, organization, and action type.
+* Admins can view activity history.
+* Users cannot modify audit logs.
+________________
+
+
+Story 4.2 – Matter History
+As a user, I need matter history so I can understand what happened inside a matter.
+Acceptance Criteria
+* Matter events are recorded.
+* History includes document uploads, prompt submissions, generated outputs, edits, and status changes.
+* Matter history is visible to authorized users.
+* Matter history is ordered by timestamp.
+________________
+
+
+Story 4.3 – Prompt History
+As a user, I need prompt history so I can review what was submitted to AI during the legal workflow.
+Acceptance Criteria
+* Prompts are stored with the related matter.
+* Prompt history includes timestamp, user, provider, and response reference.
+* Prompt history is available for audit and review.
+* Sensitive data handling rules are followed.
+________________
+
+
+Story 4.4 – Document Revision History
+As a user, I need document revision history so I can compare previous versions of work product.
+Acceptance Criteria
+* Generated and edited documents maintain version history.
+* User can view previous versions.
+* System records who created or changed each version.
+* Version history cannot be deleted by standard users.
+________________
+
+
+Story 4.5 – Administrative Audit Logs
+As a platform administrator, I need admin actions logged so sensitive changes are traceable.
+Acceptance Criteria
+* Role changes are logged.
+* User removals are logged.
+* Feature flag changes are logged.
+* Organization setting changes are logged.
+* Audit logs are visible only to authorized administrators.
+________________
+
+
+Epic 5: Administrative Controls
+Story 5.1 – User Administration
+As an organization admin, I need user administration tools so I can manage my team.
+Acceptance Criteria
+* Admin can view users.
+* Admin can invite users.
+* Admin can remove users.
+* Admin can change roles.
+* User admin actions are logged.
+________________
+
+
+Story 5.2 – Organization Administration
+As an organization admin, I need organization settings so I can manage my company workspace.
+Acceptance Criteria
+* Admin can view organization profile.
+* Admin can edit organization name and basic settings.
+* Admin can view active users.
+* Admin can view usage summary.
+* Organization changes are logged.
+________________
+
+
+Story 5.3 – Feature Controls
+As a platform administrator, I need feature controls so features can be enabled or disabled by organization.
+Acceptance Criteria
+* Features can be enabled/disabled by organization.
+* Feature access is enforced by the backend.
+* UI reflects enabled/disabled features.
+* Feature changes are logged.
+________________
+
+
+Story 5.4 – Environment Configuration
+As a platform administrator, I need environment configuration controls so the platform can be safely managed across beta and production environments.
+Acceptance Criteria
+* Environment-specific settings are configurable.
+* Secrets are not hardcoded.
+* AI provider keys are managed securely.
+* Configuration changes are documented.
+* Misconfigured environments fail safely.
+________________
+
+
+Epic 6: Usage Tracking
+Story 6.1 – AI Usage Metering
+As the platform, I need to track AI usage so cost and usage can be monitored.
+Acceptance Criteria
+* Each AI request is logged.
+* Usage includes provider, model, matter, organization, user, timestamp, input size, output size, and estimated cost where available.
+* Failed AI requests are also tracked.
+* Usage is associated with the correct organization.
+________________
+
+
+Story 6.2 – Cost Tracking
+As an administrator, I need cost tracking so AI usage does not create unmanaged financial risk.
+Acceptance Criteria
+* Estimated AI cost is calculated per request.
+* Costs roll up by user, matter, and organization.
+* Admins can view cost summaries.
+* High-cost usage can be identified.
+* Cost tracking is validated against provider usage where possible.
+________________
+
+
+Story 6.3 – Operational Analytics
+As an administrator, I need operational analytics so I can understand beta usage and platform behavior.
+Acceptance Criteria
+* Dashboard shows active users.
+* Dashboard shows matter count.
+* Dashboard shows document generation count.
+* Dashboard shows AI usage.
+* Dashboard shows error rates or failed requests.
+________________
+
+
+Epic 7: Security Hardening
+Story 7.1 – Secrets Management
+As the platform, I need secrets managed securely so credentials are not exposed.
+Acceptance Criteria
+* Secrets are stored in a secure secrets manager or environment vault.
+* Secrets are not committed to source control.
+* Local, beta, and production secrets are separated.
+* Secret access is limited to required services.
+________________
+
+
+Story 7.2 – API Security
+As the platform, I need secured APIs so unauthorized users cannot access protected data.
+Acceptance Criteria
+* Protected APIs require authentication.
+* APIs enforce organization boundaries.
+* APIs enforce role permissions.
+* Invalid or expired tokens are rejected.
+* API errors do not expose sensitive information.
+________________
+
+
+Story 7.3 – Encryption Validation
+As the platform, I need encryption validated so sensitive legal data is protected.
+Acceptance Criteria
+* Data is encrypted in transit.
+* Sensitive stored data is encrypted at rest where applicable.
+* File storage uses secure access controls.
+* Public access to private documents is blocked.
+* Encryption approach is documented.
+________________
+
+
+Story 7.4 – Dependency Review
+As the platform owner, I need dependencies reviewed so known vulnerabilities are identified.
+Acceptance Criteria
+* Dependency scan is performed.
+* Critical vulnerabilities are remediated or documented.
+* Unused dependencies are removed where practical.
+* Dependency review results are documented.
+________________
+
+
+Story 7.5 – Logging Improvements
+As the platform operator, I need improved logs so production issues can be investigated.
+Acceptance Criteria
+* Application errors are logged.
+* API failures are logged.
+* AI provider failures are logged.
+* Logs include request context without exposing sensitive legal content.
+* Logs are searchable in the beta environment.
+________________
+
+
+Epic 8: Private Beta Deployment
+Story 8.1 – Beta Environment Deployment
+As Talden, I need the platform deployed to a private beta environment so design partners can use it.
+Acceptance Criteria
+* Application is deployed to a beta environment.
+* Environment uses production-like infrastructure.
+* Authentication is enabled.
+* Database persistence is enabled.
+* File storage is enabled.
+* Logs and monitoring are enabled.
+________________
+
+
+Story 8.2 – Private Beta Readiness Review
+As Talden, I need a readiness review so we can confirm Phase 1 is complete.
+Acceptance Criteria
+* Phase 1 deliverables are reviewed.
+* Security validation is completed.
+* Acceptance criteria are tested.
+* Known issues are documented.
+* Talden signs off on Phase 1 completion.
+________________
+
+
+Phase 1 Completion Criteria
+Phase 1 shall be considered complete when:
+* Users can securely register, log in, reset passwords, and manage sessions.
+* Organizations can invite and manage users.
+* Roles and permissions are enforced.
+* Matter workspaces persist across sessions.
+* Documents and metadata persist.
+* Audit history is available.
+* Administrative controls are operational.
+* AI usage and cost tracking are available.
+* Security hardening has been completed.
+* Platform is deployed to a private beta environment.

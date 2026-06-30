@@ -1,0 +1,1 @@
+ALTER TABLE `stage_line_items` ADD `group_label` text;

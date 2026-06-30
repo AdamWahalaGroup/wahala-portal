@@ -19,17 +19,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await readJson<{
       name?: string;
       scopeDescription?: string;
-      lineItems?: { description?: string; estimateNote?: string; amountCents?: number }[];
+      totalAmountCents?: number;
+      lineItems?: { description?: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
     }>(req);
     if (!body.name?.trim()) throw new ApiError(400, "validation", "A stage name is required.");
 
     const stage = await saveQuoteDraft(ctx, id, {
       name: body.name,
       scopeDescription: body.scopeDescription,
+      totalAmountCents: body.totalAmountCents,
       lineItems: (body.lineItems ?? []).map((li) => ({
         description: li.description ?? "",
         estimateNote: li.estimateNote,
         amountCents: Number(li.amountCents) || 0,
+        groupLabel: li.groupLabel,
       })),
     });
     return NextResponse.json({ stage });

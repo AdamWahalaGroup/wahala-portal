@@ -161,9 +161,12 @@ export const stageLineItems = sqliteTable(
   {
     id: pk(),
     stageId: text("stage_id").notNull().references(() => stages.id),
+    // Epic/category this deliverable groups under (e.g. "Authentication & Identity").
+    groupLabel: text("group_label"),
     description: text("description").notNull(),
     estimateNote: text("estimate_note"),
-    // Per-item price; the stage total is the sum of its line items' amounts.
+    // Optional/illustrative per-item price. The stage carries the authoritative fixed
+    // price (totalAmountCents); item amounts no longer have to sum to it.
     amountCents: integer("amount_cents").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
     accepted: integer("accepted", { mode: "boolean" }).notNull().default(false), // per-item acceptance (future)

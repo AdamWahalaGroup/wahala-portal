@@ -1,0 +1,407 @@
+﻿Proposal for Software Development Services
+Talden Legal AI Platform Commercialization
+
+
+Prepared For: Talden
+
+
+Prepared By: Wahala Group, LLC (or your legal entity)
+
+
+Proposal Date: __________
+
+
+Proposal Number: WG-2026-001
+
+
+---
+
+
+Executive Summary
+
+
+Talden has successfully validated a compelling product vision centered around AI-assisted legal work product creation, review, and research. The existing platform demonstrates functional workflows and establishes a strong foundation for commercialization.
+
+
+Following a comprehensive technical and architectural assessment, it has been determined that the platform has progressed beyond the concept stage but requires additional engineering to meet the standards expected of a secure, scalable, commercially deployable SaaS product.
+
+
+This proposal defines a fixed-price engagement to complete the engineering work necessary to transition Talden from an advanced prototype into a production-ready commercial platform. The work will be delivered in three structured phases, each with clearly defined scope, deliverables, acceptance criteria, and payment milestones.
+
+
+The total fixed investment for this engagement is $225,000, delivered over approximately 28 weeks.
+
+
+---
+
+
+Scope of Engagement
+
+
+Wahala Group will provide software engineering, architecture, implementation, testing, and deployment services required to commercialize the Talden platform.
+
+
+The engagement includes application development, cloud infrastructure, security hardening, quality assurance, deployment support, and technical documentation necessary to achieve commercial readiness.
+
+
+This proposal excludes ongoing operational support, feature development outside the agreed scope, marketing activities, and production operations unless specifically authorized through a written change order.
+
+
+---
+
+
+Statement of Work
+
+
+Phase 1 – Private Beta Foundation
+
+
+Duration: 8 Weeks
+
+
+Fixed Price: $65,000
+
+
+Objective
+
+
+Build the foundational platform capabilities required to support secure multi-tenant private beta customers.
+
+
+Scope of Work
+
+
+The Contractor shall design, develop, configure, test, and deploy the following functionality:
+
+
+Authentication & Identity
+
+
+- User registration
+- Login and authentication
+- Password reset
+- Session management
+- Role-based access control
+
+
+Organization & Tenant Management
+
+
+- Multi-tenant architecture
+- Organization management
+- Workspace isolation
+- User invitations
+- Membership management
+- Permission framework
+
+
+##Matter Persistence
+
+
+- Persistent matter storage
+- Workspace persistence
+- Document persistence
+- Metadata management
+
+
+##Audit & Activity Logging
+
+
+- User activity history
+- Matter history
+- Administrative audit logs
+- Prompt history
+- Document revision history
+
+
+##Administrative Controls
+
+
+- User administration
+- Organization administration
+- Feature controls
+- Environment configuration
+
+
+##Usage Tracking
+
+
+- AI usage metering
+- Cost tracking
+- Operational analytics
+
+
+##Security Hardening
+
+
+- Secrets management
+- API security
+- Encryption validation
+- Dependency review
+- Logging improvements
+
+
+##Deliverables
+
+
+- Production authentication
+- Multi-tenant platform
+- Persistent workspaces
+- Audit logging
+- Administrative dashboard
+- Usage reporting
+- Security improvements
+
+
+##Acceptance Criteria
+
+
+Phase 1 shall be accepted when:
+
+
+- Users can securely authenticate.
+- Organizations can manage users.
+- Matters persist across sessions.
+- Audit history is available.
+- Administrative controls are operational.
+- Security validation has been completed.
+- Platform is deployed to the private beta environment.
+
+
+---
+
+
+#Phase 2 – Trusted Legal Workflow Platform
+
+
+Duration: 12 Weeks
+
+
+Fixed Price: $95,000
+
+
+##Objective
+
+
+Implement trusted legal workflows that support repeatable, reviewable, and verifiable legal work product generation.
+
+
+##Scope of Work
+
+
+The Contractor shall implement:
+
+
+- Matter workspaces
+- Durable matter state management
+- Human review workflows
+- Draft comparison tools
+- Review checkpoints
+- Citation verification framework
+- Legal evaluation framework
+- Automated regression testing
+- Workflow quality scoring
+- Performance optimization
+
+
+##Deliverables
+
+
+- Matter workspace management
+- Human review workflow
+- Citation verification system
+- Quality evaluation framework
+- Automated testing suite
+
+
+##Acceptance Criteria
+
+
+Phase 2 shall be accepted when:
+
+
+- Matters support structured review workflows.
+- Human approval checkpoints function as designed.
+- Citation verification is operational.
+- Regression testing passes agreed benchmarks.
+- Platform demonstrates stable workflow execution.
+
+
+---
+
+
+#Phase 3 – Commercial Readiness
+
+
+Duration: 8 Weeks
+
+
+Fixed Price: $65,000
+
+
+##Objective
+
+
+Prepare the platform for commercial launch and customer onboarding.
+
+
+##Scope of Work
+
+
+The Contractor shall implement:
+
+
+- Customer onboarding workflows
+- Subscription and billing integration
+- Administrative dashboards
+- Customer support tooling
+- Platform analytics
+- Operational monitoring
+- Enterprise administration
+- SOC 2 readiness planning
+- Deployment documentation
+
+
+##Deliverables
+
+
+- Customer onboarding
+- Billing platform integration
+- Administrative dashboards
+- Operational tooling
+- Deployment documentation
+- Commercial launch readiness package
+
+
+##Acceptance Criteria
+
+
+Phase 3 shall be accepted when:
+
+
+- Customers can be onboarded.
+- Billing functions as designed.
+- Administrative tooling is operational.
+- Platform monitoring is available.
+- Deployment documentation is complete.
+- Platform is ready to support commercial customers.
+
+
+---
+
+
+Project Timeline
+
+
+| Phase | Duration | Price |
+|------|----------:|------:|
+| Phase 1 | 8 Weeks | $65,000 |
+| Phase 2 | 12 Weeks | $95,000 |
+| Phase 3 | 8 Weeks | $65,000 |
+| Total | 28 Weeks | $225,000 |
+
+
+---
+
+
+Payment Schedule
+
+
+| Milestone | Amount |
+|-----------|-------:|
+| Contract Execution | $22,500 |
+| Phase 1 Acceptance | $42,500 |
+| Phase 2 Acceptance | $95,000 |
+| Phase 3 Acceptance | $65,000 |
+| Total Contract Value | $225,000 |
+
+
+---
+
+
+Out of Scope
+
+
+Unless approved through a written change order, this engagement excludes:
+
+
+- Features not described in this Statement of Work
+- Mobile applications
+- Native desktop applications
+- Custom AI model training
+- Third-party integrations outside the agreed scope
+- Production operations and ongoing maintenance after project completion
+- Legal or regulatory certification services
+- Marketing or sales enablement activities
+
+
+---
+
+
+Change Management
+
+
+Any requested work outside the scope defined in this Statement of Work shall require a written Change Order describing the requested change, schedule impact, and any adjustment to project cost.
+
+
+No additional work will begin until the Change Order has been approved by both parties.
+
+
+---
+
+
+Acceptance
+
+
+Each project phase shall be reviewed by Talden within five (5) business days of delivery.
+
+
+If no written notice of material deficiencies is received within the review period, the phase shall be deemed accepted and the corresponding milestone payment shall become due.
+
+
+---
+
+
+Signatures
+
+
+By signing below, the parties acknowledge that they have reviewed and agree to the scope, pricing, payment schedule, and acceptance criteria described in this Proposal and Statement of Work.
+
+
+Talden
+
+
+Authorized Representative
+
+
+Name: ___________________________
+
+
+Title: ___________________________
+
+
+Signature: ________________________
+
+
+Date: ____________________________
+
+
+---
+
+
+Wahala Group, LLC
+
+
+Authorized Representative
+
+
+Name: Jason Milton
+
+
+Title: Managing Member
+
+
+Signature: ________________________
+
+
+Date: ____________________________
