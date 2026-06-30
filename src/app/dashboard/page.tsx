@@ -8,6 +8,7 @@ import { scopedDb } from "@/db/scoped";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ProjectStepper } from "@/components/Stepper";
 import { WaitingOn } from "@/components/WaitingOn";
 import { Money } from "@/components/Money";
 import { CreateProjectForm } from "@/components/CreateProjectForm";
@@ -41,7 +42,13 @@ export default async function Dashboard() {
 
   const projName = new Map(projects.map((p) => [p.id, p.name]));
   const latest = new Map<string, (typeof allStages)[number]>();
-  for (const s of allStages) if (!latest.has(s.projectId)) latest.set(s.projectId, s);
+  const byProject = new Map<string, (typeof allStages)[number][]>(); // newest-first per project, for "Stage N of M"
+  for (const s of allStages) {
+    if (!latest.has(s.projectId)) latest.set(s.projectId, s);
+    const arr = byProject.get(s.projectId);
+    if (arr) arr.push(s);
+    else byProject.set(s.projectId, [s]);
+  }
 
   const onYou = allStages.filter((s) => onYouCta(s.status, ctx.isStaff)).slice(0, 6);
   const canCreateProject = ctx.isAdmin || ctx.user.role === "account_owner";
@@ -129,35 +136,45 @@ export default async function Dashboard() {
         {projects.length === 0 ? (
           <p style={{ color: "var(--muted)" }}>No projects yet.</p>
         ) : (
-          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            {projects.map((p, i) => {
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {projects.map((p) => {
               const s = latest.get(p.id);
               const party = s ? waitingParty(s.status) : "none";
-              const who = party === "none" ? null : (ctx.isStaff ? party === "wahala" : party === "client") ? "you" : "wahala";
+              const who = party === "none" ? null : party === "client" ? "you" : "wahala";
+              const stagesOf = byProject.get(p.id) ?? [];
+              const total = stagesOf.length;
+              const num = s ? total - stagesOf.findIndex((x) => x.id === s.id) : 0;
               return (
                 <Link
                   key={p.id}
                   href={`/dashboard/projects/${p.id}`}
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 150px 168px 16px",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "14px 16px",
-                    borderTop: i === 0 ? "none" : "1px solid var(--border-soft)",
+                    display: "block",
+                    background: "var(--white)",
+                    border: "1px solid #ededf1",
+                    borderRadius: 13,
+                    padding: "16px 20px",
                     textDecoration: "none",
                     color: "inherit",
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
-                    <div className="kicker" style={{ marginTop: 2 }}>
-                      {p.workType ?? p.status}
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
+                      <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>
+                        {p.workType ?? "Project"}
+                        {total > 0 ? ` · Stage ${num} of ${total}` : ""}
+                      </div>
                     </div>
+                    {s ? <StatusBadge status={s.status} /> : null}
+                    {who ? <WaitingOn who={who} /> : null}
+                    <div style={{ color: "var(--muted-line)", flex: "none" }}>›</div>
                   </div>
-                  <div style={{ justifySelf: "start" }}>{s ? <StatusBadge status={s.status} /> : null}</div>
-                  <div style={{ justifySelf: "start" }}>{who ? <WaitingOn who={who} /> : null}</div>
-                  <div style={{ color: "var(--muted-line)", textAlign: "right" }}>›</div>
+                  {s ? (
+                    <div style={{ marginTop: 16 }}>
+                      <ProjectStepper status={s.status} />
+                    </div>
+                  ) : null}
                 </Link>
               );
             })}

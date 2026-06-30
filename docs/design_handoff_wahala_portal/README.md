@@ -159,10 +159,27 @@ Reference only — the design-system panel (brand lockup, color, type, component
 - **Main:** greeting; **"On you" section** (amber-tinted cards: Approved→Pay,
   Delivered→Review & accept, each with status badge + tabular amount + Ink CTA);
   **Your projects** list.
-- **Projects list (note the alignment fix):** each row is a CSS grid
-  `grid-template-columns: 1fr 132px 142px 16px`, `align-items:center`, with
-  StatusBadge and WaitingOn chips `justify-self:start` so they align in columns
-  down the list regardless of label width. Trailing `›` chevron.
+- **Projects list — cards with an embedded progress stepper:** each project is a
+  **card** (`border:1px solid #EDEDF1`, `border-radius:13px`, padding ~16/20px),
+  stacked in a flex column with `gap:12px`. Card has two parts:
+  1. **Header row** (flex, `align-items:center`, `gap:14px`): project name +
+     mono "{work-type} · Stage N of M" sub-line (left, `flex:1`); then **StatusBadge**;
+     then a **WaitingOn chip** ("On you" amber / "On Wahala" grey); then a `›` chevron.
+  2. **A compact lifecycle Stepper** (a scaled-down reuse of the frame-05 Stepper —
+     see the Stepper component) on its own row beneath the header, representing
+     **where the project's current stage sits** in the lifecycle. 22px nodes, 10px
+     labels, the same 7 steps (Draft → Quoted → Approved → Paid → In progress →
+     Delivered → Accepted): completed = ink fill + white ✓; the current/next step =
+     white circle + 2px `#D97706` border + `#FCEFDC` 3px ring + inner amber dot
+     (label `#16181D` weight 800); upcoming = white + 1px `#D7D9DF` border + grey
+     number. A 2px progress track sits behind the nodes (`#E7E8EC` base, `#16181D`
+     fill to the current node). The active step's label is shortened to the **next
+     action** where natural ("Pay", "Accept") to echo the "On you" CTA.
+  - Per-project states in the mock: **Mobile App** — done through Approved, active
+    "Pay"; **Website Refresh** — done through Delivered, active "Accept"; **Brand
+    System** — done through Paid, active "In progress".
+  - (Replaces the earlier flat grid-row list; the stepper is the same component used
+    full-size on the stage detail screen, frame 05.)
 
 ### 04 — Project detail (`/dashboard/projects/:id`)
 - **Purpose:** One project: people + roster + the stage list.
