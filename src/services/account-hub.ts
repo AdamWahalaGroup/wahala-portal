@@ -44,10 +44,14 @@ export type AccountHub = {
 
 /** The most meaningful timestamp + label for a stage's timeline node. */
 function nodeMoment(s: typeof schema.stages.$inferSelect): { at: Date; label: string } {
-  if (s.status === "accepted" && s.acceptedAt) return { at: s.acceptedAt, label: "Accepted" };
-  if (s.status === "delivered" && s.deliveredAt) return { at: s.deliveredAt, label: "Delivered" };
-  if (s.paidAt) return { at: s.paidAt, label: "Paid" };
-  return { at: s.updatedAt, label: STATUS_STYLES[s.status].label };
+  // Label always reflects the stage's CURRENT status (so an in-progress, paid stage
+  // reads "In progress", not "Paid"); pick the most relevant timestamp for it.
+  const label = STATUS_STYLES[s.status].label;
+  let at = s.updatedAt;
+  if (s.status === "accepted" && s.acceptedAt) at = s.acceptedAt;
+  else if (s.status === "delivered" && s.deliveredAt) at = s.deliveredAt;
+  else if (s.status === "paid" && s.paidAt) at = s.paidAt;
+  return { at, label };
 }
 
 /** Assemble the full account hub for one org, or throw NOT_FOUND if out of scope. */
