@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       description?: string;
       visibility?: string;
       assigneeUserId?: string;
+      stageLineItemId?: string;
     }>(req);
 
     if (!body.stageId || !body.title?.trim()) {
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
       description: body.description,
       visibility: body.visibility,
       assigneeUserId: body.assigneeUserId || undefined,
+      stageLineItemId: body.stageLineItemId || undefined,
     });
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e) {

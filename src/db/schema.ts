@@ -217,6 +217,33 @@ export const taskAssignments = sqliteTable(
   (t) => [index("task_assignments_task_idx").on(t.taskId)],
 );
 
+// ---- Task subtasks (engineering checklist under a task; inherit task visibility) ----
+export const taskSubtasks = sqliteTable(
+  "task_subtasks",
+  {
+    id: pk(),
+    taskId: text("task_id").notNull().references(() => tasks.id),
+    title: text("title").notNull(),
+    done: integer("done", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("task_subtasks_task_idx").on(t.taskId)],
+);
+
+// ---- Task notes (append-only worklog: "what was done"; inherit task visibility) ----
+export const taskNotes = sqliteTable(
+  "task_notes",
+  {
+    id: pk(),
+    taskId: text("task_id").notNull().references(() => tasks.id),
+    authorUserId: text("author_user_id").references(() => users.id),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("task_notes_task_idx").on(t.taskId)],
+);
+
 // ---- Change orders (out-of-scope re-quotes; reuse the approve→pay gate) ----
 export const changeOrders = sqliteTable("change_orders", {
   id: pk(),

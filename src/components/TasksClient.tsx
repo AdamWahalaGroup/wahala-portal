@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { VisibilityMarker } from "@/components/VisibilityMarker";
 
+type Subtask = { id: string; title: string; done: boolean };
+type Note = { id: string; author: string; body: string; createdAt: string | Date };
 type Task = {
   id: string;
   title: string;
@@ -11,8 +13,12 @@ type Task = {
   status: string;
   visibility: "client_visible" | "internal";
   assignee: { name: string; type: "wahala" | "client" | "ai" } | null;
+  deliverableId: string | null;
+  subtasks: Subtask[];
+  notes: Note[];
 };
 type Person = { id: string; name: string; type: "wahala" | "client" };
+type Deliverable = { id: string; description: string };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   todo: { bg: "#f1f2f4", text: "#4b5159", label: "To do" },
@@ -22,17 +28,7 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   cancelled: { bg: "#f1f2f4", text: "#9aa0aa", label: "Cancelled" },
 };
 const STATUSES = ["todo", "in_progress", "blocked", "done", "cancelled"];
-
-const GRID = "1fr 150px 148px 132px";
-
-function StatusPill({ status }: { status: string }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.todo;
-  return (
-    <span style={{ background: s.bg, color: s.text, borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
-      {s.label}
-    </span>
-  );
-}
+const GRID = "22px 1fr 132px 140px 116px";
 
 const input: React.CSSProperties = {
   padding: "8px 10px",
@@ -43,14 +39,48 @@ const input: React.CSSProperties = {
   background: "var(--white)",
 };
 
+function StatusPill({ status }: { status: string }) {
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.todo;
+  return (
+    <span style={{ background: s.bg, color: s.text, borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
+      {s.label}
+    </span>
+  );
+}
+
+/** Group tasks under their deliverable (deliverable order; null/General last). */
+function groupTasks(tasks: Task[], deliverables: Deliverable[]): { id: string | null; label: string; tasks: Task[] }[] {
+  const labelById = new Map(deliverables.map((d) => [d.id, d.description]));
+  const order = new Map(deliverables.map((d, i) => [d.id, i] as const));
+  const groups: { id: string | null; label: string; tasks: Task[] }[] = [];
+  for (const t of tasks) {
+    const id = t.deliverableId && labelById.has(t.deliverableId) ? t.deliverableId : null;
+    let g = groups.find((x) => x.id === id);
+    if (!g) {
+      g = { id, label: id ? labelById.get(id)! : "General", tasks: [] };
+      groups.push(g);
+    }
+    g.tasks.push(t);
+  }
+  groups.sort((a, b) => {
+    if (a.id === b.id) return 0;
+    if (a.id === null) return 1;
+    if (b.id === null) return -1;
+    return (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0);
+  });
+  return groups;
+}
+
 export function TasksClient({
   tasks,
   assignable,
+  deliverables,
   stageId,
   canManage,
 }: {
   tasks: Task[];
   assignable: Person[];
+  deliverables: Deliverable[];
   stageId: string;
   canManage: boolean;
 }) {
@@ -60,6 +90,7 @@ export function TasksClient({
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState("client_visible");
   const [assignee, setAssignee] = useState("");
+  const [deliverable, setDeliverable] = useState("");
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +100,13 @@ export function TasksClient({
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ stageId, title: title.trim(), visibility, assigneeUserId: assignee || undefined }),
+        body: JSON.stringify({
+          stageId,
+          title: title.trim(),
+          visibility,
+          assigneeUserId: assignee || undefined,
+          stageLineItemId: deliverable || undefined,
+        }),
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { message?: string };
@@ -86,97 +123,23 @@ export function TasksClient({
     }
   }
 
-  async function setStatus(taskId: string, status: string) {
-    setError(null);
-    try {
-      const res = await fetch(`/api/tasks/${taskId}/status`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) {
-        const d = (await res.json().catch(() => ({}))) as { message?: string };
-        setError(d.message ?? `Failed (${res.status}).`);
-      } else {
-        router.refresh();
-      }
-    } catch {
-      setError("Network error — please try again.");
-    }
-  }
+  const groups = groupTasks(tasks, deliverables);
 
   return (
     <div>
       {tasks.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 14, margin: "0 0 12px" }}>No tasks yet.</p>
       ) : (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: GRID,
-              gap: 12,
-              padding: "9px 14px",
-              background: "var(--surface-soft)",
-              borderBottom: "1px solid var(--border-soft)",
-            }}
-            className="kicker"
-          >
-            <span>Task</span>
-            <span>Assignee</span>
-            <span>Status</span>
-            <span>Visibility</span>
-          </div>
-          {tasks.map((t) => (
-            <div
-              key={t.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: GRID,
-                gap: 12,
-                alignItems: "center",
-                padding: "12px 14px",
-                borderTop: "1px solid var(--border-soft)",
-                background: t.visibility === "internal" ? "var(--surface-soft-2)" : "var(--white)",
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{t.title}</div>
-                {t.description && (
-                  <div style={{ fontSize: 12.5, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {t.description}
-                  </div>
-                )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {groups.map((g) => (
+            <div key={g.id ?? "_general"}>
+              <div className="kicker" style={{ marginBottom: 6, color: g.id ? "var(--cobalt)" : "var(--muted)" }}>
+                {g.label}
               </div>
-              <div style={{ fontSize: 13, minWidth: 0 }}>
-                {t.assignee ? (
-                  <>
-                    {t.assignee.name}
-                    {t.assignee.type === "client" && (
-                      <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 600, color: "var(--cobalt-text)", background: "var(--cobalt-wash)", borderRadius: 999, padding: "1px 6px" }}>
-                        client
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span style={{ color: "var(--muted-line)" }}>—</span>
-                )}
-              </div>
-              <div>
-                {canManage ? (
-                  <select value={t.status} onChange={(e) => setStatus(t.id, e.target.value)} style={{ ...input, padding: "6px 8px", fontSize: 13 }}>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_STYLE[s].label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <StatusPill status={t.status} />
-                )}
-              </div>
-              <div>
-                <VisibilityMarker visibility={t.visibility} />
+              <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+                {g.tasks.map((t, i) => (
+                  <TaskRow key={t.id} task={t} canManage={canManage} first={i === 0} onChanged={() => router.refresh()} setError={setError} />
+                ))}
               </div>
             </div>
           ))}
@@ -184,14 +147,18 @@ export function TasksClient({
       )}
 
       {canManage && (
-        <form onSubmit={addTask} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
-          <input
-            style={{ ...input, flex: 1, minWidth: 180 }}
-            placeholder="New task title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+        <form onSubmit={addTask} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 14 }}>
+          <input style={{ ...input, flex: 1, minWidth: 160 }} placeholder="New task title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          {deliverables.length > 0 && (
+            <select style={input} value={deliverable} onChange={(e) => setDeliverable(e.target.value)}>
+              <option value="">No deliverable</option>
+              {deliverables.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.description}
+                </option>
+              ))}
+            </select>
+          )}
           <select style={input} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
             <option value="">Unassigned</option>
             {assignable.map((p) => (
@@ -215,6 +182,197 @@ export function TasksClient({
         </form>
       )}
       {error && <p style={{ color: "#b00020", fontSize: 13, marginTop: 8, marginBottom: 0 }}>{error}</p>}
+    </div>
+  );
+}
+
+/** One task: a header row (status/visibility) that expands to its subtasks + worklog. */
+function TaskRow({
+  task,
+  canManage,
+  first,
+  onChanged,
+  setError,
+}: {
+  task: Task;
+  canManage: boolean;
+  first: boolean;
+  onChanged: () => void;
+  setError: (s: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [note, setNote] = useState("");
+  const doneCount = task.subtasks.filter((s) => s.done).length;
+
+  async function call(url: string, method: string, body?: object) {
+    setError(null);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => ({}))) as { message?: string };
+        setError(d.message ?? `Failed (${res.status}).`);
+        return false;
+      }
+      onChanged();
+      return true;
+    } catch {
+      setError("Network error — please try again.");
+      return false;
+    }
+  }
+
+  return (
+    <div style={{ borderTop: first ? "none" : "1px solid var(--border-soft)", background: task.visibility === "internal" ? "var(--surface-soft-2)" : "var(--white)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: GRID, gap: 12, alignItems: "center", padding: "12px 14px" }}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? "Collapse" : "Expand"}
+          style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted-line)", fontSize: 13, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}
+        >
+          ▶
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{task.title}</div>
+          {(task.subtasks.length > 0 || task.notes.length > 0) && (
+            <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 1 }}>
+              {task.subtasks.length > 0 && `${doneCount}/${task.subtasks.length} subtasks`}
+              {task.subtasks.length > 0 && task.notes.length > 0 && " · "}
+              {task.notes.length > 0 && `${task.notes.length} note${task.notes.length === 1 ? "" : "s"}`}
+            </div>
+          )}
+        </div>
+        <div style={{ fontSize: 13, minWidth: 0 }}>
+          {task.assignee ? (
+            <>
+              {task.assignee.name}
+              {task.assignee.type === "client" && (
+                <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 600, color: "var(--cobalt-text)", background: "var(--cobalt-wash)", borderRadius: 999, padding: "1px 6px" }}>client</span>
+              )}
+            </>
+          ) : (
+            <span style={{ color: "var(--muted-line)" }}>—</span>
+          )}
+        </div>
+        <div>
+          {canManage ? (
+            <select
+              value={task.status}
+              onChange={(e) => call(`/api/tasks/${task.id}/status`, "POST", { status: e.target.value })}
+              style={{ ...input, padding: "6px 8px", fontSize: 13 }}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_STYLE[s].label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <StatusPill status={task.status} />
+          )}
+        </div>
+        <div>
+          <VisibilityMarker visibility={task.visibility} />
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ padding: "2px 14px 16px 48px", display: "grid", gap: 16 }}>
+          {/* Subtasks */}
+          <div>
+            <div className="kicker" style={{ marginBottom: 6 }}>
+              Subtasks
+            </div>
+            {task.subtasks.length === 0 && !canManage ? (
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>None.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {task.subtasks.map((s) => (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={s.done}
+                      disabled={!canManage}
+                      onChange={(e) => call(`/api/tasks/${task.id}/subtasks`, "PATCH", { subtaskId: s.id, done: e.target.checked })}
+                    />
+                    <span style={{ fontSize: 13.5, flex: 1, textDecoration: s.done ? "line-through" : "none", color: s.done ? "var(--muted)" : "var(--ink)" }}>
+                      {s.title}
+                    </span>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => call(`/api/tasks/${task.id}/subtasks`, "DELETE", { subtaskId: s.id })}
+                        aria-label="Remove subtask"
+                        style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 13 }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {canManage && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <input
+                  style={{ ...input, flex: 1, fontSize: 13 }}
+                  placeholder="Add a subtask"
+                  value={subtaskTitle}
+                  onChange={(e) => setSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subtaskTitle.trim()) {
+                      e.preventDefault();
+                      call(`/api/tasks/${task.id}/subtasks`, "POST", { title: subtaskTitle.trim() }).then((ok) => ok && setSubtaskTitle(""));
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Notes / worklog */}
+          <div>
+            <div className="kicker" style={{ marginBottom: 6 }}>
+              Notes — what was done
+            </div>
+            {task.notes.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>No notes yet.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {task.notes.map((n) => (
+                  <div key={n.id} style={{ fontSize: 13.5 }}>
+                    <span style={{ whiteSpace: "pre-wrap" }}>{n.body}</span>
+                    <span className="mono" style={{ fontSize: 11, color: "var(--muted)", marginLeft: 6 }}>
+                      — {n.author}, {new Date(n.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {canManage && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <input
+                  style={{ ...input, flex: 1, fontSize: 13 }}
+                  placeholder="Record what was done…"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && note.trim()) {
+                      e.preventDefault();
+                      call(`/api/tasks/${task.id}/notes`, "POST", { body: note.trim() }).then((ok) => ok && setNote(""));
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

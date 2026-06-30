@@ -190,6 +190,8 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
 
   await db.batch([
     db.delete(schema.taskAssignments).where(inArray(schema.taskAssignments.taskId, taskIds)),
+    db.delete(schema.taskSubtasks).where(inArray(schema.taskSubtasks.taskId, taskIds)),
+    db.delete(schema.taskNotes).where(inArray(schema.taskNotes.taskId, taskIds)),
     db.delete(schema.tasks).where(eq(schema.tasks.organizationId, orgId)),
     db.delete(schema.stageLineItems).where(inArray(schema.stageLineItems.stageId, stageIds)),
     db.delete(schema.stages).where(eq(schema.stages.organizationId, orgId)),

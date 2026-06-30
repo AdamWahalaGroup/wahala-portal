@@ -225,7 +225,13 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
             <div className="kicker" style={{ marginBottom: 12 }}>
               Tasks ({tasks.length})
             </div>
-            <TasksClient tasks={tasks} assignable={assignable} stageId={stage.id} canManage={canManageTasks} />
+            <TasksClient
+              tasks={tasks}
+              assignable={assignable}
+              deliverables={lineItems.map((li) => ({ id: li.id, description: li.description }))}
+              stageId={stage.id}
+              canManage={canManageTasks}
+            />
           </section>
         </div>
 

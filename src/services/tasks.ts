@@ -17,6 +17,9 @@ import { securityLog } from "@/lib/security-log";
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 export const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done", "cancelled"];
 
+export type Subtask = { id: string; title: string; done: boolean };
+export type TaskNote = { id: string; author: string; body: string; createdAt: Date };
+
 export type TaskView = {
   id: string;
   title: string;
@@ -24,6 +27,9 @@ export type TaskView = {
   status: TaskStatus;
   visibility: "client_visible" | "internal";
   assignee: { name: string; type: "wahala" | "client" | "ai" } | null;
+  deliverableId: string | null;
+  subtasks: Subtask[];
+  notes: TaskNote[];
 };
 
 export type AssignablePerson = { id: string; name: string; type: "wahala" | "client" };
@@ -65,18 +71,39 @@ export async function listTasksForStage(ctx: AuthContext, stageId: string): Prom
   if (rows.length === 0) return [];
 
   const taskIds = rows.map((r) => r.id);
-  const assignments = await db
-    .select()
-    .from(schema.taskAssignments)
-    .where(inArray(schema.taskAssignments.taskId, taskIds));
-  const assigneeUserIds = [...new Set(assignments.map((a) => a.assigneeUserId).filter(Boolean))] as string[];
-  const users = assigneeUserIds.length
-    ? await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, assigneeUserIds))
+  const [assignments, subtaskRows, noteRows] = await Promise.all([
+    db.select().from(schema.taskAssignments).where(inArray(schema.taskAssignments.taskId, taskIds)),
+    db.select().from(schema.taskSubtasks).where(inArray(schema.taskSubtasks.taskId, taskIds)).orderBy(schema.taskSubtasks.sortOrder),
+    db.select().from(schema.taskNotes).where(inArray(schema.taskNotes.taskId, taskIds)).orderBy(schema.taskNotes.createdAt),
+  ]);
+
+  // Names for assignees + note authors in one lookup.
+  const userIds = [
+    ...new Set([
+      ...assignments.map((a) => a.assigneeUserId),
+      ...noteRows.map((n) => n.authorUserId),
+    ].filter(Boolean)),
+  ] as string[];
+  const users = userIds.length
+    ? await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
     : [];
   const nameById = new Map(users.map((u) => [u.id, u.name]));
 
   const firstByTask = new Map<string, (typeof assignments)[number]>();
   for (const a of assignments) if (!firstByTask.has(a.taskId)) firstByTask.set(a.taskId, a);
+
+  const subtasksByTask = new Map<string, Subtask[]>();
+  for (const s of subtaskRows) {
+    const arr = subtasksByTask.get(s.taskId) ?? [];
+    arr.push({ id: s.id, title: s.title, done: s.done });
+    subtasksByTask.set(s.taskId, arr);
+  }
+  const notesByTask = new Map<string, TaskNote[]>();
+  for (const n of noteRows) {
+    const arr = notesByTask.get(n.taskId) ?? [];
+    arr.push({ id: n.id, author: n.authorUserId ? nameById.get(n.authorUserId) ?? "—" : "—", body: n.body, createdAt: n.createdAt });
+    notesByTask.set(n.taskId, arr);
+  }
 
   return rows.map((r) => {
     const a = firstByTask.get(r.id);
@@ -93,6 +120,9 @@ export async function listTasksForStage(ctx: AuthContext, stageId: string): Prom
       status: r.status as TaskStatus,
       visibility: r.visibility as "client_visible" | "internal",
       assignee,
+      deliverableId: r.stageLineItemId ?? null,
+      subtasks: subtasksByTask.get(r.id) ?? [],
+      notes: notesByTask.get(r.id) ?? [],
     };
   });
 }
@@ -131,7 +161,7 @@ export async function assignableForStage(ctx: AuthContext, stageId: string): Pro
 /** Create a task on a stage (admin / project lead only). */
 export async function createTask(
   ctx: AuthContext,
-  input: { stageId: string; title: string; description?: string; visibility?: string; assigneeUserId?: string },
+  input: { stageId: string; title: string; description?: string; visibility?: string; assigneeUserId?: string; stageLineItemId?: string },
 ): Promise<void> {
   const stage = await loadStageProject(ctx, input.stageId);
   if (!canManageTasks(ctx, stage.project?.leadEngineerUserId)) {
@@ -150,6 +180,7 @@ export async function createTask(
       organizationId: stage.organizationId,
       projectId: stage.projectId,
       stageId: input.stageId,
+      stageLineItemId: input.stageLineItemId || null,
       title,
       description: input.description?.trim() || null,
       status: "todo",
@@ -225,4 +256,56 @@ export async function updateTaskStatus(ctx: AuthContext, taskId: string, status:
       }),
     ),
   ]);
+}
+
+/** Load a task + authorize manage (admin or the project's lead). Tenant-scoped. */
+async function loadTaskForManage(ctx: AuthContext, taskId: string) {
+  const db = getDb();
+  const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId), with: { project: true } });
+  if (!task) throw new StageError("NOT_FOUND", "Task not found.");
+  if (!canAccessProject(ctx.accessScope, { id: task.projectId, organizationId: task.organizationId })) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "task_child", resource: `task:${taskId}`, reason: "out_of_scope" });
+    throw new StageError("NOT_FOUND", "Task not found.");
+  }
+  if (!canManageTasks(ctx, task.project?.leadEngineerUserId)) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "task_child", resource: `task:${taskId}`, reason: "not_admin_or_lead" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or the project's lead can edit this task.");
+  }
+  return task;
+}
+
+/** Add a subtask (checklist item) to a task. Admin/lead only. */
+export async function addSubtask(ctx: AuthContext, taskId: string, title: string): Promise<void> {
+  await loadTaskForManage(ctx, taskId);
+  const t = title?.trim();
+  if (!t) throw new StageError("VALIDATION", "Subtask title is required.");
+  const db = getDb();
+  const existing = await db.select({ id: schema.taskSubtasks.id }).from(schema.taskSubtasks).where(eq(schema.taskSubtasks.taskId, taskId));
+  await db.insert(schema.taskSubtasks).values({ taskId, title: t, sortOrder: existing.length });
+}
+
+/** Toggle a subtask's done flag. Admin/lead only. */
+export async function setSubtaskDone(ctx: AuthContext, taskId: string, subtaskId: string, done: boolean): Promise<void> {
+  await loadTaskForManage(ctx, taskId);
+  const db = getDb();
+  await db
+    .update(schema.taskSubtasks)
+    .set({ done: !!done })
+    .where(and(eq(schema.taskSubtasks.id, subtaskId), eq(schema.taskSubtasks.taskId, taskId)));
+}
+
+/** Delete a subtask. Admin/lead only. */
+export async function removeSubtask(ctx: AuthContext, taskId: string, subtaskId: string): Promise<void> {
+  await loadTaskForManage(ctx, taskId);
+  const db = getDb();
+  await db.delete(schema.taskSubtasks).where(and(eq(schema.taskSubtasks.id, subtaskId), eq(schema.taskSubtasks.taskId, taskId)));
+}
+
+/** Append a worklog note ("what was done") to a task. Admin/lead only. */
+export async function addNote(ctx: AuthContext, taskId: string, body: string): Promise<void> {
+  await loadTaskForManage(ctx, taskId);
+  const b = body?.trim();
+  if (!b) throw new StageError("VALIDATION", "A note can't be empty.");
+  const db = getDb();
+  await db.insert(schema.taskNotes).values({ taskId, authorUserId: ctx.user.id, body: b });
 }
