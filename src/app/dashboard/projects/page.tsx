@@ -11,6 +11,7 @@ import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Avatar } from "@/components/People";
+import { NewProjectButton } from "@/components/NewProjectButton";
 import type { StageStatus } from "@/domain/stage-machine";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
 
   const { q: rawQ } = await searchParams;
   const q = (rawQ ?? "").trim().toLowerCase();
+  const canCreateProject = ctx.isAdmin || ctx.user.role === "account_owner";
 
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const ownerName = new Map(staff.map((s) => [s.id, s.name]));
@@ -74,6 +76,12 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
           />
         </form>
       </div>
+
+      {canCreateProject && orgs.length > 0 && (
+        <div style={{ marginTop: 18 }}>
+          <NewProjectButton orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} />
+        </div>
+      )}
 
       {groups.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 24 }}>
