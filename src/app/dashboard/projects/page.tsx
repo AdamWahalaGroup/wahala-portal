@@ -11,7 +11,6 @@ import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Avatar } from "@/components/People";
-import { NewProjectButton } from "@/components/NewProjectButton";
 import type { StageStatus } from "@/domain/stage-machine";
 
 export const dynamic = "force-dynamic";
@@ -67,21 +66,55 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
           <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>Projects</h1>
           <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 14.5 }}>Across all your clients.</p>
         </div>
-        <form>
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Search projects or clients"
-            style={{ padding: "9px 12px", fontSize: 13.5, border: "1px solid var(--border)", borderRadius: 9, background: "var(--white)", width: 240, fontFamily: "inherit" }}
-          />
-        </form>
-      </div>
-
-      {canCreateProject && orgs.length > 0 && (
-        <div style={{ marginTop: 18 }}>
-          <NewProjectButton orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <form>
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Search projects or clients"
+              style={{ padding: "9px 12px", fontSize: 13.5, border: "1px solid var(--border)", borderRadius: 9, background: "var(--white)", width: 240, fontFamily: "inherit" }}
+            />
+          </form>
+          {canCreateProject && orgs.length > 0 && (
+            <>
+              <Link
+                href="/dashboard/projects/new?ai=1"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "9px 14px",
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  color: "#2536C4",
+                  background: "var(--white)",
+                  border: "1px solid #C9D0FB",
+                  borderRadius: 9,
+                  textDecoration: "none",
+                }}
+              >
+                ◆ Draft with AI
+              </Link>
+              <Link
+                href="/dashboard/projects/new"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "9px 14px",
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  color: "var(--white)",
+                  background: "var(--ink)",
+                  borderRadius: 9,
+                  textDecoration: "none",
+                }}
+              >
+                + New project
+              </Link>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {groups.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 24 }}>
