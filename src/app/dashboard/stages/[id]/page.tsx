@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getStageDetail } from "@/services/stages";
 import { listTasksForStage, assignableForStage } from "@/services/tasks";
+import { listChangeOrdersForStage } from "@/services/change-orders";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -18,6 +19,7 @@ import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { WaitingOn } from "@/components/WaitingOn";
 import { PeopleCard } from "@/components/People";
 import { TasksClient } from "@/components/TasksClient";
+import { ChangeOrders } from "@/components/ChangeOrders";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { waitingParty } from "@/lib/stage-ui";
 
@@ -51,9 +53,10 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
   });
   const { stage, people, lineItems, audit, actions } = detail;
 
-  const [tasks, assignable] = await Promise.all([
+  const [tasks, assignable, changeOrders] = await Promise.all([
     listTasksForStage(ctx, id),
     ctx.isStaff ? assignableForStage(ctx, id) : Promise.resolve([]),
+    listChangeOrdersForStage(ctx, id),
   ]);
   const canManageTasks = ctx.isAdmin || detail.resource.projectLeadUserId === ctx.user.id;
   const canQuote =
@@ -232,6 +235,11 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
               stageId={stage.id}
               canManage={canManageTasks}
             />
+          </section>
+
+          {/* Changes (client-requested change orders) */}
+          <section style={{ marginTop: 28 }}>
+            <ChangeOrders stageId={stage.id} projectId={stage.projectId} items={changeOrders} />
           </section>
         </div>
 
