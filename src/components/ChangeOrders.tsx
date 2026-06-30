@@ -12,8 +12,10 @@ type Item = {
   status: string;
   totalAmountCents: number;
   requiresAdminApproval: boolean;
+  taskId: string | null;
   actions: Action[];
 };
+type TaskOption = { id: string; title: string };
 
 const STATUS: Record<string, { bg: string; text: string; label: string }> = {
   draft: { bg: "#fff7ed", text: "#b45309", label: "Requested" },
@@ -63,7 +65,7 @@ function toneFor(a: Action): "ink" | "green" | "red" | "secondary" {
 }
 
 /** Change orders on a stage (design: the "I want to make a change" path). */
-export function ChangeOrders({ stageId, projectId, items }: { stageId: string; projectId: string; items: Item[] }) {
+export function ChangeOrders({ stageId, projectId, items, tasks }: { stageId: string; projectId: string; items: Item[]; tasks: TaskOption[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -72,6 +74,7 @@ export function ChangeOrders({ stageId, projectId, items }: { stageId: string; p
   const [error, setError] = useState<string | null>(null);
   const [quoteFor, setQuoteFor] = useState<string | null>(null);
   const [quoteAmt, setQuoteAmt] = useState("");
+  const [quoteTask, setQuoteTask] = useState("");
 
   async function request() {
     if (!name.trim()) return;
@@ -170,22 +173,35 @@ export function ChangeOrders({ stageId, projectId, items }: { stageId: string; p
                 </div>
                 {co.description && <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "var(--muted)" }}>{co.description}</p>}
 
-                {/* Inline quote entry (staff) */}
+                {/* Inline quote entry (staff): price + which task it attaches to */}
                 {quoteFor === co.id ? (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 13 }}>$</span>
                     <input
                       className="tabular"
-                      style={{ ...input, width: 120, textAlign: "right" }}
+                      style={{ ...input, width: 110, textAlign: "right" }}
                       inputMode="decimal"
                       placeholder="0"
                       value={quoteAmt}
                       onChange={(e) => setQuoteAmt(e.target.value)}
                     />
-                    <button type="button" disabled={busy} onClick={() => act(co.id, "send_quote", { totalAmountCents: toCents(quoteAmt) })} style={btn("ink")}>
+                    <select style={input} value={quoteTask} onChange={(e) => setQuoteTask(e.target.value)} title="Attach this change to a task">
+                      <option value="">No task</option>
+                      {tasks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.title.length > 36 ? `${t.title.slice(0, 36)}…` : t.title}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => act(co.id, "send_quote", { totalAmountCents: toCents(quoteAmt), taskId: quoteTask || undefined })}
+                      style={btn("ink")}
+                    >
                       Send quote
                     </button>
-                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Enter 0 to absorb (no charge).</span>
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>0 = absorb · the task shows it as a Change subitem.</span>
                     <button type="button" onClick={() => setQuoteFor(null)} style={btn("secondary")}>
                       Cancel
                     </button>
@@ -198,7 +214,15 @@ export function ChangeOrders({ stageId, projectId, items }: { stageId: string; p
                           key={a}
                           type="button"
                           disabled={busy}
-                          onClick={() => (a === "send_quote" ? setQuoteFor(co.id) : act(co.id, a))}
+                          onClick={() => {
+                            if (a === "send_quote") {
+                              setQuoteFor(co.id);
+                              setQuoteTask(co.taskId ?? "");
+                              setQuoteAmt(co.totalAmountCents ? String(co.totalAmountCents / 100) : "");
+                            } else {
+                              act(co.id, a);
+                            }
+                          }}
                           style={btn(toneFor(a))}
                         >
                           {ACTION_LABEL[a]}

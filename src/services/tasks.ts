@@ -19,6 +19,7 @@ export const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "d
 
 export type Subtask = { id: string; title: string; done: boolean };
 export type TaskNote = { id: string; author: string; body: string; createdAt: Date };
+export type TaskChange = { id: string; name: string; amountCents: number; status: string };
 
 export type TaskView = {
   id: string;
@@ -30,6 +31,7 @@ export type TaskView = {
   deliverableId: string | null;
   subtasks: Subtask[];
   notes: TaskNote[];
+  changes: TaskChange[];
 };
 
 export type AssignablePerson = { id: string; name: string; type: "wahala" | "client" };
@@ -71,10 +73,15 @@ export async function listTasksForStage(ctx: AuthContext, stageId: string): Prom
   if (rows.length === 0) return [];
 
   const taskIds = rows.map((r) => r.id);
-  const [assignments, subtaskRows, noteRows] = await Promise.all([
+  const [assignments, subtaskRows, noteRows, changeRows] = await Promise.all([
     db.select().from(schema.taskAssignments).where(inArray(schema.taskAssignments.taskId, taskIds)),
     db.select().from(schema.taskSubtasks).where(inArray(schema.taskSubtasks.taskId, taskIds)).orderBy(schema.taskSubtasks.sortOrder),
     db.select().from(schema.taskNotes).where(inArray(schema.taskNotes.taskId, taskIds)).orderBy(schema.taskNotes.createdAt),
+    db
+      .select({ id: schema.changeOrders.id, name: schema.changeOrders.name, amountCents: schema.changeOrders.totalAmountCents, status: schema.changeOrders.status, taskId: schema.changeOrders.taskId })
+      .from(schema.changeOrders)
+      .where(inArray(schema.changeOrders.taskId, taskIds))
+      .orderBy(schema.changeOrders.createdAt),
   ]);
 
   // Names for assignees + note authors in one lookup.
@@ -104,6 +111,13 @@ export async function listTasksForStage(ctx: AuthContext, stageId: string): Prom
     arr.push({ id: n.id, author: n.authorUserId ? nameById.get(n.authorUserId) ?? "—" : "—", body: n.body, createdAt: n.createdAt });
     notesByTask.set(n.taskId, arr);
   }
+  const changesByTask = new Map<string, TaskChange[]>();
+  for (const c of changeRows) {
+    if (!c.taskId || c.status === "rejected") continue; // declined changes don't clutter the task
+    const arr = changesByTask.get(c.taskId) ?? [];
+    arr.push({ id: c.id, name: c.name, amountCents: c.amountCents, status: c.status });
+    changesByTask.set(c.taskId, arr);
+  }
 
   return rows.map((r) => {
     const a = firstByTask.get(r.id);
@@ -123,6 +137,7 @@ export async function listTasksForStage(ctx: AuthContext, stageId: string): Prom
       deliverableId: r.stageLineItemId ?? null,
       subtasks: subtasksByTask.get(r.id) ?? [],
       notes: notesByTask.get(r.id) ?? [],
+      changes: changesByTask.get(r.id) ?? [],
     };
   });
 }

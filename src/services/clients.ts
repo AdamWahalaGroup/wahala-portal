@@ -190,6 +190,8 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
   const lineItemIds = db.select({ id: schema.stageLineItems.id }).from(schema.stageLineItems).where(inArray(schema.stageLineItems.stageId, stageIds));
 
   await db.batch([
+    // change_orders reference tasks + stages, so clear them first.
+    db.delete(schema.changeOrders).where(eq(schema.changeOrders.organizationId, orgId)),
     db.delete(schema.taskAssignments).where(inArray(schema.taskAssignments.taskId, taskIds)),
     db.delete(schema.taskSubtasks).where(inArray(schema.taskSubtasks.taskId, taskIds)),
     db.delete(schema.taskNotes).where(inArray(schema.taskNotes.taskId, taskIds)),
@@ -197,7 +199,6 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
     db.delete(schema.deliverableNotes).where(inArray(schema.deliverableNotes.stageLineItemId, lineItemIds)),
     db.delete(schema.stageLineItems).where(inArray(schema.stageLineItems.stageId, stageIds)),
     db.delete(schema.stages).where(eq(schema.stages.organizationId, orgId)),
-    db.delete(schema.changeOrders).where(eq(schema.changeOrders.organizationId, orgId)),
     db.delete(schema.assets).where(eq(schema.assets.organizationId, orgId)),
     db.delete(schema.messages).where(eq(schema.messages.organizationId, orgId)),
     db.delete(schema.projectMembers).where(eq(schema.projectMembers.organizationId, orgId)),

@@ -11,7 +11,7 @@
  * Mirrors the stage action machine: tenant-scoped load → role check → compare-and-swap
  * UPDATE … WHERE status = <from> → best-effort audit.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { scopedDb } from "@/db/scoped";
 import type { AuthContext } from "@/auth/context";
@@ -33,6 +33,7 @@ export type ChangeOrderView = {
   status: string;
   totalAmountCents: number;
   requiresAdminApproval: boolean;
+  taskId: string | null;
   actions: ChangeAction[];
 };
 
@@ -89,7 +90,7 @@ export function changeActionsFor(ctx: AuthContext, co: ChangeOrder, accountOwner
 function resolveTransition(
   action: ChangeAction,
   co: ChangeOrder,
-  extra: { totalAmountCents?: number; stripeRef?: string },
+  extra: { totalAmountCents?: number; stripeRef?: string; taskId?: string },
 ): { from: StageStatus; to: StageStatus; fields: Partial<typeof schema.changeOrders.$inferInsert> } {
   switch (action) {
     case "send_quote": {
@@ -97,7 +98,11 @@ function resolveTransition(
       return {
         from: "draft",
         to: "quoted",
-        fields: { totalAmountCents: total, requiresAdminApproval: requiresAdminApproval(total, adminApprovalThresholdCents()) },
+        fields: {
+          totalAmountCents: total,
+          requiresAdminApproval: requiresAdminApproval(total, adminApprovalThresholdCents()),
+          taskId: extra.taskId || null, // attach to the chosen task (renders as a Change subitem there)
+        },
       };
     }
     case "approve":
@@ -182,7 +187,7 @@ export async function applyChangeAction(
   ctx: AuthContext,
   id: string,
   action: ChangeAction,
-  extra: { totalAmountCents?: number; stripeRef?: string; note?: string } = {},
+  extra: { totalAmountCents?: number; stripeRef?: string; note?: string; taskId?: string } = {},
 ): Promise<ChangeOrder> {
   const db = getDb();
   const { co, accountOwnerUserId } = await loadChange(ctx, id);
@@ -206,6 +211,14 @@ export async function applyChangeAction(
     .returning({ id: schema.changeOrders.id });
   if (updated.length === 0) {
     throw new StageError("CONFLICT", "This change was just updated by someone else — reload and try again.");
+  }
+
+  // Applying a billable change re-scopes the stage: its fixed price goes up by the change amount.
+  if (action === "apply" && co.stageId && co.totalAmountCents > 0) {
+    await db
+      .update(schema.stages)
+      .set({ totalAmountCents: sql`${schema.stages.totalAmountCents} + ${co.totalAmountCents}`, updatedAt: new Date() })
+      .where(eq(schema.stages.id, co.stageId));
   }
 
   await recordChange(db, ctx, {
@@ -240,6 +253,7 @@ export async function listChangeOrdersForStage(ctx: AuthContext, stageId: string
     status: co.status,
     totalAmountCents: co.totalAmountCents,
     requiresAdminApproval: co.requiresAdminApproval,
+    taskId: co.taskId ?? null,
     actions: changeActionsFor(ctx, co, accountOwnerUserId),
   }));
 }

@@ -6,6 +6,7 @@ import { VisibilityMarker } from "@/components/VisibilityMarker";
 
 type Subtask = { id: string; title: string; done: boolean };
 type Note = { id: string; author: string; body: string; createdAt: string | Date };
+type Change = { id: string; name: string; amountCents: number; status: string };
 type Task = {
   id: string;
   title: string;
@@ -16,7 +17,18 @@ type Task = {
   deliverableId: string | null;
   subtasks: Subtask[];
   notes: Note[];
+  changes: Change[];
 };
+
+const CHANGE_LABEL: Record<string, string> = {
+  quoted: "Quoted",
+  approved: "Approved",
+  paid: "Paid",
+  accepted: "Applied",
+};
+function fmtUsd(cents: number): string {
+  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
 type Person = { id: string; name: string; type: "wahala" | "client" };
 type Deliverable = { id: string; description: string };
 
@@ -272,6 +284,11 @@ function TaskRow({
               <StatusPill status={task.status} />
             )}
             <VisibilityMarker visibility={task.visibility} />
+            {task.changes.length > 0 && (
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: "#b45309", background: "#fff7ed", border: "1px solid #fadcb4", borderRadius: 999, padding: "1px 7px" }}>
+                ⚡ {task.changes.length} change{task.changes.length === 1 ? "" : "s"}
+              </span>
+            )}
             {(task.subtasks.length > 0 || task.notes.length > 0) && (
               <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
                 {task.subtasks.length > 0 && `${doneCount}/${task.subtasks.length} subtasks`}
@@ -296,6 +313,31 @@ function TaskRow({
 
       {open && (
         <div style={{ padding: "2px 14px 16px 48px", display: "grid", gap: 16 }}>
+          {/* Change requests attached to this task — clearly distinct from normal subtasks */}
+          {task.changes.length > 0 && (
+            <div>
+              <div className="kicker" style={{ marginBottom: 6, color: "#b45309" }}>
+                Change requests
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {task.changes.map((c) => (
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff7ed", border: "1px solid #fadcb4", borderRadius: 8, padding: "7px 10px" }}>
+                    <span style={{ flex: "none", fontSize: 13 }}>⚡</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{c.name}</span>
+                    {c.amountCents > 0 ? (
+                      <span className="tabular" style={{ fontSize: 13, fontWeight: 700, color: "#b45309" }}>+{fmtUsd(c.amountCents)}</span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "var(--muted)" }}>No charge</span>
+                    )}
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#92400e", background: "#fde6c4", borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap" }}>
+                      {CHANGE_LABEL[c.status] ?? c.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Subtasks */}
           <div>
             <div className="kicker" style={{ marginBottom: 6 }}>

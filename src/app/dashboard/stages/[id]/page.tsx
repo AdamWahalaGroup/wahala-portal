@@ -177,7 +177,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
 
           {/* Changes (client-requested change orders) */}
           <section style={{ marginTop: 28 }}>
-            <ChangeOrders stageId={stage.id} projectId={stage.projectId} items={changeOrders} />
+            <ChangeOrders stageId={stage.id} projectId={stage.projectId} items={changeOrders} tasks={tasks.map((t) => ({ id: t.id, title: t.title }))} />
           </section>
         </div>
 

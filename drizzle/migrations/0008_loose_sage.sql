@@ -1,0 +1,1 @@
+ALTER TABLE `change_orders` ADD `task_id` text REFERENCES tasks(id);

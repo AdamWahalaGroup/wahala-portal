@@ -269,6 +269,8 @@ export const changeOrders = sqliteTable("change_orders", {
   organizationId: text("organization_id").notNull().references(() => organizations.id),
   projectId: text("project_id").notNull().references(() => projects.id),
   stageId: text("stage_id").references(() => stages.id),
+  // Optional task this change attaches to — it renders as a flagged "Change" subitem there.
+  taskId: text("task_id").references(() => tasks.id),
   name: text("name").notNull(),
   description: text("description"),
   status: text("status", { enum: STAGE_STATUSES }).notNull().default("draft"),

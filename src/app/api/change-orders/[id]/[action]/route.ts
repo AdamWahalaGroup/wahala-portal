@@ -19,11 +19,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!ACTIONS.has(normalized)) {
       throw new ApiError(400, "validation", `Unknown change-order action "${action}".`);
     }
-    const body = await readJson<{ totalAmountCents?: number; stripeRef?: string; note?: string }>(req);
+    const body = await readJson<{ totalAmountCents?: number; stripeRef?: string; note?: string; taskId?: string }>(req);
     const changeOrder = await applyChangeAction(ctx, id, normalized, {
       totalAmountCents: body.totalAmountCents,
       stripeRef: body.stripeRef,
       note: body.note,
+      taskId: body.taskId,
     });
     return NextResponse.json({ changeOrder });
   } catch (e) {
