@@ -12,6 +12,7 @@ import { WaitingOn } from "@/components/WaitingOn";
 import { Money } from "@/components/Money";
 import { CreateProjectForm } from "@/components/CreateProjectForm";
 import { ClientWelcome } from "@/components/ClientWelcome";
+import { StaffHome } from "@/components/StaffHome";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { onYouCta, waitingParty } from "@/lib/stage-ui";
 
@@ -26,6 +27,9 @@ function greeting(hour: number): string {
 export default async function Dashboard() {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
+
+  // Wahala staff get the clients & revenue landing (frame 17); clients get their dashboard.
+  if (ctx.isStaff) return <StaffHome ctx={ctx} />;
 
   const sdb = scopedDb(ctx);
   const [projects, allStages, org, accountOwner] = await Promise.all([
