@@ -32,7 +32,7 @@ export type WorkHistoryItem = {
 export type HubPerson = { id: string; name: string; email: string; role: string; status: string };
 
 export type AccountHub = {
-  org: { id: string; name: string; status: string; intakeNotes: string | null; createdAt: Date };
+  org: { id: string; name: string; status: string; intakeNotes: string | null; aiContextMd: string | null; createdAt: Date };
   accountOwner: { id: string; name: string; email: string } | null;
   counts: { projects: number; stages: number };
   totals: { paidCents: number; acceptedCents: number; openCents: number };
@@ -137,7 +137,7 @@ export async function getAccountHub(ctx: AuthContext, orgId: string): Promise<Ac
   }
 
   return {
-    org: { id: org.id, name: org.name, status: org.status, intakeNotes: org.intakeNotes, createdAt: org.createdAt },
+    org: { id: org.id, name: org.name, status: org.status, intakeNotes: org.intakeNotes, aiContextMd: org.aiContextMd, createdAt: org.createdAt },
     accountOwner,
     counts: { projects: orgProjects.length, stages: orgStages.length },
     totals,

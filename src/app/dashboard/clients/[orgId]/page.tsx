@@ -13,6 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Money } from "@/components/Money";
 import { Avatar, PeopleCard } from "@/components/People";
+import { ClientMemoEditor } from "@/components/ClientMemoEditor";
 import { STATUS_STYLES } from "@/lib/theme";
 import { formatCents } from "@/lib/format";
 
@@ -67,6 +68,11 @@ export default async function AccountHubPage({
   const { tab: tabParam } = await searchParams;
   const realTabs = new Set(["overview", "history", "people"]);
   const tab = realTabs.has(tabParam ?? "") ? tabParam! : "overview";
+
+  // Admin or the org's Account Owner may edit the AI client memory; everyone else
+  // sees it read-only (still useful as context).
+  const canEditMemo =
+    ctx.isAdmin || (ctx.user.role === "account_owner" && ctx.user.id === hub.accountOwner?.id);
 
   const initials =
     hub.org.name
@@ -156,7 +162,7 @@ export default async function AccountHubPage({
         })}
       </div>
 
-      {tab === "overview" && <OverviewTab hub={hub} orgId={orgId} />}
+      {tab === "overview" && <OverviewTab hub={hub} orgId={orgId} canEditMemo={canEditMemo} />}
       {tab === "history" && (
         <section style={{ marginTop: 24 }}>
           <div className="kicker" style={{ marginBottom: 12 }}>
@@ -170,7 +176,15 @@ export default async function AccountHubPage({
   );
 }
 
-function OverviewTab({ hub, orgId }: { hub: Awaited<ReturnType<typeof getAccountHub>>; orgId: string }) {
+function OverviewTab({
+  hub,
+  orgId,
+  canEditMemo,
+}: {
+  hub: Awaited<ReturnType<typeof getAccountHub>>;
+  orgId: string;
+  canEditMemo: boolean;
+}) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 30, marginTop: 24, alignItems: "start" }}>
       {/* Main */}
@@ -185,6 +199,8 @@ function OverviewTab({ hub, orgId }: { hub: Awaited<ReturnType<typeof getAccount
             <p style={{ margin: 0, fontSize: 14, color: "var(--ink-soft)", lineHeight: 1.55 }}>{hub.org.intakeNotes}</p>
           </section>
         )}
+
+        <ClientMemoEditor orgId={orgId} initial={hub.org.aiContextMd ?? ""} canEdit={canEditMemo} />
 
         <div className="kicker" style={{ marginBottom: 12 }}>
           Recent work

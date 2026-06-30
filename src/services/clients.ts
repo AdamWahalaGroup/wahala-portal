@@ -6,6 +6,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
+import { canAccessOrg } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
@@ -169,6 +170,31 @@ export async function onboardClient(
   }
 
   return { organizationId, userId, inviteLink };
+}
+
+/**
+ * Set the per-client AI memory (organizations.ai_context_md). Editable by Wahala
+ * admins or that org's Account Owner — same RBAC as createProject. Future AI features
+ * read this as grounding so they don't have to re-read the source docs each time.
+ */
+export async function setOrgAiContextMd(ctx: AuthContext, orgId: string, body: string): Promise<void> {
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, orgId) });
+  if (!org) throw new StageError("NOT_FOUND", "Organization not found.");
+  if (!canAccessOrg(ctx.accessScope, org.id)) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "set_org_ai_context", resource: `org:${orgId}`, reason: "out_of_scope" });
+    throw new StageError("NOT_FOUND", "Organization not found.");
+  }
+  const isOwner = ctx.user.id === org.accountOwnerUserId;
+  if (!(ctx.isAdmin || (ctx.user.role === "account_owner" && isOwner))) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "set_org_ai_context", resource: `org:${orgId}`, reason: "not_admin_or_owner" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or this client's Account Owner can edit the client memory.");
+  }
+  const trimmed = body.trim();
+  await db
+    .update(schema.organizations)
+    .set({ aiContextMd: trimmed.length > 0 ? trimmed : null })
+    .where(eq(schema.organizations.id, orgId));
 }
 
 /**
