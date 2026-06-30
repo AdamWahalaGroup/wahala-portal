@@ -47,7 +47,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
             {usd(ov.collectedCents)}
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-            Across {ov.collectedClientCount} client{ov.collectedClientCount === 1 ? "" : "s"} · accepted &amp; paid
+            Across {ov.collectedClientCount} client{ov.collectedClientCount === 1 ? "" : "s"} · payments received
           </div>
         </div>
 
@@ -60,7 +60,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
             {usd(ov.promisedCents)}
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-            In-flight + approved quotes · invoiced as stages complete
+            Agreed work · not yet collected
           </div>
         </div>
       </div>

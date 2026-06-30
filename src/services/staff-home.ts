@@ -1,21 +1,23 @@
 /**
  * Staff home / admin landing (design frame 17) — clients & revenue, NOT a worklist.
- * Per client: lifetime collected (accepted stages) + promised pipeline (everything
- * agreed but not yet accepted). Tenant-scoped via scopedDb.
+ * Money is bucketed by the PAYMENT fact (stages.paidAt), not the work status, so the
+ * split is correct under either billing model: "pay before work" (paidAt set at the
+ * paid step) or a future "pay on completion" (paidAt set at acceptance). Per client:
+ *   - paidToDate = stages with paidAt set (money actually received),
+ *   - promised   = stages agreed but not yet paid (outstanding).
+ * Tenant-scoped via scopedDb.
  */
 import type { AuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
 import { listWahalaStaff } from "@/services/clients";
-
-const PROMISED_STATUSES = new Set(["quoted", "approved", "paid", "in_progress", "delivered", "needs_revision"]);
 
 export type ClientRevenue = {
   orgId: string;
   orgName: string;
   ownerName: string | null;
   projectCount: number;
-  paidToDateCents: number; // accepted stages (lifetime collected)
-  promisedCents: number; // in-flight + approved/quoted (invoiced as stages complete)
+  paidToDateCents: number; // stages actually paid (paidAt set) — money received
+  promisedCents: number; // agreed but not yet paid — outstanding, regardless of billing model
 };
 
 export type RevenueOverview = {
@@ -42,8 +44,13 @@ export async function staffRevenueOverview(ctx: AuthContext): Promise<RevenueOve
   const paid = new Map<string, number>();
   const promised = new Map<string, number>();
   for (const s of stages) {
-    if (s.status === "accepted") paid.set(s.organizationId, (paid.get(s.organizationId) ?? 0) + s.totalAmountCents);
-    else if (PROMISED_STATUSES.has(s.status)) promised.set(s.organizationId, (promised.get(s.organizationId) ?? 0) + s.totalAmountCents);
+    if (s.paidAt) {
+      // Money in the door — regardless of where the stage is in its work lifecycle.
+      paid.set(s.organizationId, (paid.get(s.organizationId) ?? 0) + s.totalAmountCents);
+    } else if (s.status !== "draft" && s.status !== "rejected") {
+      // Agreed (or in flight) but not yet collected — outstanding.
+      promised.set(s.organizationId, (promised.get(s.organizationId) ?? 0) + s.totalAmountCents);
+    }
   }
 
   const clients: ClientRevenue[] = orgs
