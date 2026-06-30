@@ -8,6 +8,7 @@ import { getAuthContext } from "@/auth/context";
 import { getStageDetail } from "@/services/stages";
 import { listTasksForStage, assignableForStage } from "@/services/tasks";
 import { listChangeOrdersForStage } from "@/services/change-orders";
+import { listDeliverablesForStage, canManageDeliverables } from "@/services/deliverables";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -20,27 +21,13 @@ import { WaitingOn } from "@/components/WaitingOn";
 import { PeopleCard } from "@/components/People";
 import { TasksClient } from "@/components/TasksClient";
 import { ChangeOrders } from "@/components/ChangeOrders";
+import { DeliverablesClient } from "@/components/DeliverablesClient";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
 
 const PAID_OR_BEYOND = new Set(["paid", "in_progress", "delivered", "accepted"]);
-
-/** Group deliverables (line items) by their epic label, preserving first-seen order. */
-function groupDeliverables<T extends { groupLabel: string | null }>(items: T[]): { label: string; items: T[] }[] {
-  const groups: { label: string; items: T[] }[] = [];
-  for (const li of items) {
-    const label = li.groupLabel ?? "";
-    let g = groups.find((x) => x.label === label);
-    if (!g) {
-      g = { label, items: [] };
-      groups.push(g);
-    }
-    g.items.push(li);
-  }
-  return groups;
-}
 
 export default async function StagePage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
@@ -53,12 +40,14 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
   });
   const { stage, people, lineItems, audit, actions } = detail;
 
-  const [tasks, assignable, changeOrders] = await Promise.all([
+  const [tasks, assignable, changeOrders, deliverables] = await Promise.all([
     listTasksForStage(ctx, id),
     ctx.isStaff ? assignableForStage(ctx, id) : Promise.resolve([]),
     listChangeOrdersForStage(ctx, id),
+    listDeliverablesForStage(ctx, id),
   ]);
   const canManageTasks = ctx.isAdmin || detail.resource.projectLeadUserId === ctx.user.id;
+  const canManageDeliverablesNow = canManageDeliverables(ctx, stage, detail.resource);
   const canQuote =
     ctx.isStaff &&
     stage.status === "draft" &&
@@ -141,59 +130,15 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
             <p style={{ marginTop: 22, color: "var(--ink-soft)", fontSize: 14.5 }}>{stage.scopeDescription}</p>
           )}
 
-          {/* Deliverables = the acceptance checklist, grouped by epic */}
+          {/* Deliverables — grouped by epic; assigned staff mark complete + add progress notes */}
           <section style={{ marginTop: 22 }}>
             <div className="kicker" style={{ marginBottom: 10 }}>
-              Deliverables ({lineItems.length})
+              Deliverables ({deliverables.length})
             </div>
-            {lineItems.length === 0 ? (
+            {deliverables.length === 0 ? (
               <p style={{ color: "var(--muted)", fontSize: 14 }}>No deliverables yet.</p>
             ) : (
-              groupDeliverables(lineItems).map((g) => (
-                <div key={g.label || "_general"} style={{ marginBottom: g.label ? 14 : 0 }}>
-                  {g.label && (
-                    <div className="kicker" style={{ color: "var(--cobalt)", margin: "8px 0 2px" }}>
-                      {g.label}
-                    </div>
-                  )}
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                    {g.items.map((li) => {
-                      const checked = stage.status === "accepted";
-                      return (
-                        <li
-                          key={li.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            padding: "11px 0",
-                            borderBottom: "1px solid var(--border-soft)",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 19,
-                              height: 19,
-                              borderRadius: 6,
-                              flex: "none",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              background: checked ? "#16a34a" : "var(--white)",
-                              color: "var(--white)",
-                              border: checked ? "none" : "1.5px solid #d7d9df",
-                            }}
-                          >
-                            {checked ? "✓" : ""}
-                          </span>
-                          <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>{li.description}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))
+              <DeliverablesClient deliverables={deliverables} canManage={canManageDeliverablesNow} />
             )}
             {ctx.isStaff && (
               <div

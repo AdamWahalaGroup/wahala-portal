@@ -169,10 +169,27 @@ export const stageLineItems = sqliteTable(
     // price (totalAmountCents); item amounts no longer have to sum to it.
     amountCents: integer("amount_cents").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
-    accepted: integer("accepted", { mode: "boolean" }).notNull().default(false), // per-item acceptance (future)
+    accepted: integer("accepted", { mode: "boolean" }).notNull().default(false), // per-item client acceptance (future)
+    // Wahala-side delivery progress: the assigned staff mark a deliverable done while work is underway.
+    completed: integer("completed", { mode: "boolean" }).notNull().default(false),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+    completedByUserId: text("completed_by_user_id").references(() => users.id),
     createdAt: createdAt(),
   },
   (t) => [index("stage_line_items_stage_idx").on(t.stageId)],
+);
+
+// ---- Deliverable notes (client-visible progress log on a deliverable as it's worked) ----
+export const deliverableNotes = sqliteTable(
+  "deliverable_notes",
+  {
+    id: pk(),
+    stageLineItemId: text("stage_line_item_id").notNull().references(() => stageLineItems.id),
+    authorUserId: text("author_user_id").references(() => users.id),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("deliverable_notes_item_idx").on(t.stageLineItemId)],
 );
 
 // ---- Tasks (internal work; client-visible by default) ----
