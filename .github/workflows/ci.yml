@@ -12,7 +12,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24 ships npm 11 (which accepts the committed lockfile) and satisfies the
+          # >=22 engine requirement of wrangler/miniflare. Node 20 (npm 10.8) rejected the
+          # lockfile with "npm ci can only install … in sync" and is now deprecated on runners.
+          node-version: 24
           cache: npm
       - run: npm ci
       # Type safety
