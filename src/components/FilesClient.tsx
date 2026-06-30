@@ -39,6 +39,7 @@ export function FilesClient({ files, projectId, canManage }: { files: FileItem[]
   const [visibility, setVisibility] = useState("client_visible");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -86,10 +87,23 @@ export function FilesClient({ files, projectId, canManage }: { files: FileItem[]
 
   return (
     <div>
-      {canManage && (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <div className="kicker">Files ({files.length})</div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setShowUpload((s) => !s)}
+            style={{ background: "var(--white)", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, padding: "5px 11px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            {showUpload ? "Cancel" : "Upload file · optional"}
+          </button>
+        )}
+      </div>
+
+      {canManage && showUpload && (
         <form
           onSubmit={upload}
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: files.length ? 14 : 0, padding: 14, border: "1px dashed var(--border)", borderRadius: 12, background: "var(--surface-soft)" }}
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14, padding: 14, border: "1px dashed var(--border)", borderRadius: 12, background: "var(--surface-soft)" }}
         >
           <input ref={inputRef} type="file" style={{ fontSize: 13 }} />
           <select value={visibility} onChange={(e) => setVisibility(e.target.value)} style={selectStyle}>

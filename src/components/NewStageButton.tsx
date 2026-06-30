@@ -32,26 +32,26 @@ export function NewStageButton({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      {error && <span style={{ color: "#b00020", fontSize: 12.5 }}>{error}</span>}
+    <div>
       <button
         type="button"
         onClick={create}
         disabled={busy}
         style={{
+          width: "100%",
           border: "none",
-          borderRadius: 9,
-          padding: "8px 14px",
-          fontSize: 13.5,
-          fontWeight: 600,
+          borderRadius: 11,
+          padding: "13px 16px",
+          fontSize: 14.5,
+          fontWeight: 700,
           background: "var(--ink)",
           color: "var(--white)",
           cursor: busy ? "default" : "pointer",
-          whiteSpace: "nowrap",
         }}
       >
-        {busy ? "Creating…" : "+ New stage"}
+        {busy ? "Creating…" : "+ New stage — scope the next phase"}
       </button>
+      {error && <p style={{ color: "#b00020", fontSize: 12.5, margin: "8px 0 0" }}>{error}</p>}
     </div>
   );
 }

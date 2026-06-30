@@ -170,7 +170,20 @@ Reference only — the design-system panel (brand lockup, color, type, component
   meta. People row: Account owner card + Lead engineer card + roster avatar stack.
 - **Stages list:** numbered rows (`01`…), name + sub-meta, StatusBadge, right-
   aligned tabular amount, chevron. The active stage row uses the active-row
-  highlight. Staff/owner see a **+ New stage** button.
+  highlight. **+ New stage** is the prominent next action — a full-width Ink button
+  *below* the stage list ("New stage — scope the next phase"), not a small header
+  button. File upload is a deliberately **secondary, off-to-the-side** affordance
+  (small outlined "Upload file · optional" in the section header), visibly optional.
+
+### 16 — Projects, staff (`/dashboard/projects`) — grouped by client
+- **Purpose:** A staff cross-client list of all projects, **cleanly separated by
+  client** so each client's work reads as its own block.
+- **Layout:** page header ("Projects · Across all your clients" + search); then one
+  **client group** per org — a heading row (org avatar + name + project count +
+  the assigned Wahala person on the right) with a 2px ink underline, followed by
+  that client's project rows (name + work-type/stage meta + StatusBadge + chevron).
+  Groups are visually distinct (heading divider + spacing) so clients never blur
+  together. Respects tenant scoping (only orgs the staffer can see).
 
 ### 05 — Stage detail (`/dashboard/stages/:id`) — THE KEY SCREEN
 - **Purpose:** Everything about one stage; where quote→approve→pay→deliver→accept
@@ -179,31 +192,52 @@ Reference only — the design-system panel (brand lockup, color, type, component
   grid: main (1fr) + 372px right rail, divided by a border.
 - **Main:** title + StatusBadge; **Stepper**; a celebrated **Paid banner**
   (`#E1F4F9`/`#B9E3EE`, ✓ in `#0891B2` circle, "Paid in full — work cleared to
-  begin"); Scope copy; **Line items** list (each with a checkbox — the line items
-  ARE the acceptance checklist) with tabular amounts; an **internal-only** note
-  ("3 internal tasks & the kickoff recording are hidden from the client").
-- **Right rail:** big tabular **Stage total** + paid sub-line; **Your next action**
-  card (contextual copy + Ink primary "Deliver to client" + secondary "Pause work"
-  + a note that only role/state-allowed actions are shown); WaitingOn pill; People;
-  **History timeline**.
-- **Islands:** ActionBar, all ConfirmDialogs.
+  begin"); Scope copy; **Deliverables** list **grouped by epic** (cobalt epic
+  subheaders; each deliverable has the accept ✓ checkbox and its description —
+  the stage is one fixed price — **per-deliverable prices and estimate notes are
+  hidden for now**, deliverable rows show description only); a **Tasks** section (internal delivery) where tasks
+  are **grouped under their deliverable** and each row is **expandable** to reveal a
+  **subtask checklist** + a **notes worklog** (attributed + dated, inline add for
+  staff) — collapsed header shows "{done}/{n} subtasks · {n} notes"; a **Changes**
+  section (change orders — see below); and the **internal-only** note (tasks/
+  subtasks/notes are staff-only unless a task is client-visible).
+- **Changes (change orders):** a **+ Request a change** button (client + staff)
+  opens a name + detail form; each change card shows a status pill —
+  **Requested → Quoted → Approved → Paid → Applied** (or **Declined**) — a price (or
+  "no price yet" / "$0 absorb"), and role-appropriate buttons (staff: Send quote w/
+  inline `$`, "$0 — absorb", Decline, Apply; client: Approve / Reject; admin: Mark
+  paid). Change orders run their own approve→pay gate before being applied to scope.
+- **Right rail:** big tabular **Stage price** (fixed) + paid sub-line; **Your next
+  action** card (contextual copy + Ink primary, e.g. "Deliver to client" / staff-
+  draft "Edit quote" / client-delivered green "Review & accept" → frame 07; only
+  role/state-allowed actions shown); WaitingOn pill; People; **History timeline**.
+- **Islands:** ActionBar, ConfirmDialogs, expandable Task rows (subtasks + notes),
+  Changes section.
 
 ### 06 — Quote / scope builder (staff)
-- **Purpose:** Build the quote = the later acceptance checklist; send (with
-  over-threshold admin co-sign path).
-- **Layout:** header (title + Draft badge); 2-col: editor (stage name input, scope
-  textarea, reorderable line-item rows with `⠿` drag handle + description input +
-  tabular amount + `✕`, dashed "+ Add line item") + 320px summary rail (total card,
-  **over-threshold co-sign banner** in `#FFFAF2`/`#FADCB4` when total > $10,000,
-  disabled "Send quote — awaiting co-sign", Ink "Request admin co-sign").
-- **Island:** LineItemEditor (add/reorder/edit, live total, send).
+- **Purpose:** Set a stage's **fixed price** and its **deliverables** (grouped by
+  epic); send (with over-threshold admin co-sign path). The deliverables become the
+  later acceptance checklist.
+- **Layout:** header (title + Draft badge); 2-col: editor + 320px summary rail.
+  **Editor is epic-grouped:** each **epic** is a card with an editable epic-name
+  header, then its **deliverable** rows under it (drag handle · description · `✕`);
+  an **+ Add deliverable** button inside each epic lets the admin add deliverables
+  one after another without re-entering the epic; an **+ Add epic** button at the
+  bottom starts a new epic group with its own deliverables. **No per-deliverable
+  price or estimate-note inputs** — only the description. The rail has a big
+  editable **Stage price · fixed** `$` field (hint: "{N} epics · {N} deliverables ·
+  the client pays this one fixed price"), the **over-threshold co-sign banner** in
+  `#FFFAF2`/`#FADCB4` when price > $10,000, disabled "Send quote — awaiting
+  co-sign", Ink "Request admin co-sign".
+- **Island:** ScopeBuilder (add/reorder epics + deliverables, fixed price, send).
 
 ### 07 — Acceptance (client) — designed for **mobile**
-- **Purpose:** Formally accept a delivered stage against its line items, or request
-  revision. A deliberate, logged trust moment.
+- **Purpose:** Formally accept a delivered stage against its deliverables, or
+  request revision. A deliberate, logged trust moment.
 - **Layout:** phone frame (390px). Delivered badge ("your acceptance needed"),
-  checklist of line items (green ✓ boxes), paid total, big green **Accept delivery**
-  + outlined red **Request revision**, micro-note "Acceptance is final & recorded".
+  **checklist of deliverables grouped by epic** (green ✓ boxes), paid total, big
+  green **Accept delivery** + outlined red **Request revision**, micro-note
+  "Acceptance is final & recorded".
 - **Confirm dialog:** weighty modal — green check tile, "Accept this delivery?",
   body naming the items + that it's logged as accepted by *you* on the date,
   Cancel + green "Yes, accept". Plus a **Request revision** variant with a note
@@ -234,18 +268,25 @@ Reference only — the design-system panel (brand lockup, color, type, component
   (size · uploader · date) + VisibilityMarker. Internal files (`recording.mp4`,
   `AI-meeting-digest.md`) get the `⊘ Internal only` marker + tinted row.
 
-### 11 — Messages / comms
-- **Purpose:** Threaded, attributed comms flagged Waiting on you / Wahala.
-- **Layout:** 300px thread list (each thread shows a waiting-on dot) + thread view
-  (header with WaitingOn pill; message bubbles — Wahala left/`#F4F5F7`, client
-  right/`#EEF0FE`, each with avatar + name + mono "{org} · {date time}"; composer
-  with input + Ink Send).
+### 11 — Messages / comms (`/dashboard/messages`)
+- **Purpose:** Threaded, attributed comms. **Two thread levels:** an **Account
+  thread** per client org (the durable client↔Wahala line, exists before any
+  project) + one thread per **project**.
+- **Layout:** 300px thread list — each row = waiting-on dot + title; **account
+  threads carry a small cobalt "Account" tag**; project threads show a mono
+  org/project sub-line; last-message snippet. Thread view: header (title + Account
+  tag / org-project meta) with a **viewer-aware WaitingOn pill** ("Waiting on you"
+  amber vs "Waiting on Wahala / the client" grey, phrased for the viewer); message
+  bubbles — Wahala left/`#F4F5F7`, client right/`#EEF0FE`, each with avatar + name +
+  mono "{org} · {date time}"; a **composer** (textarea + Ink Send, a "Needs a reply
+  from {them}" checkbox that flags the thread, ⌘/Ctrl-Enter to send).
+- **Islands:** thread view + composer.
 
 ### 12 — Client account hub
 - **Purpose:** The durable home for one organization.
 - **Layout:** org header (ink logo tile, name, mono "Client since … · N projects ·
-  N stages", account-owner card); tab row (Overview / People / Work history /
-  Files / Messages); body = work-history timeline (status-colored nodes, item =
+  N stages", account-owner card); tab row (Overview / Work history / People /
+  Files *soon* / Messages *soon*); body = work-history timeline (status-colored nodes, item =
   project·stage, mono "Accepted · date · $amount") + side cards (Lifetime totals,
   People with client roles).
 
@@ -295,7 +336,10 @@ Reference only — the Server/Island mapping below, rendered visually.
   contact you shortly to get started on your project.") — no CTAs in the hero); a **What we
   do** 2×2 offerings grid; and a **Your Wahala agent** card — shows the assigned
   agent (set at invite time), states they'll reach out with next steps to scope the
-  first project, and offers a **Message {agent}** action.
+  first project, and offers a **Message {agent}** action that **opens the in-app
+  Account thread** (frame 11), not an email client. The hero has no CTAs — it ends
+  with a bold line "Your Wahala representative is {agent}. {agent} will contact you
+  shortly to get started on your project."
 - **Offerings (the four cards):** (1) **Build & ship** — websites, services, apps,
   delivered stage by stage; (2) **Custom AI, tuned to you** — bespoke models &
   pipelines, minimal hallucinations, learns the business over time; (3) **Hosting &
@@ -340,9 +384,25 @@ and stream HTML. Islands render only what they're handed.
 ## State Management
 - Auth/session (magic-link, KV) → current user + role.
 - Current org (clients locked to one; staff may switch).
-- Per-stage: status, line items, amount, payment state, history, allowed-action set.
+- Per-stage: status, **deliverables (grouped by epic)**, fixed price, payment state,
+  **tasks → subtasks + notes worklog**, **change orders** (own status), history,
+  allowed-action set.
 - Optimistic UI in islands is fine, but the **server is authoritative** for state
   transitions and permissions.
+- **Auto-refresh (behavioral):** Clients, stage, dashboard, and Messages views poll
+  ~8s while something is pending (e.g. an invite outstanding) so cross-session
+  changes appear live — no manual refresh, no dedicated visual.
+
+## Vocabulary (use consistently across the UI)
+- **Stage** = a fixed-price phase (paid before work). **Deliverable** = a client-
+  facing scope item (renamed from "line item"; amount optional/illustrative).
+  Deliverables group under **Epics**. Internal **Tasks** hang under a deliverable
+  and carry **Subtasks** (checklist) + **Notes** (worklog). A **Change order** is
+  the client's/staff's "request a change" object with its own
+  Requested→Quoted→Approved→Paid→Applied (or Declined) gate.
+- **Not yet built:** milestone billing (deposit + per-phase payment) is a future
+  phase — today a stage is still "pay in full before work" (admin "Mark paid").
+  Don't design final billing UI around the old per-line model.
 
 ## Non-negotiable functional constraints (§7)
 1. **Role + state gating** — render only allowed actions (server returns the set).

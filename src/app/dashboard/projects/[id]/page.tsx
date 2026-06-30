@@ -92,10 +92,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {/* Stages */}
       <section style={{ marginTop: 30 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-          <div className="kicker">Stages ({stages.length})</div>
-          {canCreateStage && <NewStageButton projectId={project.id} />}
-        </div>
+        <div className="kicker" style={{ marginBottom: 12 }}>Stages ({stages.length})</div>
         {stages.length === 0 ? (
           <p style={{ color: "var(--muted)" }}>No stages yet. Add one to build its quote.</p>
         ) : (
@@ -137,13 +134,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             })}
           </div>
         )}
+        {canCreateStage && (
+          <div style={{ marginTop: 14 }}>
+            <NewStageButton projectId={project.id} />
+          </div>
+        )}
       </section>
 
       {/* Files */}
       <section style={{ marginTop: 30 }}>
-        <div className="kicker" style={{ marginBottom: 12 }}>
-          Files ({files.length})
-        </div>
         <FilesClient files={files} projectId={project.id} canManage={ctx.isStaff} />
       </section>
 

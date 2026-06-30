@@ -15,9 +15,9 @@
   // here — it lives only in .dev.vars so it can never leak into production.
   "vars": {
     "EMAIL_FROM": "login@wahala-services.com",
-    // Quote total (cents) above which a Wahala admin must co-sign. $5,000 placeholder
-    // pending the figure you + Jason set.
-    "ADMIN_APPROVAL_THRESHOLD_CENTS": "500000",
+    // Stage/change price (cents) above which a Wahala admin must co-sign. $10,000 per
+    // the design (frame 06); adjust here when you + Jason settle the figure.
+    "ADMIN_APPROVAL_THRESHOLD_CENTS": "1000000",
     // Email domains whose Google SSO logins auto-become Wahala admins (the team).
     // Everyone else is invite-only. Comma-separated.
     "STAFF_SSO_DOMAINS": "wahalagroup.com"

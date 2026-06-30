@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCents } from "@/lib/format";
 
-type Row = { id: string; group: string; description: string; estimateNote: string; amount: string };
+type Item = { id: string; description: string };
+type Epic = { id: string; name: string; items: Item[] };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -18,7 +19,9 @@ const inputStyle: React.CSSProperties = {
 };
 
 let seq = 0;
-const newRow = (group = ""): Row => ({ id: `r${seq++}`, group, description: "", estimateNote: "", amount: "" });
+const uid = () => `k${seq++}`;
+const newItem = (description = ""): Item => ({ id: uid(), description });
+const newEpic = (name = ""): Epic => ({ id: uid(), name, items: [newItem()] });
 
 /** Dollars string ("2,500" / "2500.50") → integer cents. NaN/blank → 0. */
 function toCents(s: string): number {
@@ -26,7 +29,24 @@ function toCents(s: string): number {
   return Number.isFinite(n) ? Math.max(0, Math.round(n * 100)) : 0;
 }
 
-/** Quote / scope builder (design frame 06). Edits a DRAFT stage's itemized quote. */
+/** Build the initial epic groups from saved deliverables (grouped by epic label). */
+function initialEpics(items: { description: string; groupLabel: string | null }[]): Epic[] {
+  if (items.length === 0) return [newEpic()];
+  const epics: Epic[] = [];
+  for (const li of items) {
+    const name = li.groupLabel ?? "";
+    let e = epics.find((x) => x.name === name);
+    if (!e) {
+      e = { id: uid(), name, items: [] };
+      epics.push(e);
+    }
+    e.items.push(newItem(li.description));
+  }
+  return epics;
+}
+
+/** Quote / scope builder (design frame 06) — set a stage's ONE fixed price and its
+ *  deliverables, grouped by epic (description only; no per-item price). */
 export function QuoteBuilder({
   stageId,
   projectId,
@@ -50,75 +70,69 @@ export function QuoteBuilder({
   const [name, setName] = useState(initialName);
   const [scope, setScope] = useState(initialScope);
   const [price, setPrice] = useState(initialTotalCents ? String(initialTotalCents / 100) : "");
-  const [rows, setRows] = useState<Row[]>(
-    initialItems.length
-      ? initialItems.map((li) => ({
-          id: `r${seq++}`,
-          group: li.groupLabel ?? "",
-          description: li.description,
-          estimateNote: li.estimateNote ?? "",
-          amount: li.amountCents ? String(li.amountCents / 100) : "",
-        }))
-      : [newRow()],
-  );
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [epics, setEpics] = useState<Epic[]>(() => initialEpics(initialItems));
+  const [drag, setDrag] = useState<{ epicId: string; index: number } | null>(null);
   const [busy, setBusy] = useState<null | "save" | "send" | "cosign">(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [cosignRequested, setCosignRequested] = useState(false);
 
-  // The stage price is author-set (the fixed chunk price). The item sum is just a hint.
+  const dirty = () => setSaved(false);
   const totalCents = toCents(price);
-  const itemsSum = useMemo(
-    () => rows.reduce((sum, r) => sum + (r.description.trim() ? toCents(r.amount) : 0), 0),
-    [rows],
-  );
-  const nDeliverables = rows.filter((r) => r.description.trim()).length;
+  const nDeliverables = epics.reduce((n, e) => n + e.items.filter((i) => i.description.trim()).length, 0);
+  const nEpics = epics.filter((e) => e.items.some((i) => i.description.trim())).length;
   const overThreshold = totalCents > thresholdCents;
   const canSend = !overThreshold || isAdmin;
 
-  function patchRow(id: string, field: keyof Row, value: string) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-    setSaved(false);
+  function setEpicName(epicId: string, value: string) {
+    setEpics((prev) => prev.map((e) => (e.id === epicId ? { ...e, name: value } : e)));
+    dirty();
   }
-  function addRow(group = "") {
-    setRows((prev) => [...prev, newRow(group)]);
-    setSaved(false);
+  function setItem(epicId: string, itemId: string, value: string) {
+    setEpics((prev) => prev.map((e) => (e.id === epicId ? { ...e, items: e.items.map((i) => (i.id === itemId ? { ...i, description: value } : i)) } : e)));
+    dirty();
   }
-  function removeRow(id: string) {
-    setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
-    setSaved(false);
+  function addItem(epicId: string) {
+    setEpics((prev) => prev.map((e) => (e.id === epicId ? { ...e, items: [...e.items, newItem()] } : e)));
+    dirty();
   }
-  function moveTo(target: number) {
-    setRows((prev) => {
-      if (dragIdx === null || dragIdx === target || dragIdx < 0 || dragIdx >= prev.length) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(dragIdx, 1);
-      next.splice(target, 0, moved);
-      return next;
-    });
-    setDragIdx(null);
-    setSaved(false);
+  function removeItem(epicId: string, itemId: string) {
+    setEpics((prev) => prev.map((e) => (e.id === epicId ? { ...e, items: e.items.filter((i) => i.id !== itemId) } : e)));
+    dirty();
+  }
+  function addEpic() {
+    setEpics((prev) => [...prev, newEpic()]);
+    dirty();
+  }
+  function removeEpic(epicId: string) {
+    setEpics((prev) => (prev.length > 1 ? prev.filter((e) => e.id !== epicId) : prev));
+    dirty();
+  }
+  function dropOn(epicId: string, index: number) {
+    setEpics((prev) =>
+      prev.map((e) => {
+        if (e.id !== epicId || !drag || drag.epicId !== epicId) return e; // reorder within an epic only
+        const items = [...e.items];
+        const [moved] = items.splice(drag.index, 1);
+        items.splice(index, 0, moved);
+        return { ...e, items };
+      }),
+    );
+    setDrag(null);
+    dirty();
   }
 
-  /** PUT the current draft. Returns true on success. */
+  /** PUT the current draft (flatten epics → deliverables with their epic label). */
   async function save(): Promise<boolean> {
+    const lineItems = epics.flatMap((e) =>
+      e.items
+        .filter((i) => i.description.trim())
+        .map((i) => ({ groupLabel: e.name.trim(), description: i.description.trim() })),
+    );
     const res = await fetch(`/api/stages/${stageId}/quote`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: name.trim(),
-        scopeDescription: scope.trim(),
-        totalAmountCents: toCents(price),
-        lineItems: rows
-          .filter((r) => r.description.trim())
-          .map((r) => ({
-            groupLabel: r.group.trim(),
-            description: r.description.trim(),
-            estimateNote: r.estimateNote.trim(),
-            amountCents: toCents(r.amount),
-          })),
-      }),
+      body: JSON.stringify({ name: name.trim(), scopeDescription: scope.trim(), totalAmountCents: toCents(price), lineItems }),
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { message?: string };
@@ -149,11 +163,7 @@ export function QuoteBuilder({
     setError(null);
     try {
       if (!(await save())) return;
-      const res = await fetch(`/api/stages/${stageId}/send_quote`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      });
+      const res = await fetch(`/api/stages/${stageId}/send_quote`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
         setError(data.message ?? `Send failed (${res.status}).`);
@@ -195,11 +205,11 @@ export function QuoteBuilder({
           <span className="kicker">Stage name</span>
           <input
             style={{ ...inputStyle, fontSize: 16, fontWeight: 600 }}
-            placeholder="e.g. Discovery & scope"
+            placeholder="e.g. Phase 1 — Private Beta Foundation"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
-              setSaved(false);
+              dirty();
             }}
           />
         </label>
@@ -207,109 +217,111 @@ export function QuoteBuilder({
         <label style={{ display: "grid", gap: 6, marginTop: 16 }}>
           <span className="kicker">Scope description</span>
           <textarea
-            style={{ ...inputStyle, minHeight: 76 }}
-            placeholder="What this stage delivers — the client sees this."
+            style={{ ...inputStyle, minHeight: 70 }}
+            placeholder="What this phase delivers — the client sees this."
             value={scope}
             onChange={(e) => {
               setScope(e.target.value);
-              setSaved(false);
+              dirty();
             }}
           />
         </label>
 
         <div className="kicker" style={{ margin: "24px 0 4px" }}>
-          Deliverables
+          Scope by epic
         </div>
-        <p style={{ margin: "0 0 10px", fontSize: 12.5, color: "var(--muted)" }}>
-          What this phase delivers. Tag each with an <strong>epic</strong> to group them; per-item amounts are optional
-          (the stage price is set on the right).
+        <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "var(--muted)" }}>
+          Group deliverables under an epic. The stage is one fixed price (set on the right) — deliverables have no individual prices.
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {rows.map((r, i) => (
-            <div
-              key={r.id}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => moveTo(i)}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "20px 132px minmax(0,1fr) 110px 28px",
-                alignItems: "start",
-                gap: 8,
-                opacity: dragIdx === i ? 0.4 : 1,
-              }}
-            >
-              <span
-                draggable
-                onDragStart={() => setDragIdx(i)}
-                onDragEnd={() => setDragIdx(null)}
-                title="Drag to reorder"
-                style={{ cursor: "grab", color: "var(--muted-line)", fontSize: 16, textAlign: "center", userSelect: "none", paddingTop: 9 }}
-              >
-                ⠿
-              </span>
-              <input
-                style={{ ...inputStyle, fontSize: 12.5, padding: "9px 9px" }}
-                placeholder="Epic (optional)"
-                value={r.group}
-                onChange={(e) => patchRow(r.id, "group", e.target.value)}
-              />
-              <div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {epics.map((epic) => (
+            <div key={epic.id} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <input
-                  style={inputStyle}
-                  placeholder="Describe the deliverable"
-                  value={r.description}
-                  onChange={(e) => patchRow(r.id, "description", e.target.value)}
+                  style={{ ...inputStyle, fontWeight: 700, fontSize: 14.5, border: "1px solid transparent", background: "var(--surface-soft)" }}
+                  placeholder="Epic name (e.g. Authentication & Identity)"
+                  value={epic.name}
+                  onChange={(e) => setEpicName(epic.id, e.target.value)}
                 />
-                <input
-                  style={{ ...inputStyle, marginTop: 5, fontSize: 12.5, padding: "6px 11px", color: "var(--muted)" }}
-                  placeholder="Estimate note (optional)"
-                  value={r.estimateNote}
-                  onChange={(e) => patchRow(r.id, "estimateNote", e.target.value)}
-                />
+                {epics.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeEpic(epic.id)}
+                    aria-label="Remove epic"
+                    title="Remove epic"
+                    style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 15, flex: "none" }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-              <input
-                className="tabular"
-                style={{ ...inputStyle, textAlign: "right" }}
-                inputMode="decimal"
-                placeholder="$0"
-                value={r.amount}
-                onChange={(e) => patchRow(r.id, "amount", e.target.value)}
-              />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {epic.items.map((item, i) => (
+                  <div
+                    key={item.id}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => dropOn(epic.id, i)}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "18px minmax(0,1fr) 24px",
+                      alignItems: "center",
+                      gap: 6,
+                      opacity: drag && drag.epicId === epic.id && drag.index === i ? 0.4 : 1,
+                    }}
+                  >
+                    <span
+                      draggable
+                      onDragStart={() => setDrag({ epicId: epic.id, index: i })}
+                      onDragEnd={() => setDrag(null)}
+                      title="Drag to reorder"
+                      style={{ cursor: "grab", color: "var(--muted-line)", fontSize: 15, textAlign: "center", userSelect: "none" }}
+                    >
+                      ⠿
+                    </span>
+                    <input
+                      style={inputStyle}
+                      placeholder="Describe the deliverable"
+                      value={item.description}
+                      onChange={(e) => setItem(epic.id, item.id, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItem(epic.id, item.id)}
+                      aria-label="Remove deliverable"
+                      style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 15 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+
               <button
                 type="button"
-                onClick={() => removeRow(r.id)}
-                aria-label="Remove deliverable"
-                style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 16, lineHeight: 1, paddingTop: 9 }}
+                onClick={() => addItem(epic.id)}
+                style={{ marginTop: 8, width: "100%", padding: "8px 12px", fontSize: 13, fontWeight: 600, color: "var(--muted)", background: "transparent", border: "1.5px dashed var(--border)", borderRadius: 9, cursor: "pointer" }}
               >
-                ✕
+                + Add deliverable
               </button>
             </div>
           ))}
         </div>
+
         <button
           type="button"
-          onClick={() => addRow(rows[rows.length - 1]?.group ?? "")}
-          style={{
-            marginTop: 10,
-            width: "100%",
-            padding: "10px 12px",
-            fontSize: 13.5,
-            fontWeight: 600,
-            color: "var(--muted)",
-            background: "transparent",
-            border: "1.5px dashed var(--border)",
-            borderRadius: 10,
-            cursor: "pointer",
-          }}
+          onClick={addEpic}
+          style={{ marginTop: 14, width: "100%", padding: "11px 12px", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, cursor: "pointer" }}
         >
-          + Add deliverable
+          + Add epic
         </button>
       </div>
 
       {/* Summary rail */}
       <aside style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 24 }}>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 18, boxShadow: "var(--shadow-card)" }}>
-          <div className="kicker">Stage price</div>
+          <div className="kicker">Stage price · fixed</div>
           <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 4 }}>
             <span className="tabular" style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)" }}>$</span>
             <input
@@ -319,22 +331,19 @@ export function QuoteBuilder({
               value={price}
               onChange={(e) => {
                 setPrice(e.target.value);
-                setSaved(false);
+                dirty();
               }}
               style={{ ...inputStyle, fontSize: 28, fontWeight: 800, letterSpacing: "-.02em", padding: "2px 4px", border: "1px solid transparent", background: "transparent" }}
             />
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
-            {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"}
-            {itemsSum > 0 ? ` · items add up to ${formatCents(itemsSum)}` : ""}
+            {nEpics} epic{nEpics === 1 ? "" : "s"} · {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"} · the client pays this one fixed price
           </div>
         </div>
 
         {overThreshold && (
           <div style={{ background: "#FFFAF2", border: "1px solid #FADCB4", borderRadius: 12, padding: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: 13.5, color: "#92400e" }}>
-              Over {formatCents(thresholdCents)} — admin co-sign required
-            </div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "#92400e" }}>Over {formatCents(thresholdCents)} — admin co-sign required</div>
             <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "#b45309", lineHeight: 1.5 }}>
               {isAdmin
                 ? "You're a Wahala admin, so you can send this quote."
@@ -367,16 +376,7 @@ export function QuoteBuilder({
               type="button"
               onClick={onRequestCosign}
               disabled={busy !== null || cosignRequested}
-              style={{
-                borderRadius: 9,
-                padding: "11px 16px",
-                fontSize: 14,
-                fontWeight: 600,
-                border: "1px solid var(--ink)",
-                background: "var(--white)",
-                color: "var(--ink)",
-                cursor: busy !== null || cosignRequested ? "default" : "pointer",
-              }}
+              style={{ borderRadius: 9, padding: "11px 16px", fontSize: 14, fontWeight: 600, border: "1px solid var(--ink)", background: "var(--white)", color: "var(--ink)", cursor: busy !== null || cosignRequested ? "default" : "pointer" }}
             >
               {cosignRequested ? "Co-sign requested ✓" : busy === "cosign" ? "Requesting…" : "Request admin co-sign"}
             </button>
@@ -386,24 +386,12 @@ export function QuoteBuilder({
             type="button"
             onClick={onSave}
             disabled={busy !== null}
-            style={{
-              borderRadius: 9,
-              padding: "11px 16px",
-              fontSize: 14,
-              fontWeight: 600,
-              border: "1px solid var(--border)",
-              background: "var(--white)",
-              color: "var(--ink)",
-              cursor: busy !== null ? "default" : "pointer",
-            }}
+            style={{ borderRadius: 9, padding: "11px 16px", fontSize: 14, fontWeight: 600, border: "1px solid var(--border)", background: "var(--white)", color: "var(--ink)", cursor: busy !== null ? "default" : "pointer" }}
           >
             {busy === "save" ? "Saving…" : saved ? "Saved ✓" : "Save draft"}
           </button>
 
-          <a
-            href={`/dashboard/projects/${projectId}`}
-            style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", padding: "4px 0", textDecoration: "none" }}
-          >
+          <a href={`/dashboard/projects/${projectId}`} style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", padding: "4px 0", textDecoration: "none" }}>
             Cancel
           </a>
         </div>

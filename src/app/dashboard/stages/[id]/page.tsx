@@ -187,15 +187,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                           >
                             {checked ? "✓" : ""}
                           </span>
-                          <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>
-                            {li.description}
-                            {li.estimateNote && (
-                              <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>
-                            )}
-                          </span>
-                          {li.amountCents > 0 && (
-                            <Money cents={li.amountCents} style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }} />
-                          )}
+                          <span style={{ fontSize: 14.5, flex: 1, minWidth: 0 }}>{li.description}</span>
                         </li>
                       );
                     })}

@@ -54,6 +54,8 @@ export function AppShell({
         <nav style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.filter((item) => !item.staffOnly || user.isStaff).map((item) => {
             const isActive = item.key === active;
+            // Staff get the cross-client Projects index; clients keep their dashboard.
+            const href = item.key === "projects" && user.isStaff ? "/dashboard/projects" : item.href;
             const inner = (
               <span
                 style={{
@@ -64,20 +66,20 @@ export function AppShell({
                   borderRadius: 9,
                   fontSize: 14,
                   fontWeight: 600,
-                  color: item.href ? (isActive ? "var(--white)" : "#aeb2bb") : "#595e67",
+                  color: href ? (isActive ? "var(--white)" : "#aeb2bb") : "#595e67",
                   background: isActive ? "rgba(255,255,255,.08)" : "transparent",
                 }}
               >
                 {item.label}
-                {!item.href && (
+                {!href && (
                   <span className="kicker" style={{ fontSize: 9, color: "#595e67" }}>
                     soon
                   </span>
                 )}
               </span>
             );
-            return item.href ? (
-              <Link key={item.key} href={item.href} style={{ textDecoration: "none" }}>
+            return href ? (
+              <Link key={item.key} href={href} style={{ textDecoration: "none" }}>
                 {inner}
               </Link>
             ) : (

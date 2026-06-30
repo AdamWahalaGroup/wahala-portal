@@ -13,7 +13,7 @@ DEV_AUTH=true
 # From-address for login emails once the domain is onboarded to Email Sending.
 EMAIL_FROM=login@wahala-services.com
 # Quote total (cents) above which a Wahala admin must co-sign quotes.
-ADMIN_APPROVAL_THRESHOLD_CENTS=500000
+ADMIN_APPROVAL_THRESHOLD_CENTS=1000000
 
 # Google SSO (OAuth) — from Google Cloud Console (Web application client).
 # Client id can be a var; set the SECRET in prod via `wrangler secret put GOOGLE_CLIENT_SECRET`.

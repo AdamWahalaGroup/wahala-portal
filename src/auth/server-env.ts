@@ -30,7 +30,7 @@ export function emailFrom(): string {
  */
 export function adminApprovalThresholdCents(): number {
   const n = Number(vars().ADMIN_APPROVAL_THRESHOLD_CENTS);
-  return Number.isFinite(n) && n > 0 ? n : 500_000;
+  return Number.isFinite(n) && n > 0 ? n : 1_000_000; // $10,000 (design frame 06)
 }
 
 /** Google OAuth client id (var ok — not secret) for SSO. */

@@ -124,15 +124,7 @@ export function AcceptanceChecklist({
                   >
                     ✓
                   </span>
-                  <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>
-                    {li.description}
-                    {li.estimateNote && <span style={{ color: "var(--muted)", fontSize: 13 }}> · {li.estimateNote}</span>}
-                  </span>
-                  {li.amountCents > 0 && (
-                    <span className="tabular" style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-soft)" }}>
-                      {formatCents(li.amountCents)}
-                    </span>
-                  )}
+                  <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>{li.description}</span>
                 </li>
               ))}
             </ul>
