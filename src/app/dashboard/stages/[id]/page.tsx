@@ -171,6 +171,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
               deliverables={lineItems.map((li) => ({ id: li.id, description: li.description }))}
               stageId={stage.id}
               canManage={canManageTasks}
+              canDelete={canManageTasks && stage.status === "draft"}
             />
           </section>
 

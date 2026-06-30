@@ -76,12 +76,14 @@ export function TasksClient({
   deliverables,
   stageId,
   canManage,
+  canDelete,
 }: {
   tasks: Task[];
   assignable: Person[];
   deliverables: Deliverable[];
   stageId: string;
   canManage: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -137,7 +139,7 @@ export function TasksClient({
               </div>
               <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
                 {g.tasks.map((t, i) => (
-                  <TaskRow key={t.id} task={t} canManage={canManage} first={i === 0} onChanged={() => router.refresh()} setError={setError} />
+                  <TaskRow key={t.id} task={t} canManage={canManage} canDelete={canDelete} first={i === 0} onChanged={() => router.refresh()} setError={setError} />
                 ))}
               </div>
             </div>
@@ -189,12 +191,14 @@ export function TasksClient({
 function TaskRow({
   task,
   canManage,
+  canDelete,
   first,
   onChanged,
   setError,
 }: {
   task: Task;
   canManage: boolean;
+  canDelete: boolean;
   first: boolean;
   onChanged: () => void;
   setError: (s: string | null) => void;
@@ -277,6 +281,17 @@ function TaskRow({
             )}
           </div>
         </div>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => call(`/api/tasks/${task.id}`, "DELETE")}
+            title="Delete task"
+            aria-label="Delete task"
+            style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 14, flex: "none", marginTop: 2 }}
+          >
+            🗑
+          </button>
+        )}
       </div>
 
       {open && (

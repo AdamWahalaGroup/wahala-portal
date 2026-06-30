@@ -274,6 +274,25 @@ async function loadTaskForManage(ctx: AuthContext, taskId: string) {
   return task;
 }
 
+/** Delete a task (admin/lead) — only before the quote is sent (stage still draft). */
+export async function deleteTask(ctx: AuthContext, taskId: string): Promise<void> {
+  const task = await loadTaskForManage(ctx, taskId);
+  const db = getDb();
+  const stage = task.stageId ? await db.query.stages.findFirst({ where: eq(schema.stages.id, task.stageId) }) : null;
+  if (!stage || stage.status !== "draft") {
+    throw new StageError("INVALID_STATE", "Tasks can only be deleted before the quote is sent.");
+  }
+  await db.batch([
+    db.delete(schema.taskAssignments).where(eq(schema.taskAssignments.taskId, taskId)),
+    db.delete(schema.taskSubtasks).where(eq(schema.taskSubtasks.taskId, taskId)),
+    db.delete(schema.taskNotes).where(eq(schema.taskNotes.taskId, taskId)),
+    db.delete(schema.tasks).where(eq(schema.tasks.id, taskId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({ organizationId: task.organizationId, actorUserId: ctx.user.id, action: "task.deleted", entityType: "task", entityId: taskId, metadata: { title: task.title } }),
+    ),
+  ]);
+}
+
 /** Add a subtask (checklist item) to a task. Admin/lead only. */
 export async function addSubtask(ctx: AuthContext, taskId: string, title: string): Promise<void> {
   await loadTaskForManage(ctx, taskId);
