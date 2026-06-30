@@ -267,7 +267,7 @@ export type StageDetail = {
   organizationName: string;
   people: { accountOwner: string | null; leadEngineer: string | null };
   lineItems: (typeof schema.stageLineItems.$inferSelect)[];
-  audit: { action: string; createdAt: Date; actorName: string; from?: string; to?: string }[];
+  audit: { action: string; createdAt: Date; actorName: string; from?: string; to?: string; note?: string }[];
   actions: StageAction[];
 };
 
@@ -299,13 +299,14 @@ export async function getStageDetail(ctx: AuthContext, stageId: string): Promise
   const nameById = new Map(actors.map((u) => [u.id, u.name]));
 
   const audit = auditRows.map((r) => {
-    const meta = (r.metadata ?? {}) as { from?: string; to?: string };
+    const meta = (r.metadata ?? {}) as { from?: string; to?: string; note?: string };
     return {
       action: r.action,
       createdAt: r.createdAt,
       actorName: r.actorUserId ? (nameById.get(r.actorUserId) ?? "Unknown") : "System",
       from: meta.from,
       to: meta.to,
+      note: typeof meta.note === "string" ? meta.note : undefined,
     };
   });
 

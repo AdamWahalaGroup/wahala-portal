@@ -28,7 +28,6 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   cancelled: { bg: "#f1f2f4", text: "#9aa0aa", label: "Cancelled" },
 };
 const STATUSES = ["todo", "in_progress", "blocked", "done", "cancelled"];
-const GRID = "22px 1fr 132px 140px 116px";
 
 const input: React.CSSProperties = {
   padding: "8px 10px",
@@ -228,56 +227,55 @@ function TaskRow({
 
   return (
     <div style={{ borderTop: first ? "none" : "1px solid var(--border-soft)", background: task.visibility === "internal" ? "var(--surface-soft-2)" : "var(--white)" }}>
-      <div style={{ display: "grid", gridTemplateColumns: GRID, gap: 12, alignItems: "center", padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px" }}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? "Collapse" : "Expand"}
-          style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted-line)", fontSize: 13, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}
+          style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted-line)", fontSize: 13, flex: "none", marginTop: 2, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}
         >
           ▶
         </button>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>{task.title}</div>
-          {(task.subtasks.length > 0 || task.notes.length > 0) && (
-            <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 1 }}>
-              {task.subtasks.length > 0 && `${doneCount}/${task.subtasks.length} subtasks`}
-              {task.subtasks.length > 0 && task.notes.length > 0 && " · "}
-              {task.notes.length > 0 && `${task.notes.length} note${task.notes.length === 1 ? "" : "s"}`}
-            </div>
-          )}
-        </div>
-        <div style={{ fontSize: 13, minWidth: 0 }}>
-          {task.assignee ? (
-            <>
-              {task.assignee.name}
-              {task.assignee.type === "client" && (
-                <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 600, color: "var(--cobalt-text)", background: "var(--cobalt-wash)", borderRadius: 999, padding: "1px 6px" }}>client</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, overflowWrap: "anywhere" }}>{task.title}</div>
+          {/* Meta wraps under the title so long titles never get squeezed */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 7 }}>
+            <span style={{ fontSize: 12.5, color: task.assignee ? "var(--ink-soft)" : "var(--muted-line)" }}>
+              {task.assignee ? (
+                <>
+                  {task.assignee.name}
+                  {task.assignee.type === "client" && (
+                    <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 600, color: "var(--cobalt-text)", background: "var(--cobalt-wash)", borderRadius: 999, padding: "1px 6px" }}>client</span>
+                  )}
+                </>
+              ) : (
+                "Unassigned"
               )}
-            </>
-          ) : (
-            <span style={{ color: "var(--muted-line)" }}>—</span>
-          )}
-        </div>
-        <div>
-          {canManage ? (
-            <select
-              value={task.status}
-              onChange={(e) => call(`/api/tasks/${task.id}/status`, "POST", { status: e.target.value })}
-              style={{ ...input, padding: "6px 8px", fontSize: 13 }}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_STYLE[s].label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <StatusPill status={task.status} />
-          )}
-        </div>
-        <div>
-          <VisibilityMarker visibility={task.visibility} />
+            </span>
+            {canManage ? (
+              <select
+                value={task.status}
+                onChange={(e) => call(`/api/tasks/${task.id}/status`, "POST", { status: e.target.value })}
+                style={{ ...input, padding: "5px 8px", fontSize: 12.5 }}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_STYLE[s].label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <StatusPill status={task.status} />
+            )}
+            <VisibilityMarker visibility={task.visibility} />
+            {(task.subtasks.length > 0 || task.notes.length > 0) && (
+              <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                {task.subtasks.length > 0 && `${doneCount}/${task.subtasks.length} subtasks`}
+                {task.subtasks.length > 0 && task.notes.length > 0 && " · "}
+                {task.notes.length > 0 && `${task.notes.length} note${task.notes.length === 1 ? "" : "s"}`}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
