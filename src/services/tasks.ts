@@ -43,7 +43,7 @@ async function loadStageProject(ctx: AuthContext, stageId: string) {
     where: eq(schema.stages.id, stageId),
     with: { project: true },
   });
-  if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
+  if (!stage) throw new StageError("NOT_FOUND", "Phase not found.");
   if (!canAccessProject(ctx.accessScope, { id: stage.projectId, organizationId: stage.organizationId })) {
     securityLog({
       actorUserId: ctx.user.id,
@@ -52,7 +52,7 @@ async function loadStageProject(ctx: AuthContext, stageId: string) {
       resource: `stage:${stageId}`,
       reason: "out_of_scope",
     });
-    throw new StageError("NOT_FOUND", "Stage not found.");
+    throw new StageError("NOT_FOUND", "Phase not found.");
   }
   return stage;
 }

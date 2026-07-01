@@ -210,7 +210,7 @@ export function AcceptanceChecklist({
             </h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14, lineHeight: 1.5 }}>
               {dialog === "accept"
-                ? `This records all ${items.length} item${items.length === 1 ? "" : "s"} as accepted by you today and unlocks the next stage. It can't be undone.`
+                ? `This records all ${items.length} item${items.length === 1 ? "" : "s"} as accepted by you today and unlocks the next phase. It can't be undone.`
                 : "Tell your Wahala team what needs to change. Work resumes once it's revised."}
             </p>
             {dialog === "revision" && (

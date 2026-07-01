@@ -16,7 +16,7 @@ export function NewStageButton({ projectId }: { projectId: string }) {
       const res = await fetch("/api/stages", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId, name: "Untitled stage", totalAmountCents: 0 }),
+        body: JSON.stringify({ projectId, name: "Untitled phase", totalAmountCents: 0 }),
       });
       const data = (await res.json().catch(() => ({}))) as { stage?: { id: string }; message?: string };
       if (!res.ok || !data.stage) {
@@ -49,7 +49,7 @@ export function NewStageButton({ projectId }: { projectId: string }) {
           cursor: busy ? "default" : "pointer",
         }}
       >
-        {busy ? "Creating…" : "+ New stage — scope the next phase"}
+        {busy ? "Creating…" : "+ New phase — scope the next one"}
       </button>
       {error && <p style={{ color: "#b00020", fontSize: 12.5, margin: "8px 0 0" }}>{error}</p>}
     </div>

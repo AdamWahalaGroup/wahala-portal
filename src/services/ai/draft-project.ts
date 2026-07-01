@@ -17,14 +17,14 @@ import { getDraftProvider, type DraftPart, type DraftUsage, type ProjectDraft } 
 /** Hard cap on total bytes across all files+paste to keep the call cheap and bounded. */
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024; // 8 MB
 
-const SYSTEM_PROMPT = `You draft project structures for Wahala Group, a services firm that engages clients in pay-as-you-go FIXED-PRICE STAGES (phases).
+const SYSTEM_PROMPT = `You draft project structures for Wahala Group, a services firm that engages clients in pay-as-you-go FIXED-PRICE PHASES.
 
 Produce a ProjectDraft with:
 - name, description (1–3 sentences), workType (free-form category, e.g. "Software engineering", "Brand identity").
-- stages: a small number of fixed-price phases (typically 1–5). Each stage has:
-  - name (e.g. "Phase 1 — Private Beta Foundation")
-  - scopeDescription (a short client-facing paragraph describing what's in scope for this phase)
-  - deliverables: an array of { epic, description } pairs. "epic" is a short CATEGORY label shared by multiple deliverables (e.g. "Authentication & Identity", "Org & Tenant Management"). "description" is one concrete client-visible deliverable (e.g. "User registration with email + password").
+- stages: **ONE ENTRY PER PHASE THAT APPEARS IN THE SOURCE.** If the source names or numbers phases ("Phase 1", "Phase 2", "Phase 3", or "Discovery / Build / Launch", etc.), produce that many stages — do NOT stop after the first phase, do NOT collapse multiple phases into one. If the source has no phase breakdown, produce a single stage. Each stage has:
+  - name (echo the source's phase name verbatim when given — e.g. "Phase 1 — Private Beta Foundation")
+  - scopeDescription (a short client-facing paragraph of what's in scope for this phase)
+  - deliverables: an array of { epic, description } pairs. "epic" is a short CATEGORY label shared by multiple deliverables (e.g. "Authentication & Identity", "Org & Tenant Management"). "description" is one concrete client-visible deliverable.
 - clientMessage: a short, warm first message to the client in markdown (2–4 short paragraphs).
 - projectContextMd: a markdown memo with EXACTLY these sections in this order:
   # {Project Title}
@@ -37,11 +37,16 @@ Produce a ProjectDraft with:
   ## Open questions
   - questions the staffer should clarify with the client before sending the quote
 
+DELIVERABLE RULES (the goal is a clean acceptance checklist the client can tick off):
+- **One story per row.** If the source lists "user login" and "session management" as separate stories, produce two separate deliverables — do NOT bundle them as "Secure login and session management".
+- **Terse verb-noun naming.** Match the source's terseness: "User registration", "Password reset", "Session management" — not "Secure user registration with email and password verification". 2–5 words per description is the sweet spot.
+- **Preserve every epic the source names.** If the source names 8 epics under a phase (e.g. "Authentication & Identity", "Org & Tenant Management", "Matter Persistence", "Audit & Activity Logging", "Administration Controls", "Usage Tracking", "Security Hardening", "Private Beta Deployment"), produce all 8 in that phase's deliverables — do not silently drop epics you consider less important.
+- Reuse the same epic label across related deliverables so they group cleanly under one heading.
+
 HARD RULES:
-- DO NOT include prices or amounts anywhere. The staffer sets stage prices after this draft.
+- DO NOT include prices or amounts anywhere. The staffer sets phase prices after this draft.
 - DO NOT change or guess the client. The staffer picked the client up front; just use it as context.
-- Keep it concrete and concise. Prefer fewer, well-scoped stages over many tiny ones.
-- Use the same epic label across related deliverables so they group cleanly under one heading.`;
+- If a later phase in the source has less detail than Phase 1, still emit that phase as its own stage using whatever summary the source gives (its deliverables list can be shorter — never zero).`;
 
 export type DraftInput = {
   organizationId: string;

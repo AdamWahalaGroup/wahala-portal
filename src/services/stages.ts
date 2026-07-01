@@ -63,7 +63,7 @@ async function loadStageContext(ctx: AuthContext, stageId: string) {
     where: eq(schema.stages.id, stageId),
     with: { project: true },
   });
-  if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
+  if (!stage) throw new StageError("NOT_FOUND", "Phase not found.");
 
   // Tenant + project scope: the caller may never even load a stage out of scope.
   if (!canAccessProject(ctx.accessScope, { id: stage.projectId, organizationId: stage.organizationId })) {
@@ -74,7 +74,7 @@ async function loadStageContext(ctx: AuthContext, stageId: string) {
       resource: `stage:${stage.id}`,
       reason: "out_of_scope",
     });
-    throw new StageError("NOT_FOUND", "Stage not found.");
+    throw new StageError("NOT_FOUND", "Phase not found.");
   }
 
   const org = await db.query.organizations.findFirst({
@@ -166,7 +166,7 @@ export async function applyStageAction(
   if (updated.length === 0) {
     throw new StageError(
       "CONFLICT",
-      "This stage was just changed by someone else — reload and try again.",
+      "This phase was just changed by someone else — reload and try again.",
     );
   }
 
@@ -205,7 +205,7 @@ export const markPaid = (ctx: AuthContext, id: string, stripeRef?: string) =>
 export async function markStagePaidBySystem(stageId: string, stripeRef: string): Promise<Stage> {
   const db = getDb();
   const stage = await db.query.stages.findFirst({ where: eq(schema.stages.id, stageId) });
-  if (!stage) throw new StageError("NOT_FOUND", "Stage not found.");
+  if (!stage) throw new StageError("NOT_FOUND", "Phase not found.");
 
   // Idempotent: a webhook retry on an already-paid (or not-yet-approved) stage is a no-op.
   if (stage.status !== "approved") return stage;
@@ -374,7 +374,7 @@ export async function createStage(
       resource: `project:${project.id}`,
       reason: "not_admin_or_owner",
     });
-    throw new StageError("FORBIDDEN", "Only a Wahala admin or the Account Owner can create a stage.");
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or the Account Owner can create a phase.");
   }
 
   const stageId = crypto.randomUUID();
@@ -457,7 +457,7 @@ export async function saveQuoteDraft(
   assertCanQuote(ctx, resource, "save_quote");
 
   const name = input.name?.trim();
-  if (!name) throw new StageError("VALIDATION", "A stage name is required.");
+  if (!name) throw new StageError("VALIDATION", "A phase name is required.");
 
   const items = (input.lineItems ?? [])
     .map((li, i) => ({

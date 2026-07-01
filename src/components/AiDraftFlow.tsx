@@ -215,7 +215,7 @@ function Upload(props: {
       </div>
       <p style={{ margin: "8px 0 22px", color: "var(--muted)", fontSize: 14.5 }}>
         Pick a client, drop in a proposal / SOW / notes (PDF, images, .txt, .md, or pasted text). The model drafts
-        the whole project — stages, epic-grouped deliverables, and a first client message — and you edit it before saving.
+        the whole project — phases, epic-grouped deliverables, and a first client message — and you edit it before saving.
       </p>
 
       <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 22 }}>
@@ -332,7 +332,7 @@ function Analyzing({ usageHint }: { usageHint: Usage | null }) {
         <ul style={{ margin: "12px 0 14px", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
           <Step done text="Extracted text" />
           <Step done text="Identified phases" />
-          <Step current text="Drafting stages & deliverables" />
+          <Step current text="Drafting phases & deliverables" />
           <Step text="Writing the client message + context memo" />
         </ul>
         <div style={{ height: 4, background: COBALT_SOFT, borderRadius: 999, overflow: "hidden" }}>
@@ -436,7 +436,7 @@ function Review(props: {
       </div>
 
       <div style={{ marginTop: 14, background: COBALT_SOFT, border: `1px solid ${COBALT_BORDER}`, color: COBALT, borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
-        Every field below is editable. The project, its stages, and the client message are created only when you press <strong>Create project</strong>.
+        Every field below is editable. The project, its phases, and the client message are created only when you press <strong>Create project</strong>.
       </div>
 
       {error && <ErrorBox text={error} />}
@@ -449,22 +449,22 @@ function Review(props: {
           </Field>
           <Field label="Work type">
             <input value={draft.workType} onChange={(e) => setDraft({ ...draft, workType: e.target.value })} style={inp()} />
-            <div className="kicker" style={{ marginTop: 4, color: "var(--muted)" }}>{draft.stages.length} stage{draft.stages.length === 1 ? "" : "s"} · prices set later</div>
+            <div className="kicker" style={{ marginTop: 4, color: "var(--muted)" }}>{draft.stages.length} phase{draft.stages.length === 1 ? "" : "s"} · prices set later</div>
           </Field>
           <Field label="Description">
             <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={3} style={{ ...inp(), resize: "vertical", fontFamily: "inherit" }} />
           </Field>
 
-          <div className="kicker" style={{ marginTop: 24, marginBottom: 10 }}>Stages & deliverables · drafted from the SOW phases</div>
+          <div className="kicker" style={{ marginTop: 24, marginBottom: 10 }}>Phases & deliverables · drafted from the SOW</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {draft.stages.map((s, i) => (
               <div key={s.id} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ background: "var(--ink)", color: "var(--white)", width: 26, height: 26, borderRadius: 7, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>{String(i + 1).padStart(2, "0")}</span>
-                  <input value={s.name} onChange={(e) => updateStage(s.id, { name: e.target.value })} placeholder="Stage name" style={{ flex: 1, ...inp(15, 700), border: "none", background: "transparent", padding: "4px 0" }} />
-                  <button type="button" onClick={() => removeStage(s.id)} style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 18, cursor: "pointer" }} aria-label="Remove stage">×</button>
+                  <input value={s.name} onChange={(e) => updateStage(s.id, { name: e.target.value })} placeholder="Phase name" style={{ flex: 1, ...inp(15, 700), border: "none", background: "transparent", padding: "4px 0" }} />
+                  <button type="button" onClick={() => removeStage(s.id)} style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 18, cursor: "pointer" }} aria-label="Remove phase">×</button>
                 </div>
-                <textarea value={s.scopeDescription} onChange={(e) => updateStage(s.id, { scopeDescription: e.target.value })} placeholder="Scope of this stage…" rows={2} style={{ marginTop: 8, ...inp(), resize: "vertical", fontFamily: "inherit" }} />
+                <textarea value={s.scopeDescription} onChange={(e) => updateStage(s.id, { scopeDescription: e.target.value })} placeholder="Scope of this phase…" rows={2} style={{ marginTop: 8, ...inp(), resize: "vertical", fontFamily: "inherit" }} />
 
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
                   {s.epics.map((e) => (
@@ -489,7 +489,7 @@ function Review(props: {
                 </div>
               </div>
             ))}
-            <button type="button" onClick={addStage} style={{ alignSelf: "flex-start", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", background: "var(--white)", border: "1.5px dashed var(--border)", padding: "10px 14px", borderRadius: 10, cursor: "pointer" }}>+ Add stage</button>
+            <button type="button" onClick={addStage} style={{ alignSelf: "flex-start", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", background: "var(--white)", border: "1.5px dashed var(--border)", padding: "10px 14px", borderRadius: 10, cursor: "pointer" }}>+ Add phase</button>
           </div>
 
           <div style={{ marginTop: 24, background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 16 }}>

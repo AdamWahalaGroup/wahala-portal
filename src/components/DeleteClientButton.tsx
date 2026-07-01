@@ -59,7 +59,7 @@ export function DeleteClientButton({ orgId, name }: { orgId: string; name: strin
             </div>
             <h3 style={{ margin: "16px 0 6px", fontSize: 19, fontWeight: 800, letterSpacing: "-.01em" }}>Delete this client?</h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14 }}>
-              This permanently removes <strong>{name}</strong> and <strong>all of its projects, stages, tasks, and history</strong>. It can&apos;t be undone. (Its Wahala account owner isn&apos;t affected.)
+              This permanently removes <strong>{name}</strong> and <strong>all of its projects, phases, tasks, and history</strong>. It can&apos;t be undone. (Its Wahala account owner isn&apos;t affected.)
             </p>
             {error && <p style={{ color: "#b00020", fontSize: 13.5, marginTop: 12, marginBottom: 0 }}>{error}</p>}
             <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 20 }}>

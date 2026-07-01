@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/People";
 
 const OFFERINGS = [
-  { title: "Build & ship", body: "Websites, services, and apps — delivered stage by stage, each one scoped, paid, and accepted before the next begins." },
+  { title: "Build & ship", body: "Websites, services, and apps — delivered phase by phase, each one scoped, paid, and accepted before the next begins." },
   { title: "Custom AI, tuned to you", body: "Bespoke models and pipelines with minimal hallucinations that learn your business over time." },
   { title: "Hosting & maintenance", body: "We host it and keep it running, so upkeep stays on Wahala — not on you." },
   { title: "Grow on your terms", body: "A clean hand-off to your own dev team whenever you're ready to scale in-house." },
@@ -47,7 +47,7 @@ export function ClientWelcome({
         </h2>
         <p style={{ margin: "12px 0 0", fontSize: 15, color: "#aeb2bb", maxWidth: 560, lineHeight: 1.6, position: "relative" }}>
           Wahala Group is your dedicated team for getting real work shipped. Every piece of work is a
-          <strong style={{ color: "#cfd2da" }}> stage</strong> — itemized and scoped, paid up front,
+          <strong style={{ color: "#cfd2da" }}> phase</strong> — itemized and scoped, paid up front,
           delivered by your Wahala people, and formally accepted by you before the next one begins.
           No surprises, no runaway scope.
         </p>

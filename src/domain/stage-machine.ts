@@ -80,7 +80,7 @@ export class StageError extends Error {
  */
 export function assertPayGate(to: StageStatus, paidAt: Date | number | null | undefined): void {
   if (to === "in_progress" && !paidAt) {
-    throw new StageError("PAY_GATE", "A stage cannot start before its payment is confirmed.");
+    throw new StageError("PAY_GATE", "A phase cannot start before its payment is confirmed.");
   }
 }
 

@@ -8,13 +8,13 @@ import { ACTION_LABELS } from "@/lib/format";
 const CONFIRM: Record<string, { title: string; body: string; confirmLabel: string; tone: "ink" | "green" | "red" }> = {
   accept: {
     title: "Accept this delivery?",
-    body: "This is recorded as accepted by you and unlocks the next stage. It can't be undone.",
+    body: "This is recorded as accepted by you and unlocks the next phase. It can't be undone.",
     confirmLabel: "Yes, accept",
     tone: "green",
   },
   reject_quote: {
     title: "Reject this quote?",
-    body: "The stage returns to draft so it can be re-scoped and re-quoted.",
+    body: "The phase returns to draft so it can be re-scoped and re-quoted.",
     confirmLabel: "Reject quote",
     tone: "red",
   },
@@ -25,7 +25,7 @@ const CONFIRM: Record<string, { title: string; body: string; confirmLabel: strin
     tone: "red",
   },
   mark_paid: {
-    title: "Mark this stage as paid?",
+    title: "Mark this phase as paid?",
     body: "Manually records payment (normally handled by Stripe) and clears work to begin.",
     confirmLabel: "Mark paid",
     tone: "ink",

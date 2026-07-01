@@ -97,7 +97,7 @@ async function loadForManage(ctx: AuthContext, deliverableId: string) {
   const resource = { accountOwnerUserId: org?.accountOwnerUserId ?? null, projectLeadUserId: stage.project?.leadEngineerUserId ?? null };
   if (!canManageDeliverables(ctx, stage, resource)) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "deliverable_manage", resource: `deliverable:${deliverableId}`, reason: "not_permitted" });
-    if (!stage.paidAt) throw new StageError("INVALID_STATE", "Work hasn't started on this stage yet.");
+    if (!stage.paidAt) throw new StageError("INVALID_STATE", "Work hasn't started on this phase yet.");
     throw new StageError("FORBIDDEN", "Only the assigned Wahala staff can update this deliverable.");
   }
   return { item, stage };

@@ -155,7 +155,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                   color: "var(--muted)",
                 }}
               >
-                <span style={{ color: "var(--ink)" }}>⊘</span> Internal tasks &amp; recordings on this stage are hidden from the client.
+                <span style={{ color: "var(--ink)" }}>⊘</span> Internal tasks &amp; recordings on this phase are hidden from the client.
               </div>
             )}
           </section>
@@ -184,7 +184,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
         {/* Right rail */}
         <aside style={{ borderLeft: "1px solid var(--border)", paddingLeft: 30, display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
-            <div className="kicker">Stage total</div>
+            <div className="kicker">Phase total</div>
             <Money cents={stage.totalAmountCents} style={{ display: "block", fontSize: 30, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4 }} />
             <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
               {paid ? `Paid${stage.paidAt ? ` · ${new Date(stage.paidAt).toLocaleDateString()}` : ""}` : "Due in full before work begins"}

@@ -117,7 +117,7 @@ export default async function AccountHubPage({
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>{hub.org.name}</h1>
             <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
               Client since {fmtDate(hub.org.createdAt)} · {plural(hub.counts.projects, "project")} ·{" "}
-              {plural(hub.counts.stages, "stage")}
+              {plural(hub.counts.stages, "phase")}
             </div>
           </div>
         </div>
