@@ -4,6 +4,7 @@ import { Avatar } from "@/components/People";
 
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false },
+  { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true },
   { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false },
   { key: "files", label: "Files", href: null, staffOnly: false },

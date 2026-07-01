@@ -49,6 +49,20 @@ export const STAGE_STATUSES = [
 ] as const;
 export const VISIBILITY = ["client_visible", "internal"] as const;
 export const BILLING_MODES = ["upfront", "on_delivery"] as const;
+export const LEAD_STATUSES = ["new", "qualified", "disqualified"] as const;
+// Sales STAGES are dispositions, not a state machine: free to skip, free to move,
+// never enforced (see docs/brain_storming/synthesis.md — "enforce gates, report on
+// stages"). won/lost are terminal dispositions kept out of the funnel columns.
+export const DEAL_STAGES = [
+  "discovery",
+  "business_requirements",
+  "solution_design",
+  "proposal",
+  "negotiation",
+  "contract",
+  "won",
+  "lost",
+] as const;
 
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
@@ -87,6 +101,90 @@ export const users = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("users_org_idx").on(t.organizationId)],
+);
+
+// ---- Leads (CRM front half: an UNOWNED record trap) ----
+// A lead is a name + number + context that must be able to exist without ownership.
+// It means nothing until a salesperson qualifies it — qualification converts it into
+// an organization (status 'prospect') + contact + deal.
+export const leads = sqliteTable(
+  "leads",
+  {
+    id: pk(),
+    name: text("name").notNull(), // person or "guy from the airport bar"
+    company: text("company"), // free text until qualified — no org row yet
+    email: text("email"),
+    phone: text("phone"),
+    source: text("source"), // website form, referral, airport bar, Reddit…
+    industry: text("industry"), // marketing vertical
+    notes: text("notes"),
+    status: text("status", { enum: LEAD_STATUSES }).notNull().default("new"),
+    assignedToUserId: text("assigned_to_user_id").references(() => users.id), // null = unowned
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    convertedDealId: text("converted_deal_id"), // set on qualify (no FK: deals is defined below)
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("leads_status_idx").on(t.status)],
+);
+
+// ---- Contacts (a person, distinct from portal users; may never log in) ----
+export const contacts = sqliteTable("contacts", {
+  id: pk(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  title: text("title"),
+  notes: text("notes"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+// ---- Contact ↔ company (many-to-many: "same Adam, now with company B") ----
+export const contactCompanies = sqliteTable(
+  "contact_companies",
+  {
+    id: pk(),
+    contactId: text("contact_id").notNull().references(() => contacts.id),
+    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    title: text("title"), // role AT this company (may differ per company)
+    isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(false),
+    current: integer("current", { mode: "boolean" }).notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("contact_companies_contact_idx").on(t.contactId),
+    index("contact_companies_org_idx").on(t.organizationId),
+  ],
+);
+
+// ---- Deals (one potential engagement moving through sales stages) ----
+// stage is a DISPOSITION — the service layer allows any→any move. stageEnteredAt
+// powers days-in-stage / stuck detection for the Monday-meeting funnel view.
+export const deals = sqliteTable(
+  "deals",
+  {
+    id: pk(),
+    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    name: text("name").notNull(),
+    stage: text("stage", { enum: DEAL_STAGES }).notNull().default("discovery"),
+    stageEnteredAt: integer("stage_entered_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    ownerUserId: text("owner_user_id").references(() => users.id), // the salesperson
+    primaryContactId: text("primary_contact_id").references(() => contacts.id),
+    sourceLeadId: text("source_lead_id").references(() => leads.id),
+    // Rough deal value for pipeline totals — a gut number, NOT a quote. Quoting
+    // stays on stages/phases where the price authority rules live.
+    valueCents: integer("value_cents").notNull().default(0),
+    notes: text("notes"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("deals_org_idx").on(t.organizationId),
+    index("deals_stage_idx").on(t.stage),
+  ],
 );
 
 // ---- Projects (any kind of work) ----
