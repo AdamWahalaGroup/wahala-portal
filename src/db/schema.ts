@@ -178,6 +178,10 @@ export const deals = sqliteTable(
     // stays on stages/phases where the price authority rules live.
     valueCents: integer("value_cents").notNull().default(0),
     notes: text("notes"),
+    // The Discovery Package (R2): markdown distilled from call transcripts/notes —
+    // business profile, workflows, goals, pain points, decision makers, terminology.
+    // Editable by staff; seeds the org's AI memory when the deal is won.
+    discoveryMd: text("discovery_md"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

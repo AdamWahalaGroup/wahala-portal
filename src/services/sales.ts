@@ -26,7 +26,7 @@ function assertStaff(ctx: AuthContext, action: string): void {
   }
 }
 
-function assertSalesManager(ctx: AuthContext, action: string): void {
+export function assertSalesManager(ctx: AuthContext, action: string): void {
   assertStaff(ctx, action);
   if (!(ctx.isAdmin || ctx.user.role === "account_owner")) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_admin_or_owner" });
@@ -314,9 +314,17 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
   );
   if (stage === "won") {
     // The prospect became a customer — the contract→project seam takes over from here.
+    // The Discovery Package graduates into the client's durable AI memory so every
+    // later AI feature (project drafts, proposals) is grounded in what sales learned.
+    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) });
+    let aiContextMd = org?.aiContextMd ?? null;
+    if (deal.discoveryMd?.trim() && !(aiContextMd ?? "").includes(deal.discoveryMd.trim())) {
+      const block = `## Discovery — ${deal.name} (won ${new Date().toLocaleDateString("en-US")})\n\n${deal.discoveryMd.trim()}`;
+      aiContextMd = aiContextMd ? `${aiContextMd}\n\n${block}` : block;
+    }
     const activateOrg = db
       .update(schema.organizations)
-      .set({ status: "active" })
+      .set({ status: "active", aiContextMd })
       .where(eq(schema.organizations.id, deal.organizationId));
     await db.batch([moveDeal, audit, activateOrg]);
   } else {
@@ -327,7 +335,7 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
 export async function updateDeal(
   ctx: AuthContext,
   dealId: string,
-  input: { name?: string; valueCents?: number; notes?: string },
+  input: { name?: string; valueCents?: number; notes?: string; discoveryMd?: string },
 ): Promise<void> {
   assertSalesManager(ctx, "update_deal");
   const db = getDb();
@@ -341,6 +349,7 @@ export async function updateDeal(
   }
   if (input.valueCents !== undefined) patch.valueCents = Math.max(0, Math.round(input.valueCents));
   if (input.notes !== undefined) patch.notes = input.notes.trim() || null;
+  if (input.discoveryMd !== undefined) patch.discoveryMd = input.discoveryMd.trim() || null;
   if (Object.keys(patch).length === 0) return;
   await db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId));
 }
@@ -362,6 +371,7 @@ export type DealDetail = {
     stage: DealStage;
     valueCents: number;
     notes: string | null;
+    discoveryMd: string | null;
     createdAt: Date;
     daysInStage: number;
     stuck: boolean;
@@ -434,6 +444,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       stage: deal.stage,
       valueCents: deal.valueCents,
       notes: deal.notes,
+      discoveryMd: deal.discoveryMd,
       createdAt: deal.createdAt,
       daysInStage: daysInStage(deal.stageEnteredAt, now),
       stuck: deal.stage !== "won" && deal.stage !== "lost" && isStuck(deal.stageEnteredAt, now),

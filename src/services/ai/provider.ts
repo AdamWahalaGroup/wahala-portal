@@ -37,6 +37,17 @@ export type DraftUsage = {
 
 export interface AiDraftProvider {
   draftProject(args: { system: string; parts: DraftPart[] }): Promise<{ draft: ProjectDraft; usage: DraftUsage }>;
+  /**
+   * Generic strict-JSON completion — same multi-modal parts, caller-supplied schema.
+   * New AI features (discovery packages, estimators…) build on this instead of adding
+   * per-feature provider methods.
+   */
+  completeStructured<T>(args: {
+    system: string;
+    parts: DraftPart[];
+    schemaName: string;
+    schema: object;
+  }): Promise<{ output: T; usage: DraftUsage }>;
 }
 
 /**

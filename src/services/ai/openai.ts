@@ -19,7 +19,12 @@ type OpenAiContentPart =
   | { type: "file"; file: { filename: string; file_data: string } };
 
 export class OpenAiDraftProvider implements AiDraftProvider {
-  async draftProject(args: { system: string; parts: DraftPart[] }): Promise<{ draft: ProjectDraft; usage: DraftUsage }> {
+  async completeStructured<T>(args: {
+    system: string;
+    parts: DraftPart[];
+    schemaName: string;
+    schema: object;
+  }): Promise<{ output: T; usage: DraftUsage }> {
     const key = openaiApiKey();
     if (!key) {
       throw new StageError(
@@ -43,7 +48,7 @@ export class OpenAiDraftProvider implements AiDraftProvider {
       ],
       response_format: {
         type: "json_schema",
-        json_schema: { name: "ProjectDraft", strict: true, schema: projectDraftJsonSchema },
+        json_schema: { name: args.schemaName, strict: true, schema: args.schema },
       },
     };
 
@@ -63,9 +68,9 @@ export class OpenAiDraftProvider implements AiDraftProvider {
     const raw = data?.choices?.[0]?.message?.content;
     if (typeof raw !== "string") throw new Error("OpenAI response had no message content.");
 
-    let draft: ProjectDraft;
+    let output: T;
     try {
-      draft = JSON.parse(raw) as ProjectDraft;
+      output = JSON.parse(raw) as T;
     } catch {
       throw new Error("OpenAI response was not valid JSON (despite strict schema).");
     }
@@ -78,6 +83,16 @@ export class OpenAiDraftProvider implements AiDraftProvider {
       outputTokens,
       costCents: estimateCostCents(model, inputTokens, outputTokens),
     };
-    return { draft, usage };
+    return { output, usage };
+  }
+
+  async draftProject(args: { system: string; parts: DraftPart[] }): Promise<{ draft: ProjectDraft; usage: DraftUsage }> {
+    const { output, usage } = await this.completeStructured<ProjectDraft>({
+      system: args.system,
+      parts: args.parts,
+      schemaName: "ProjectDraft",
+      schema: projectDraftJsonSchema,
+    });
+    return { draft: output, usage };
   }
 }

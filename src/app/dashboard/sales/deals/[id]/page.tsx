@@ -16,6 +16,7 @@ import { Money } from "@/components/Money";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { PeopleCard } from "@/components/People";
 import { DealStageSelect, DealFieldsForm } from "@/components/DealEditor";
+import { DiscoveryPanel } from "@/components/DiscoveryPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               </p>
             )}
           </section>
+
+          <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />
 
           {sourceLead && (
             <section style={{ marginTop: 20 }}>
