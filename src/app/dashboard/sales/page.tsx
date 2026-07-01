@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
 import { salesOverview } from "@/services/sales";
+import { listWahalaStaff } from "@/services/clients";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { SalesBoard } from "@/components/SalesBoard";
@@ -19,7 +20,11 @@ export default async function SalesPage() {
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isStaff) redirect("/dashboard");
 
-  const [overview, orgs] = await Promise.all([salesOverview(ctx), scopedDb(ctx).listOrganizations()]);
+  const [overview, orgs, staff] = await Promise.all([
+    salesOverview(ctx),
+    scopedDb(ctx).listOrganizations(),
+    listWahalaStaff(ctx),
+  ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   return (
@@ -31,7 +36,7 @@ export default async function SalesPage() {
     >
       <div className="kicker">Wahala staff</div>
       <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>Sales</h1>
-      <SalesBoard overview={overview} orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} canManage={canManage} />
+      <SalesBoard overview={overview} orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} staff={staff} canManage={canManage} />
     </AppShell>
   );
 }

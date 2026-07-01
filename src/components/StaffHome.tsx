@@ -7,6 +7,7 @@ import type { AuthContext } from "@/auth/context";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/People";
 import { staffRevenueOverview } from "@/services/staff-home";
+import { salesOverview } from "@/services/sales";
 
 function usd(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -18,7 +19,9 @@ function greeting(hour: number): string {
 }
 
 export async function StaffHome({ ctx }: { ctx: AuthContext }) {
-  const ov = await staffRevenueOverview(ctx);
+  const [ov, sales] = await Promise.all([staffRevenueOverview(ctx), salesOverview(ctx)]);
+  const openDealCount = sales.columns.reduce((n, c) => n + c.deals.length, 0);
+  const newLeadCount = sales.leads.filter((l) => l.status === "new").length;
   const now = new Date();
   const firstName = (ctx.user.name.split(/\s+/)[0] || ctx.user.name).replace(/[^A-Za-z].*$/, "");
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -64,6 +67,39 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
           </div>
         </div>
       </div>
+
+      {/* Sales pipeline strip — the front half of the funnel, one glance */}
+      <Link
+        href="/dashboard/sales"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          flexWrap: "wrap",
+          marginTop: 16,
+          background: "var(--white)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: "14px 20px",
+          textDecoration: "none",
+          color: "inherit",
+        }}
+      >
+        <span className="kicker">Sales pipeline</span>
+        <span className="tabular" style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-.01em" }}>
+          {usd(sales.openPipelineCents)}
+        </span>
+        <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+          {openDealCount} open deal{openDealCount === 1 ? "" : "s"}
+          {newLeadCount > 0 ? ` · ${newLeadCount} lead${newLeadCount === 1 ? "" : "s"} to qualify` : ""}
+        </span>
+        {sales.stuckCount > 0 && (
+          <span className="kicker" style={{ fontSize: 10, background: "#fff7ed", color: "#b45309", padding: "3px 8px", borderRadius: 6 }}>
+            ⚠ {sales.stuckCount} stuck 14d+
+          </span>
+        )}
+        <span style={{ marginLeft: "auto", color: "var(--muted-line)" }}>›</span>
+      </Link>
 
       {/* Clients table */}
       <section style={{ marginTop: 30 }}>

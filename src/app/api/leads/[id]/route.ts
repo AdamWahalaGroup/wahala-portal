@@ -2,10 +2,11 @@
  * PATCH /api/leads/[id] — act on a lead (admin / account owner):
  *   { action: "qualify", organizationId?, dealName?, valueCents? } → org + contact + deal
  *   { action: "disqualify" }
+ *   { action: "assign", assignedToUserId: string | null } — handoff (any staff)
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
-import { qualifyLead, disqualifyLead } from "@/services/sales";
+import { qualifyLead, disqualifyLead, assignLead } from "@/services/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       organizationId?: string;
       dealName?: string;
       valueCents?: number;
+      assignedToUserId?: string | null;
     }>(req);
 
     if (body.action === "qualify") {
@@ -32,7 +34,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await disqualifyLead(ctx, id);
       return NextResponse.json({ ok: true });
     }
-    throw new ApiError(400, "validation", "action must be 'qualify' or 'disqualify'.");
+    if (body.action === "assign") {
+      await assignLead(ctx, id, body.assignedToUserId ?? null);
+      return NextResponse.json({ ok: true });
+    }
+    throw new ApiError(400, "validation", "action must be 'qualify', 'disqualify', or 'assign'.");
   } catch (e) {
     return handleApiError(e);
   }

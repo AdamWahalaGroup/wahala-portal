@@ -11,7 +11,7 @@
  * RBAC: any staff can view and capture leads; qualifying, deal edits, and stage
  * moves need admin or account_owner (same tier as quoting).
  */
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -46,6 +46,7 @@ export type LeadItem = {
   industry: string | null;
   notes: string | null;
   status: "new" | "qualified" | "disqualified";
+  assignedToUserId: string | null;
   assignedToName: string | null;
   createdAt: Date;
 };
@@ -73,9 +74,32 @@ export async function listLeads(ctx: AuthContext): Promise<LeadItem[]> {
     industry: l.industry,
     notes: l.notes,
     status: l.status,
+    assignedToUserId: l.assignedToUserId,
     assignedToName: l.assignedToUserId ? names.get(l.assignedToUserId) ?? null : null,
     createdAt: l.createdAt,
   }));
+}
+
+/**
+ * Hand a lead to a salesperson (or back to the unowned pool with null). Any staff
+ * member can assign — claiming a lead is a soft act, not a gate.
+ */
+export async function assignLead(ctx: AuthContext, leadId: string, userId: string | null): Promise<void> {
+  assertStaff(ctx, "assign_lead");
+  const db = getDb();
+  if (userId) {
+    const [target] = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(and(eq(schema.users.id, userId), eq(schema.users.userType, "wahala"), ne(schema.users.status, "disabled")));
+    if (!target) throw new StageError("VALIDATION", "Leads can only be assigned to active Wahala staff.");
+  }
+  const [row] = await db
+    .update(schema.leads)
+    .set({ assignedToUserId: userId })
+    .where(eq(schema.leads.id, leadId))
+    .returning({ id: schema.leads.id });
+  if (!row) throw new StageError("NOT_FOUND", "Lead not found.");
 }
 
 export async function createLead(
@@ -319,6 +343,107 @@ export async function updateDeal(
   if (input.notes !== undefined) patch.notes = input.notes.trim() || null;
   if (Object.keys(patch).length === 0) return;
   await db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId));
+}
+
+// ---------------------------------------------------------------- deal detail
+
+export type DealHistoryItem = {
+  action: string; // pre-formatted for HistoryTimeline's label(): underscores → spaces
+  actorName: string;
+  from?: string;
+  to?: string;
+  createdAt: Date;
+};
+
+export type DealDetail = {
+  deal: {
+    id: string;
+    name: string;
+    stage: DealStage;
+    valueCents: number;
+    notes: string | null;
+    createdAt: Date;
+    daysInStage: number;
+    stuck: boolean;
+  };
+  org: { id: string; name: string; status: string };
+  owner: { id: string; name: string } | null;
+  contact: { id: string; name: string; email: string | null; phone: string | null } | null;
+  sourceLead: { source: string | null; notes: string | null; createdAt: Date } | null;
+  history: DealHistoryItem[];
+};
+
+/** One deal with its people, provenance, and audited stage history (R2 attaches here). */
+export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<DealDetail> {
+  assertStaff(ctx, "get_deal_detail");
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "get_deal_detail", resource: `deal:${dealId}`, reason: "out_of_scope" });
+    throw new StageError("NOT_FOUND", "Deal not found.");
+  }
+
+  const [org, owner, contact, lead, auditRows] = await Promise.all([
+    db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }),
+    deal.ownerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, deal.ownerUserId) }) : null,
+    deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
+    deal.sourceLeadId ? db.query.leads.findFirst({ where: eq(schema.leads.id, deal.sourceLeadId) }) : null,
+    db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.entityType, "deal"), eq(schema.auditLog.entityId, dealId)))
+      .orderBy(desc(schema.auditLog.createdAt)),
+  ]);
+  if (!org) throw new StageError("NOT_FOUND", "Deal not found.");
+
+  const actorIds = [...new Set(auditRows.map((a) => a.actorUserId).filter((v): v is string => !!v))];
+  const actorName = new Map<string, string>();
+  if (actorIds.length > 0) {
+    const actors = await db
+      .select({ id: schema.users.id, name: schema.users.name })
+      .from(schema.users)
+      .where(inArray(schema.users.id, actorIds));
+    for (const a of actors) actorName.set(a.id, a.name);
+  }
+
+  const history: DealHistoryItem[] = auditRows.map((a) => {
+    const meta = (a.metadata ?? {}) as { from?: string; to?: string };
+    if (a.action === "deal.stage_changed") {
+      return {
+        action: "moved_this_deal",
+        actorName: a.actorUserId ? actorName.get(a.actorUserId) ?? "Someone" : "System",
+        from: isDealStage(meta.from ?? "") ? STAGE_META[meta.from as DealStage].label : meta.from,
+        to: isDealStage(meta.to ?? "") ? STAGE_META[meta.to as DealStage].label : meta.to,
+        createdAt: a.createdAt,
+      };
+    }
+    return {
+      action: a.action === "lead.qualified" ? "qualified_the_lead" : a.action.replace(/\./g, "_"),
+      actorName: a.actorUserId ? actorName.get(a.actorUserId) ?? "Someone" : "System",
+      createdAt: a.createdAt,
+    };
+  });
+
+  const now = new Date();
+  return {
+    deal: {
+      id: deal.id,
+      name: deal.name,
+      stage: deal.stage,
+      valueCents: deal.valueCents,
+      notes: deal.notes,
+      createdAt: deal.createdAt,
+      daysInStage: daysInStage(deal.stageEnteredAt, now),
+      stuck: deal.stage !== "won" && deal.stage !== "lost" && isStuck(deal.stageEnteredAt, now),
+    },
+    org: { id: org.id, name: org.name, status: org.status },
+    owner: owner ? { id: owner.id, name: owner.name } : null,
+    contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null,
+    sourceLead: lead ? { source: lead.source, notes: lead.notes, createdAt: lead.createdAt } : null,
+    history,
+  };
 }
 
 // ---------------------------------------------------------------- funnel view

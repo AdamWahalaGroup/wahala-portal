@@ -6,10 +6,13 @@
  * rules — while days-in-stage + stuck flags give the Monday-meeting view ("why does
  * Jason have 20 deals stuck in solution design?").
  */
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Money } from "@/components/Money";
 import type { SalesOverview, DealItem, LeadItem } from "@/services/sales";
+
+type StaffOption = { id: string; name: string };
 
 const STAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "discovery", label: "Discovery" },
@@ -117,10 +120,12 @@ function LeadCaptureForm() {
 function LeadRow({
   lead,
   orgs,
+  staff,
   canManage,
 }: {
   lead: LeadItem;
   orgs: { id: string; name: string }[];
+  staff: StaffOption[];
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -155,6 +160,21 @@ function LeadRow({
             </span>
           )}
         </div>
+        {/* Handoff: any staff can claim a lead or hand it to someone ("Josh, you two speak RME"). */}
+        <select
+          value={lead.assignedToUserId ?? ""}
+          disabled={busy}
+          onChange={(e) => act({ action: "assign", assignedToUserId: e.target.value || null })}
+          style={{ ...inputStyle, flex: "none", fontSize: 12.5, padding: "6px 8px" }}
+          title="Who's working this lead"
+        >
+          <option value="">Unowned</option>
+          {staff.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
         {canManage && (
           <div style={{ display: "flex", gap: 8, flex: "none" }}>
             <button
@@ -275,7 +295,9 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
       }}
     >
       <div style={{ flex: 1, minWidth: 170 }}>
-        <div style={{ fontWeight: 700, fontSize: 14.5 }}>{deal.name}</div>
+        <Link href={`/dashboard/sales/deals/${deal.id}`} style={{ fontWeight: 700, fontSize: 14.5, color: "inherit", textDecoration: "none" }}>
+          {deal.name} <span style={{ color: "var(--muted-line)" }}>›</span>
+        </Link>
         <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>
           {deal.organizationName}
           {deal.contactName ? ` · ${deal.contactName}` : ""}
@@ -322,10 +344,12 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
 export function SalesBoard({
   overview,
   orgs,
+  staff,
   canManage,
 }: {
   overview: SalesOverview;
   orgs: { id: string; name: string }[];
+  staff: StaffOption[];
   canManage: boolean;
 }) {
   const newLeads = overview.leads.filter((l) => l.status === "new");
@@ -367,7 +391,7 @@ export function SalesBoard({
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
             {newLeads.map((l) => (
-              <LeadRow key={l.id} lead={l} orgs={orgs} canManage={canManage} />
+              <LeadRow key={l.id} lead={l} orgs={orgs} staff={staff} canManage={canManage} />
             ))}
           </div>
         )}
