@@ -63,6 +63,7 @@ export const DEAL_STAGES = [
   "won",
   "lost",
 ] as const;
+export const PROPOSAL_STATUSES = ["draft", "sent", "approved", "declined", "superseded"] as const;
 
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
@@ -189,6 +190,59 @@ export const deals = sqliteTable(
     index("deals_org_idx").on(t.organizationId),
     index("deals_stage_idx").on(t.stage),
   ],
+);
+
+// ---- Proposals (R3: the commercial offering — always Option A / Option B) ----
+// HIGH LEVEL by design: what we build, why it solves the problem, how long. The AI
+// drafts scope and complexity; ONLY an admin sets prices. Versioned — sending a new
+// version supersedes older open ones ("we're gonna rewrite it, and it's proposal two").
+// Approval is the good-faith agreement to proceed (NO deposit) and moves the deal to
+// the contract stage. Negotiation is a function within proposal, not a new artifact.
+export const proposals = sqliteTable(
+  "proposals",
+  {
+    id: pk(),
+    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    dealId: text("deal_id").notNull().references(() => deals.id),
+    version: integer("version").notNull().default(1),
+    status: text("status", { enum: PROPOSAL_STATUSES }).notNull().default("draft"),
+    title: text("title").notNull(),
+    executiveSummaryMd: text("executive_summary_md"),
+    assumptionsMd: text("assumptions_md"),
+    // AI complexity read (1–5). Above 3 = "needs engineering hardcore review" — a
+    // SOFT flag (banner + confirm), never a hard gate inside the sales funnel.
+    complexityScore: integer("complexity_score"),
+    complexityRationale: text("complexity_rationale"),
+    // Unguessable public token — the prospect reads/approves at /p/[token], no login.
+    shareToken: text("share_token").unique(),
+    sentAt: integer("sent_at", { mode: "timestamp" }),
+    respondedAt: integer("responded_at", { mode: "timestamp" }),
+    respondedByName: text("responded_by_name"), // typed name from the public approve
+    responseNote: text("response_note"),
+    selectedOptionId: text("selected_option_id"),
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("proposals_deal_idx").on(t.dealId)],
+);
+
+export const proposalOptions = sqliteTable(
+  "proposal_options",
+  {
+    id: pk(),
+    proposalId: text("proposal_id").notNull().references(() => proposals.id),
+    label: text("label").notNull(), // "A" | "B"
+    name: text("name").notNull(), // e.g. "Custom build — you own everything"
+    summaryMd: text("summary_md").notNull(),
+    timelineNote: text("timeline_note"),
+    // Admin-set. 0 = not priced yet; both options must be priced before send.
+    priceCents: integer("price_cents").notNull().default(0),
+    priceNote: text("price_note"), // e.g. "+ $500/mo platform subscription"
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("proposal_options_proposal_idx").on(t.proposalId)],
 );
 
 // ---- Projects (any kind of work) ----

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getDealDetail } from "@/services/sales";
+import { listProposalsForDeal } from "@/services/proposals";
 import { STAGE_META } from "@/domain/sales";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
@@ -17,6 +18,7 @@ import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { PeopleCard } from "@/components/People";
 import { DealStageSelect, DealFieldsForm } from "@/components/DealEditor";
 import { DiscoveryPanel } from "@/components/DiscoveryPanel";
+import { ProposalsSection } from "@/components/ProposalsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     throw e;
   });
   const { deal, org, owner, contact, sourceLead, history } = detail;
+  const proposals = await listProposalsForDeal(ctx, deal.id);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
   const meta = STAGE_META[deal.stage];
 
@@ -82,6 +85,21 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           </section>
 
           <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />
+
+          <ProposalsSection
+            dealId={deal.id}
+            proposals={proposals.map((p) => ({
+              id: p.id,
+              version: p.version,
+              status: p.status,
+              title: p.title,
+              complexityScore: p.complexityScore,
+              needsReview: p.needsReview,
+              selectedLabel: p.selectedLabel,
+            }))}
+            canManage={canManage}
+            hasDiscovery={!!deal.discoveryMd}
+          />
 
           {sourceLead && (
             <section style={{ marginTop: 20 }}>

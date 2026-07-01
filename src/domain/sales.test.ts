@@ -7,6 +7,7 @@ import {
   daysInStage,
   isStuck,
   isDealStage,
+  needsEngineeringReview,
 } from "@/domain/sales";
 import { DEAL_STAGES } from "@/db/schema";
 
@@ -30,6 +31,16 @@ describe("sales stage metadata", () => {
     expect(isDealStage("won")).toBe(true);
     expect(isDealStage("paid")).toBe(false); // phase status, not a sales stage
     expect(isDealStage("")).toBe(false);
+  });
+});
+
+describe("complexity review flag", () => {
+  it("fast-tracks 3 and under; flags above 3", () => {
+    expect(needsEngineeringReview(1)).toBe(false);
+    expect(needsEngineeringReview(3)).toBe(false);
+    expect(needsEngineeringReview(4)).toBe(true);
+    expect(needsEngineeringReview(5)).toBe(true);
+    expect(needsEngineeringReview(null)).toBe(false); // unscored (hand-written proposal)
   });
 });
 

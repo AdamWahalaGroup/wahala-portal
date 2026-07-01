@@ -63,3 +63,15 @@ export function isStuck(stageEnteredAt: Date, now: Date): boolean {
 export function isDealStage(value: string): value is DealStage {
   return (DEAL_STAGES as readonly string[]).includes(value);
 }
+
+// ---- Proposal complexity (1–5, AI-scored) ----
+// "One to five, this project's a three, anything three and under, quote it and move
+// on. Three point one and over needs to go to engineering for hardcore review."
+export const COMPLEXITY_MIN = 1;
+export const COMPLEXITY_MAX = 5;
+export const ENGINEERING_REVIEW_ABOVE = 3;
+
+/** True when the AI's complexity read says engineering should review before sending. */
+export function needsEngineeringReview(score: number | null): boolean {
+  return score !== null && score > ENGINEERING_REVIEW_ABOVE;
+}
