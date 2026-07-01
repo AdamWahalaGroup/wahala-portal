@@ -69,7 +69,15 @@ REDRAFT HONORING (only relevant if the input includes a "Previous draft's projec
 - That block contains YOUR prior memo with the staffer's inline edits and answers merged in.
 - Treat the staffer's typed text as AUTHORITATIVE. It resolves prior open questions, fills in missing information, and revises any assumption it contradicts. Do NOT ask the same open questions again — remove them from ## Open questions.
 - Reflect the newly-known facts throughout the new draft (adjust scope, deliverables, risks, and assumptions accordingly).
-- The new memo should note what was answered (fold into ## Inferred or ## Assumptions) rather than repeating a question the staffer has now answered.`;
+- The new memo should note what was answered (fold into ## Inferred, ## Assumptions, or ## Risks) rather than repeating a question the staffer has now answered.
+
+DETECTING INLINE ANSWERS (apply to BOTH ## Open questions AND ## Missing information sections):
+- Compare each bullet against the shape you would have written yourself. If a bullet contains MORE THAN the original one-sentence gap or question — extra sentences, notes, or specifics tacked on after a period — treat everything after the original description as the staffer's ANSWER.
+- Handling per section:
+  - **## Open questions**: remove the bullet from the new draft's list (or replace it with a "resolved:" note if useful). Do NOT re-ask.
+  - **## Missing information**: remove the bullet from the new draft's list (fold the newly-known fact into ## Inferred, ## Assumptions, ## Risks, or into deliverables/scope as appropriate). Only re-flag a Missing information item if the staffer's answer is itself incomplete.
+- Example: previous bullet was \`- (blocking) target launch date not stated\`. Staffer edited it to \`- (blocking) target launch date not stated. Must launch before Q3 2027 for a regulatory filing.\`. Interpretation: launch date is Q3 2027, driven by a regulatory filing. Action: drop the bullet from Missing information; add "Regulatory filing deadline drives launch before Q3 2027" to ## Assumptions or ## Risks; consider tightening the phase-timing narrative in the scope.
+- Free-form staffer commentary outside a bullet (e.g. a sentence hanging in the memo not attached to any bullet) is a note to you — read it, don't echo it back, act on any instructions it contains.`;
 
 export type DraftInput = {
   organizationId: string;
