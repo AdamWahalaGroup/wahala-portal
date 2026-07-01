@@ -9,7 +9,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 type Org = { id: string; name: string };
 
@@ -452,7 +452,7 @@ function Review(props: {
             <div className="kicker" style={{ marginTop: 4, color: "var(--muted)" }}>{draft.stages.length} phase{draft.stages.length === 1 ? "" : "s"} · prices set later</div>
           </Field>
           <Field label="Description">
-            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={3} style={{ ...inp(), resize: "vertical", fontFamily: "inherit" }} />
+            <AutoSizingTextarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} minRows={3} style={{ ...inp(), resize: "vertical", fontFamily: "inherit" }} />
           </Field>
 
           <div className="kicker" style={{ marginTop: 24, marginBottom: 10 }}>Phases & deliverables · drafted from the SOW</div>
@@ -464,7 +464,7 @@ function Review(props: {
                   <input value={s.name} onChange={(e) => updateStage(s.id, { name: e.target.value })} placeholder="Phase name" style={{ flex: 1, ...inp(15, 700), border: "none", background: "transparent", padding: "4px 0" }} />
                   <button type="button" onClick={() => removeStage(s.id)} style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 18, cursor: "pointer" }} aria-label="Remove phase">×</button>
                 </div>
-                <textarea value={s.scopeDescription} onChange={(e) => updateStage(s.id, { scopeDescription: e.target.value })} placeholder="Scope of this phase…" rows={2} style={{ marginTop: 8, ...inp(), resize: "vertical", fontFamily: "inherit" }} />
+                <AutoSizingTextarea value={s.scopeDescription} onChange={(e) => updateStage(s.id, { scopeDescription: e.target.value })} placeholder="Scope of this phase…" minRows={2} style={{ marginTop: 8, ...inp(), resize: "vertical", fontFamily: "inherit" }} />
 
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
                   {s.epics.map((e) => (
@@ -571,6 +571,27 @@ function ErrorBox({ text }: { text: string }) {
   return (
     <div style={{ marginTop: 14, background: "#FBE3E3", border: "1px solid #F4A8A8", color: "#991B1B", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>{text}</div>
   );
+}
+
+/**
+ * Textarea that sizes itself to fit its initial content on mount, so an AI-generated
+ * paragraph doesn't land in a 3-line box the admin has to drag open. User can still
+ * drag-resize (resize: "vertical" is preserved by the caller); we only set the initial
+ * height once — subsequent edits don't reflow. minRows guarantees a floor.
+ */
+function AutoSizingTextarea({
+  minRows = 2,
+  style,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []); // once, on mount — Review only mounts after the draft arrives.
+  return <textarea ref={ref} rows={minRows} style={style} {...rest} />;
 }
 
 /** Parse the '## Missing information' section of the memo into (blocking, nice-to-have) counts. */
