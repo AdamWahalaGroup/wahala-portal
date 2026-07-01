@@ -1,13 +1,18 @@
 /** UI derivations from a stage's status (presentation only — server enforces real rules). */
-import type { StageStatus } from "@/domain/stage-machine";
+import type { BillingMode, StageStatus } from "@/domain/stage-machine";
 
-/** Whose court the ball is in, by status. */
-export function waitingParty(status: StageStatus): "client" | "wahala" | "none" {
+/** Whose court the ball is in, by status. Billing mode changes the "approved" case:
+ *  upfront waits on the client (to pay); on_delivery waits on Wahala (to start work). */
+export function waitingParty(
+  status: StageStatus,
+  billingMode: BillingMode = "upfront",
+): "client" | "wahala" | "none" {
   switch (status) {
     case "quoted":
-    case "approved":
     case "delivered":
       return "client";
+    case "approved":
+      return billingMode === "on_delivery" ? "wahala" : "client";
     case "draft":
     case "paid":
     case "in_progress":
@@ -19,13 +24,18 @@ export function waitingParty(status: StageStatus): "client" | "wahala" | "none" 
 }
 
 /** Short CTA for a stage that needs the viewer's attention, or null if it doesn't. */
-export function onYouCta(status: StageStatus, isStaff: boolean): string | null {
+export function onYouCta(
+  status: StageStatus,
+  isStaff: boolean,
+  billingMode: BillingMode = "upfront",
+): string | null {
   if (isStaff) {
     switch (status) {
       case "draft":
         return "Send quote";
       case "approved":
-        return "Mark paid";
+        // On-delivery: kick off work immediately. Upfront: still waiting on payment.
+        return billingMode === "on_delivery" ? "Start work" : "Mark paid";
       case "paid":
         return "Start work";
       case "in_progress":
@@ -40,7 +50,8 @@ export function onYouCta(status: StageStatus, isStaff: boolean): string | null {
     case "quoted":
       return "Review & approve";
     case "approved":
-      return "Pay to begin";
+      // On-delivery: nothing for the client to do — work is starting.
+      return billingMode === "on_delivery" ? null : "Pay to begin";
     case "delivered":
       return "Review & accept";
     default:

@@ -39,6 +39,12 @@ export default async function AcceptPage({ params }: { params: Promise<{ id: str
       <div className="mono" style={{ fontSize: 12, color: "var(--muted)", maxWidth: 390, margin: "0 auto 8px" }}>
         <Link href={`/dashboard/stages/${stage.id}`}>← Back to stage</Link>
       </div>
+      {stage.billingMode === "on_delivery" && !stage.paidAt && (
+        <div style={{ maxWidth: 420, margin: "0 auto 14px", background: "#FFFAF2", border: "1px solid #FADCB4", color: "#92400e", borderRadius: 12, padding: "12px 14px", fontSize: 13.5, lineHeight: 1.45 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Awaiting payment confirmation</div>
+          This phase is billed on delivery. Once your Wahala representative confirms your payment has landed, the Accept button will unlock here.
+        </div>
+      )}
       <AcceptanceChecklist
         stageId={stage.id}
         stageName={stage.name}

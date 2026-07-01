@@ -54,8 +54,9 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
     (ctx.isAdmin || (ctx.user.role === "account_owner" && ctx.user.id === detail.resource.accountOwnerUserId));
   const canAcceptScreen = !ctx.isStaff && stage.status === "delivered";
 
-  const paid = PAID_OR_BEYOND.has(stage.status);
-  const party = waitingParty(stage.status);
+  // For on_delivery phases, status never enters 'paid' — use paidAt as the truth.
+  const paid = !!stage.paidAt || PAID_OR_BEYOND.has(stage.status);
+  const party = waitingParty(stage.status, stage.billingMode);
   const who = party === "none" ? null : (ctx.isStaff ? party === "wahala" : party === "client") ? "you" : "wahala";
 
   return (
@@ -187,7 +188,16 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
             <div className="kicker">Phase total</div>
             <Money cents={stage.totalAmountCents} style={{ display: "block", fontSize: 30, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4 }} />
             <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-              {paid ? `Paid${stage.paidAt ? ` · ${new Date(stage.paidAt).toLocaleDateString()}` : ""}` : "Due in full before work begins"}
+              {paid
+                ? `Paid${stage.paidAt ? ` · ${new Date(stage.paidAt).toLocaleDateString()}` : ""}`
+                : stage.billingMode === "on_delivery"
+                  ? "Due on delivery"
+                  : "Due in full before work begins"}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <span className="kicker" style={{ background: stage.billingMode === "on_delivery" ? "#F0ECFB" : "var(--surface-soft)", color: stage.billingMode === "on_delivery" ? "#6D28D9" : "var(--muted)", padding: "3px 8px", borderRadius: 6, fontSize: 10 }}>
+                {stage.billingMode === "on_delivery" ? "PAY ON DELIVERY" : "PAY UPFRONT"}
+              </span>
             </div>
           </div>
 

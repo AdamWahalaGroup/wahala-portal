@@ -68,6 +68,7 @@ export default async function QuoteBuilderPage({ params }: { params: Promise<{ i
           groupLabel: li.groupLabel,
         }))}
         initialTotalCents={stage.totalAmountCents}
+        initialBillingMode={stage.billingMode as "upfront" | "on_delivery"}
         thresholdCents={adminApprovalThresholdCents()}
         isAdmin={ctx.isAdmin}
       />

@@ -1,0 +1,1 @@
+ALTER TABLE `stages` ADD `billing_mode` text DEFAULT 'upfront' NOT NULL;

@@ -20,6 +20,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       name?: string;
       scopeDescription?: string;
       totalAmountCents?: number;
+      billingMode?: "upfront" | "on_delivery";
       lineItems?: { description?: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
     }>(req);
     if (!body.name?.trim()) throw new ApiError(400, "validation", "A phase name is required.");
@@ -28,6 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       name: body.name,
       scopeDescription: body.scopeDescription,
       totalAmountCents: body.totalAmountCents,
+      billingMode: body.billingMode,
       lineItems: (body.lineItems ?? []).map((li) => ({
         description: li.description ?? "",
         estimateNote: li.estimateNote,

@@ -6,16 +6,19 @@
  * single batch. This is the server-side chokepoint where the invariants hold:
  *   • no delivery before payment   • no cross-tenant action   • everything logged.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { canAccessProject } from "@/auth/access";
 import { canActOnStage, type PolicyActor, type StageResource } from "@/auth/policy";
 import {
   ACTION_TRANSITION,
+  assertMarkPaidOnDelivery,
   assertStageAction,
+  MARK_PAID_LEGAL_STATUSES,
   requiresAdminApproval,
   StageError,
+  type BillingMode,
   type StageAction,
 } from "@/domain/stage-machine";
 import { buildAudit, type AuditInput } from "@/services/audit";
@@ -149,6 +152,12 @@ export async function applyStageAction(
     throw new StageError("FORBIDDEN", decision.reason);
   }
 
+  // On-delivery mark_paid is a side-effect (sets paidAt without changing status).
+  // Route it through the dedicated helper before the transition guard.
+  if (action === "mark_paid" && stage.billingMode === "on_delivery") {
+    return applyMarkPaidOnDelivery(ctx, stage, extra);
+  }
+
   // Assert legal transition + the hard pay-gate.
   const { from, to } = assertStageAction(action, stage.status, stage);
 
@@ -179,6 +188,51 @@ export async function applyStageAction(
     metadata: { from, to, totalAmountCents: stage.totalAmountCents, ...(extra.note?.trim() ? { note: extra.note.trim() } : {}) },
   });
 
+  return { ...stage, ...set } as Stage;
+}
+
+/**
+ * On-delivery mark_paid: no status change, just sets paidAt (+ optional stripeRef).
+ * Legal from any post-approval, pre-accepted status; rejected if already paid. Uses
+ * a CAS on `paidAt IS NULL` so a concurrent second mark_paid doesn't double-audit.
+ */
+async function applyMarkPaidOnDelivery(
+  ctx: AuthContext,
+  stage: Stage,
+  extra: { stripeRef?: string; note?: string },
+): Promise<Stage> {
+  assertMarkPaidOnDelivery(stage.status, stage.paidAt);
+  const db = getDb();
+  const now = new Date();
+  const set: StageUpdate = {
+    paidAt: now,
+    stripeRef: extra.stripeRef ?? stage.stripeRef,
+    updatedAt: now,
+  };
+  const updated = await db
+    .update(schema.stages)
+    .set(set)
+    .where(and(eq(schema.stages.id, stage.id), sql`${schema.stages.paidAt} IS NULL`))
+    .returning({ id: schema.stages.id });
+  if (updated.length === 0) {
+    throw new StageError(
+      "CONFLICT",
+      "This phase was just marked paid by someone else — reload and try again.",
+    );
+  }
+  await recordTransition(db, ctx, {
+    organizationId: stage.organizationId,
+    actorUserId: ctx.user.id,
+    action: "stage.mark_paid",
+    entityType: "stage",
+    entityId: stage.id,
+    metadata: {
+      billingMode: "on_delivery",
+      status: stage.status, // unchanged
+      totalAmountCents: stage.totalAmountCents,
+      ...(extra.note?.trim() ? { note: extra.note.trim() } : {}),
+    },
+  });
   return { ...stage, ...set } as Stage;
 }
 
@@ -251,14 +305,42 @@ export function availableActions(
   resource: StageResource,
 ): StageAction[] {
   const actor = actorFromCtx(ctx);
-  return (Object.keys(ACTION_TRANSITION) as StageAction[])
-    .filter((a) => ACTION_TRANSITION[a].from === stage.status)
+  const mode = (stage.billingMode ?? "upfront") as BillingMode;
+
+  // Regular status-transition actions legal from the current status.
+  const transitionActions = (Object.keys(ACTION_TRANSITION) as StageAction[])
     .filter((a) => {
-      const overThreshold =
-        a === "send_quote" &&
-        requiresAdminApproval(stage.totalAmountCents, adminApprovalThresholdCents());
-      return canActOnStage(actor, a, resource, { overThreshold }).allowed;
+      if (a === "mark_paid" && mode === "on_delivery") return false; // handled below
+      const edge =
+        mode === "on_delivery" && a !== "mark_paid"
+          ? // Recompute for on_delivery which has its own map.
+            (() => {
+              if (a === "start_work") return { from: "approved" as const, to: "in_progress" as const };
+              return ACTION_TRANSITION[a];
+            })()
+          : ACTION_TRANSITION[a];
+      if (edge.from !== stage.status) return false;
+      // Also filter out actions that would trip the pay-gate — surface only what
+      // can actually succeed. Upfront: start_work blocked if unpaid. On-delivery:
+      // accept blocked if unpaid.
+      if (mode === "upfront" && edge.to === "in_progress" && !stage.paidAt) return false;
+      if (mode === "on_delivery" && edge.to === "accepted" && !stage.paidAt) return false;
+      return true;
     });
+
+  // On-delivery: mark_paid is a side-effect legal from more statuses, and refused
+  // once already paid (so hitting the button a second time doesn't re-audit).
+  const sideEffects: StageAction[] =
+    mode === "on_delivery" && !stage.paidAt && MARK_PAID_LEGAL_STATUSES.includes(stage.status)
+      ? ["mark_paid"]
+      : [];
+
+  return [...transitionActions, ...sideEffects].filter((a) => {
+    const overThreshold =
+      a === "send_quote" &&
+      requiresAdminApproval(stage.totalAmountCents, adminApprovalThresholdCents());
+    return canActOnStage(actor, a, resource, { overThreshold }).allowed;
+  });
 }
 
 export type StageDetail = {
@@ -448,6 +530,7 @@ export async function saveQuoteDraft(
     name: string;
     scopeDescription?: string;
     totalAmountCents?: number;
+    billingMode?: BillingMode;
     lineItems: { description: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
   },
 ): Promise<Stage> {
@@ -485,6 +568,7 @@ export async function saveQuoteDraft(
         scopeDescription: input.scopeDescription?.trim() || null,
         totalAmountCents,
         requiresAdminApproval: requiresApproval,
+        billingMode: input.billingMode ?? stage.billingMode ?? "upfront",
         updatedAt: new Date(),
       })
       .where(and(eq(schema.stages.id, stageId), eq(schema.stages.status, "draft"))),

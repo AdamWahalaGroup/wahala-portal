@@ -48,6 +48,7 @@ export const STAGE_STATUSES = [
   "rejected",
 ] as const;
 export const VISIBILITY = ["client_visible", "internal"] as const;
+export const BILLING_MODES = ["upfront", "on_delivery"] as const;
 
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
@@ -143,6 +144,10 @@ export const stages = sqliteTable(
     scopeDescription: text("scope_description"),
     status: text("status", { enum: STAGE_STATUSES }).notNull().default("draft"),
     totalAmountCents: integer("total_amount_cents").notNull().default(0),
+    // When the client pays: 'upfront' (pay after approve, before work — the classic
+    // hard pay-gate) or 'on_delivery' (work starts on approve; payment gate moves to
+    // acceptance). Set at Quote time; locked once the quote is sent.
+    billingMode: text("billing_mode", { enum: BILLING_MODES }).notNull().default("upfront"),
     // threshold price authority: over the $ threshold, a Wahala Admin must co-sign
     requiresAdminApproval: integer("requires_admin_approval", { mode: "boolean" })
       .notNull()

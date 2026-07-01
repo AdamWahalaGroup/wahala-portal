@@ -50,7 +50,7 @@ export default async function Dashboard() {
     else byProject.set(s.projectId, [s]);
   }
 
-  const onYou = allStages.filter((s) => onYouCta(s.status, ctx.isStaff)).slice(0, 6);
+  const onYou = allStages.filter((s) => onYouCta(s.status, ctx.isStaff, s.billingMode)).slice(0, 6);
   const canCreateProject = ctx.isAdmin || ctx.user.role === "account_owner";
   const orgs = canCreateProject ? await sdb.listOrganizations() : [];
   const firstName = (ctx.user.name.split(/\s+/)[0] || ctx.user.name).replace(/[^A-Za-z].*$/, "");
@@ -81,7 +81,7 @@ export default async function Dashboard() {
           </div>
           <div style={{ display: "grid", gap: 12 }}>
             {onYou.map((s) => {
-              const cta = onYouCta(s.status, ctx.isStaff)!;
+              const cta = onYouCta(s.status, ctx.isStaff, s.billingMode)!;
               return (
                 <div
                   key={s.id}
@@ -139,7 +139,7 @@ export default async function Dashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {projects.map((p) => {
               const s = latest.get(p.id);
-              const party = s ? waitingParty(s.status) : "none";
+              const party = s ? waitingParty(s.status, s.billingMode) : "none";
               const who = party === "none" ? null : party === "client" ? "you" : "wahala";
               const stagesOf = byProject.get(p.id) ?? [];
               const total = stagesOf.length;

@@ -26,7 +26,7 @@ const CONFIRM: Record<string, { title: string; body: string; confirmLabel: strin
   },
   mark_paid: {
     title: "Mark this phase as paid?",
-    body: "Manually records payment (normally handled by Stripe) and clears work to begin.",
+    body: "Records that payment landed for this phase (normally handled by Stripe). Use this if the money came in outside the system.",
     confirmLabel: "Mark paid",
     tone: "ink",
   },

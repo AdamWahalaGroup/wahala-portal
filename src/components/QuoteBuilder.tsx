@@ -54,6 +54,7 @@ export function QuoteBuilder({
   initialScope,
   initialItems,
   initialTotalCents,
+  initialBillingMode,
   thresholdCents,
   isAdmin,
 }: {
@@ -63,6 +64,7 @@ export function QuoteBuilder({
   initialScope: string;
   initialItems: { description: string; estimateNote: string | null; amountCents: number; groupLabel: string | null }[];
   initialTotalCents: number;
+  initialBillingMode: "upfront" | "on_delivery";
   thresholdCents: number;
   isAdmin: boolean;
 }) {
@@ -70,6 +72,7 @@ export function QuoteBuilder({
   const [name, setName] = useState(initialName);
   const [scope, setScope] = useState(initialScope);
   const [price, setPrice] = useState(initialTotalCents ? String(initialTotalCents / 100) : "");
+  const [billingMode, setBillingMode] = useState<"upfront" | "on_delivery">(initialBillingMode);
   const [epics, setEpics] = useState<Epic[]>(() => initialEpics(initialItems));
   const [drag, setDrag] = useState<{ epicId: string; index: number } | null>(null);
   const [busy, setBusy] = useState<null | "save" | "send" | "cosign">(null);
@@ -132,7 +135,7 @@ export function QuoteBuilder({
     const res = await fetch(`/api/stages/${stageId}/quote`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), scopeDescription: scope.trim(), totalAmountCents: toCents(price), lineItems }),
+      body: JSON.stringify({ name: name.trim(), scopeDescription: scope.trim(), totalAmountCents: toCents(price), billingMode, lineItems }),
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { message?: string };
@@ -339,6 +342,45 @@ export function QuoteBuilder({
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
             {nEpics} focus area{nEpics === 1 ? "" : "s"} · {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"} · the client pays this one fixed price
+          </div>
+        </div>
+
+        {/* Billing mode — locked in at Quote time; the acceptance flow enforces it. */}
+        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
+          <div className="kicker" style={{ marginBottom: 8 }}>Billing</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="billingMode"
+                value="upfront"
+                checked={billingMode === "upfront"}
+                onChange={() => { setBillingMode("upfront"); dirty(); }}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                <span style={{ fontWeight: 700, fontSize: 13.5 }}>Pay upfront</span>
+                <span style={{ display: "block", fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.45 }}>
+                  Client pays after approving the quote; work starts on paid.
+                </span>
+              </span>
+            </label>
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="billingMode"
+                value="on_delivery"
+                checked={billingMode === "on_delivery"}
+                onChange={() => { setBillingMode("on_delivery"); dirty(); }}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                <span style={{ fontWeight: 700, fontSize: 13.5 }}>Pay on delivery</span>
+                <span style={{ display: "block", fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.45 }}>
+                  Work starts as soon as the quote is approved; mark paid whenever the money lands. Client can't accept until it's paid.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
 

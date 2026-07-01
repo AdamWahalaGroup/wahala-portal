@@ -71,6 +71,13 @@
       "when": 1782846600482,
       "tag": "0009_calm_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1782926226057,
+      "tag": "0010_outgoing_boomerang",
+      "breakpoints": true
     }
   ]
 }

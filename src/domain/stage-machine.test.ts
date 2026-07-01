@@ -3,10 +3,12 @@ import {
   STAGE_TRANSITIONS,
   ACTION_TRANSITION,
   canTransition,
+  assertMarkPaidOnDelivery,
   assertStageAction,
   assertPayGate,
   requiresAdminApproval,
   StageError,
+  stageTransitionsFor,
   type StageStatus,
 } from "@/domain/stage-machine";
 
@@ -78,6 +80,64 @@ describe("assertStageAction", () => {
     expect(() => assertStageAction("deliver", "paid", { paidAt: new Date() })).toThrow();
     expect(() => assertStageAction("accept", "delivered", { paidAt: new Date() })).not.toThrow();
     expect(() => assertStageAction("accept", "in_progress", { paidAt: new Date() })).toThrow();
+  });
+});
+
+describe("on_delivery billing mode", () => {
+  it("skips paid — approved goes straight to in_progress", () => {
+    const t = stageTransitionsFor("on_delivery");
+    expect(t.approved).toEqual(["in_progress"]);
+    expect(canTransition("approved", "in_progress", "on_delivery")).toBe(true);
+    expect(canTransition("approved", "paid", "on_delivery")).toBe(false);
+  });
+
+  it("start_work is legal from approved WITHOUT paidAt", () => {
+    expect(() =>
+      assertStageAction("start_work", "approved", { paidAt: null, billingMode: "on_delivery" }),
+    ).not.toThrow();
+  });
+
+  it("moves the pay-gate to accept — accept unpaid is blocked", () => {
+    expect(() =>
+      assertPayGate("accepted", null, "on_delivery"),
+    ).toThrow(/accepted until payment/i);
+    expect(() =>
+      assertStageAction("accept", "delivered", { paidAt: null, billingMode: "on_delivery" }),
+    ).toThrow(/accepted until payment/i);
+  });
+
+  it("accept succeeds once paidAt is set", () => {
+    expect(() =>
+      assertStageAction("accept", "delivered", { paidAt: new Date(), billingMode: "on_delivery" }),
+    ).not.toThrow();
+  });
+
+  it("upfront mode is unaffected — paid → in_progress still gated by paidAt", () => {
+    expect(() =>
+      assertStageAction("start_work", "paid", { paidAt: null, billingMode: "upfront" }),
+    ).toThrow(/payment/i);
+    // Default (no billingMode passed) behaves as upfront.
+    expect(() => assertStageAction("start_work", "paid", { paidAt: null })).toThrow(/payment/i);
+  });
+
+  it("mark_paid in on_delivery is legal from post-approval statuses; blocked after already-paid", () => {
+    expect(() => assertMarkPaidOnDelivery("approved", null)).not.toThrow();
+    expect(() => assertMarkPaidOnDelivery("in_progress", null)).not.toThrow();
+    expect(() => assertMarkPaidOnDelivery("delivered", null)).not.toThrow();
+    expect(() => assertMarkPaidOnDelivery("needs_revision", null)).not.toThrow();
+    expect(() => assertMarkPaidOnDelivery("draft", null)).toThrow(/status "draft"/);
+    expect(() => assertMarkPaidOnDelivery("quoted", null)).toThrow(/status "quoted"/);
+    expect(() => assertMarkPaidOnDelivery("accepted", null)).toThrow(/status "accepted"/);
+    expect(() => assertMarkPaidOnDelivery("approved", new Date())).toThrow(/already marked paid/i);
+  });
+
+  it("mark_paid via assertStageAction is not a status transition in on_delivery mode", () => {
+    // In on_delivery mode, mark_paid isn't in the transition map. The service is expected
+    // to route it via applyMarkPaidOnDelivery; if it accidentally goes through
+    // assertStageAction, we throw INVALID_STATE rather than silently transitioning.
+    expect(() =>
+      assertStageAction("mark_paid", "in_progress", { paidAt: null, billingMode: "on_delivery" }),
+    ).toThrow(/not a status transition/);
   });
 });
 
