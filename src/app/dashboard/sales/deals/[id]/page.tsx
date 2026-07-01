@@ -9,6 +9,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getDealDetail } from "@/services/sales";
 import { listProposalsForDeal } from "@/services/proposals";
+import { getContractRoom } from "@/services/contract";
 import { STAGE_META } from "@/domain/sales";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
@@ -19,6 +20,7 @@ import { PeopleCard } from "@/components/People";
 import { DealStageSelect, DealFieldsForm } from "@/components/DealEditor";
 import { DiscoveryPanel } from "@/components/DiscoveryPanel";
 import { ProposalsSection } from "@/components/ProposalsSection";
+import { ContractRoom } from "@/components/ContractRoom";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,10 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     throw e;
   });
   const { deal, org, owner, contact, sourceLead, history } = detail;
-  const proposals = await listProposalsForDeal(ctx, deal.id);
+  const [proposals, contractRoom] = await Promise.all([
+    listProposalsForDeal(ctx, deal.id),
+    getContractRoom(ctx, deal.id),
+  ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
   const meta = STAGE_META[deal.stage];
 
@@ -100,6 +105,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             canManage={canManage}
             hasDiscovery={!!deal.discoveryMd}
           />
+
+          <ContractRoom dealId={deal.id} room={contractRoom} canManage={canManage} />
 
           {sourceLead && (
             <section style={{ marginTop: 20 }}>

@@ -64,6 +64,7 @@ export const DEAL_STAGES = [
   "lost",
 ] as const;
 export const PROPOSAL_STATUSES = ["draft", "sent", "approved", "declined", "superseded"] as const;
+export const CONTRACT_ITEM_KINDS = ["msa", "nda", "insurance", "other"] as const;
 
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
@@ -183,6 +184,10 @@ export const deals = sqliteTable(
     // business profile, workflows, goals, pain points, decision makers, terminology.
     // Editable by staff; seeds the org's AI memory when the deal is won.
     discoveryMd: text("discovery_md"),
+    // R4 seam: set when the contract executes and the SOW becomes a real project
+    // ("signed contract automatically creates a project"). Plain text — projects is
+    // declared later in this file, and the link is one-way from the sales side.
+    projectId: text("project_id"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -190,6 +195,27 @@ export const deals = sqliteTable(
     index("deals_org_idx").on(t.organizationId),
     index("deals_stage_idx").on(t.stage),
   ],
+);
+
+// ---- Contract items (R4: the commercials checklist — MSA, NDA, insurance…) ----
+// The contract is a PHASE, not a document: these rows track the paperwork getting
+// signed. v1 tracks status only (the documents themselves live outside the portal);
+// the SOW is NOT a row here — it's the project the contract execution creates.
+export const contractItems = sqliteTable(
+  "contract_items",
+  {
+    id: pk(),
+    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    dealId: text("deal_id").notNull().references(() => deals.id),
+    kind: text("kind", { enum: CONTRACT_ITEM_KINDS }).notNull(),
+    label: text("label").notNull(),
+    status: text("status", { enum: ["pending", "signed"] }).notNull().default("pending"),
+    signedAt: integer("signed_at", { mode: "timestamp" }),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("contract_items_deal_idx").on(t.dealId)],
 );
 
 // ---- Proposals (R3: the commercial offering — always Option A / Option B) ----
