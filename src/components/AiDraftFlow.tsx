@@ -117,7 +117,15 @@ export function AiDraftFlow({ orgs }: { orgs: Org[] }) {
     setPhase("analyzing");
     const fd = new FormData();
     fd.append("organizationId", orgId);
-    if (pastedText.trim()) fd.append("pastedText", pastedText.trim());
+    // On redraft (draft already exists), include the edited memo so the model sees
+    // any answers the staffer typed inline (under open questions, next to gaps, etc.)
+    // and honors them. First draft: send only the paste; no memo yet to send.
+    let augmented = pastedText.trim();
+    if (draft?.projectContextMd.trim()) {
+      const memoBlock = `# Previous draft's project-context.md (WITH the staffer's inline answers and edits)\n\n${draft.projectContextMd.trim()}\n\n(Instruction to model: anything the staffer typed inside this memo is authoritative. Treat their edits as answers to prior open questions, as newly-known facts that resolve gaps in "Missing information", and as revisions to any assumption that conflicts with them. Do NOT ask the same questions again in this next draft.)`;
+      augmented = augmented ? `${augmented}\n\n---\n\n${memoBlock}` : memoBlock;
+    }
+    if (augmented) fd.append("pastedText", augmented);
     for (const f of files) fd.append("files", f, f.name);
     try {
       const res = await fetch("/api/projects/ai-draft", { method: "POST", body: fd });
@@ -627,7 +635,7 @@ function MissingInfoCallout({ memo, onRedraft, disabled }: { memo: string; onRed
         </span>
       </div>
       <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45 }}>
-        The AI listed things it couldn't answer from the source docs. Fill them into the memo below (or paste answers into the notes field on the Upload step) and click <strong>↻ Re-draft from sources</strong> for a tighter draft.
+        The AI listed things it couldn't answer from the source docs. Type your answers directly into the memo below — right under each question, or next to any gap — and click <strong>↻ Re-draft with your answers</strong>. The model will read your edits and incorporate them.
       </p>
       <button
         type="button"

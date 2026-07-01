@@ -63,7 +63,13 @@ DELIVERABLE RULES (the goal is a clean acceptance checklist the client can tick 
 HARD RULES:
 - DO NOT include prices or amounts anywhere. The staffer sets phase prices after this draft.
 - DO NOT change or guess the client. The staffer picked the client up front; just use it as context.
-- If a later phase in the source has less detail than Phase 1, still emit that phase as its own stage using whatever summary the source gives (its deliverables list can be shorter — never zero).`;
+- If a later phase in the source has less detail than Phase 1, still emit that phase as its own stage using whatever summary the source gives (its deliverables list can be shorter — never zero).
+
+REDRAFT HONORING (only relevant if the input includes a "Previous draft's project-context.md" block):
+- That block contains YOUR prior memo with the staffer's inline edits and answers merged in.
+- Treat the staffer's typed text as AUTHORITATIVE. It resolves prior open questions, fills in missing information, and revises any assumption it contradicts. Do NOT ask the same open questions again — remove them from ## Open questions.
+- Reflect the newly-known facts throughout the new draft (adjust scope, deliverables, risks, and assumptions accordingly).
+- The new memo should note what was answered (fold into ## Inferred or ## Assumptions) rather than repeating a question the staffer has now answered.`;
 
 export type DraftInput = {
   organizationId: string;
