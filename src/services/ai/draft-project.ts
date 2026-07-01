@@ -34,6 +34,8 @@ Produce a ProjectDraft with:
   - what you concluded about the project (goals, audience, scope) from those sources
   ## Assumptions
   - assumptions you had to make (so they can be challenged)
+  ## Risks
+  - concrete things that could affect delivery — scope creep, integration dependencies, unclear requirements, third-party or external blockers, security/compliance obligations, timeline pressure. Focus on things surfaced by the source docs, not generic project risks. If nothing obvious, write "None identified from the source docs."
   ## Open questions
   - questions the staffer should clarify with the client before sending the quote
   ## Missing information
@@ -41,11 +43,22 @@ Produce a ProjectDraft with:
   - Prefix each bullet with **(blocking)** if the draft is materially worse without it, or **(nice-to-have)** if it's just polish.
   - Examples: "(blocking) target launch date not stated", "(nice-to-have) preferred hosting region unclear". If nothing is missing, write a single bullet "None — the source docs were complete."
 
+READING CHECKLIST — before drafting, scan the source docs for each of these categories and let them inform the memo above:
+- **Business goals** (the "why" — what outcome the client wants)
+- **Functional requirements** (what the system must do)
+- **Technical requirements** (constraints or stack decisions the source docs actually state — never invent them)
+- **User stories & acceptance criteria** (each story generally maps to one deliverable)
+- **Explicit deliverables** (things the source calls out as outputs)
+- **Risks & dependencies** (feeds ## Risks)
+- **Assumptions & open questions** (feeds ## Assumptions and ## Open questions)
+
 DELIVERABLE RULES (the goal is a clean acceptance checklist the client can tick off):
 - **One story per row.** If the source lists "user login" and "session management" as separate stories, produce two separate deliverables — do NOT bundle them as "Secure login and session management".
 - **Terse verb-noun naming.** Match the source's terseness: "User registration", "Password reset", "Session management" — not "Secure user registration with email and password verification". 2–5 words per description is the sweet spot.
 - **Preserve every focus area the source names.** If the source names 8 focus areas under a phase (e.g. "Authentication & Identity", "Org & Tenant Management", "Matter Persistence", "Audit & Activity Logging", "Administration Controls", "Usage Tracking", "Security Hardening", "Private Beta Deployment"), produce all 8 in that phase's deliverables — do not silently drop focus areas you consider less important.
 - Reuse the same focus-area label across related deliverables so they group cleanly under one heading.
+- **Merge duplicates.** If the same deliverable appears in more than one source document (e.g. a story in the SOW AND the user-stories doc), emit it ONCE. Cross-reference the sources when you read; don't just concatenate.
+- **Consistent terminology.** Use the same word for the same concept across all phases and the memo (e.g. don't call it "matter" in Phase 1 and "case" in Phase 2 — pick the source's word and stick with it).
 
 HARD RULES:
 - DO NOT include prices or amounts anywhere. The staffer sets phase prices after this draft.
