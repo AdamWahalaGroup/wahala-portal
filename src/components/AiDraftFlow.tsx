@@ -215,7 +215,7 @@ function Upload(props: {
       </div>
       <p style={{ margin: "8px 0 22px", color: "var(--muted)", fontSize: 14.5 }}>
         Pick a client, drop in a proposal / SOW / notes (PDF, images, .txt, .md, or pasted text). The model drafts
-        the whole project — phases, epic-grouped deliverables, and a first client message — and you edit it before saving.
+        the whole project — phases, deliverables grouped by focus area, and a first client message — and you edit it before saving.
       </p>
 
       <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 22 }}>
@@ -385,7 +385,7 @@ function Review(props: {
   }
   function addEpic(stageId: string) {
     updateStage(stageId, {
-      epics: [...(draft.stages.find((s) => s.id === stageId)?.epics ?? []), { id: rid(), name: "New epic", deliverables: [] }],
+      epics: [...(draft.stages.find((s) => s.id === stageId)?.epics ?? []), { id: rid(), name: "New focus area", deliverables: [] }],
     });
   }
   function updateEpic(stageId: string, epicId: string, patch: Partial<DraftEpic>) {
@@ -470,8 +470,8 @@ function Review(props: {
                   {s.epics.map((e) => (
                     <div key={e.id} style={{ background: "var(--surface-soft)", border: "1px solid var(--border-soft)", borderRadius: 10, padding: "10px 12px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <input value={e.name} onChange={(ev) => updateEpic(s.id, e.id, { name: ev.target.value })} placeholder="Epic" className="kicker" style={{ flex: 1, padding: "4px 6px", fontSize: 11.5, color: COBALT, background: "transparent", border: "none", outline: "none", letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 700 }} />
-                        <button type="button" onClick={() => removeEpic(s.id, e.id)} style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 14, cursor: "pointer" }} aria-label="Remove epic">×</button>
+                        <input value={e.name} onChange={(ev) => updateEpic(s.id, e.id, { name: ev.target.value })} placeholder="Focus area" className="kicker" style={{ flex: 1, padding: "4px 6px", fontSize: 11.5, color: COBALT, background: "transparent", border: "none", outline: "none", letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 700 }} />
+                        <button type="button" onClick={() => removeEpic(s.id, e.id)} style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 14, cursor: "pointer" }} aria-label="Remove focus area">×</button>
                       </div>
                       <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
                         {e.deliverables.map((d) => (
@@ -485,7 +485,7 @@ function Review(props: {
                       <button type="button" onClick={() => addDeliverable(s.id, e.id)} style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: COBALT, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>+ Add deliverable</button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => addEpic(s.id)} style={{ alignSelf: "flex-start", fontSize: 12.5, fontWeight: 600, color: COBALT, background: COBALT_SOFT, border: `1px solid ${COBALT_BORDER}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>+ Add epic</button>
+                  <button type="button" onClick={() => addEpic(s.id)} style={{ alignSelf: "flex-start", fontSize: 12.5, fontWeight: 600, color: COBALT, background: COBALT_SOFT, border: `1px solid ${COBALT_BORDER}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>+ Add focus area</button>
                 </div>
               </div>
             ))}
@@ -504,6 +504,7 @@ function Review(props: {
 
         {/* RIGHT rail */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 16 }}>
+          <MissingInfoCallout memo={draft.projectContextMd} onRedraft={onRedraft} disabled={submitting} />
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
             <div style={{ background: "var(--ink)", color: "var(--white)", padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: COBALT_BORDER }}>◆</span>
@@ -569,5 +570,52 @@ function inp(fontSize = 14, fontWeight = 500): React.CSSProperties {
 function ErrorBox({ text }: { text: string }) {
   return (
     <div style={{ marginTop: 14, background: "#FBE3E3", border: "1px solid #F4A8A8", color: "#991B1B", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>{text}</div>
+  );
+}
+
+/** Parse the '## Missing information' section of the memo into (blocking, nice-to-have) counts. */
+function countMissingInfo(memo: string): { blocking: number; niceToHave: number } {
+  const m = memo.match(/##\s*Missing information\s*\n([\s\S]*?)(?=\n##\s|\s*$)/i);
+  if (!m) return { blocking: 0, niceToHave: 0 };
+  const lines = m[1].split("\n").map((l) => l.trim()).filter((l) => l.startsWith("-"));
+  // A single "None — …" bullet means the model reported no gaps.
+  if (lines.length === 1 && /^-\s*\*?\*?none/i.test(lines[0])) return { blocking: 0, niceToHave: 0 };
+  let blocking = 0;
+  let niceToHave = 0;
+  for (const l of lines) {
+    if (/\(blocking\)/i.test(l)) blocking++;
+    else if (/\(nice-to-have\)/i.test(l)) niceToHave++;
+  }
+  return { blocking, niceToHave };
+}
+
+function MissingInfoCallout({ memo, onRedraft, disabled }: { memo: string; onRedraft: () => void; disabled: boolean }) {
+  const { blocking, niceToHave } = countMissingInfo(memo);
+  const total = blocking + niceToHave;
+  if (total === 0) return null;
+  const bg = blocking > 0 ? "#FFFAF2" : "#FBFBFC";
+  const border = blocking > 0 ? "#FADCB4" : "#E7E8EC";
+  const iconColor = blocking > 0 ? "#B45309" : "#5A6069";
+  return (
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 12, padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: iconColor }} />
+        <span className="kicker" style={{ color: iconColor }}>
+          {blocking > 0 ? `${blocking} blocking gap${blocking === 1 ? "" : "s"}` : `${niceToHave} nice-to-have gap${niceToHave === 1 ? "" : "s"}`}
+          {blocking > 0 && niceToHave > 0 ? ` · ${niceToHave} nice-to-have` : ""}
+        </span>
+      </div>
+      <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45 }}>
+        The AI listed things it couldn't answer from the source docs. Fill them into the memo below (or paste answers into the notes field on the Upload step) and click <strong>↻ Re-draft from sources</strong> for a tighter draft.
+      </p>
+      <button
+        type="button"
+        onClick={onRedraft}
+        disabled={disabled}
+        style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "var(--white)", background: iconColor, border: "none", padding: "6px 10px", borderRadius: 8, cursor: disabled ? "not-allowed" : "pointer" }}
+      >
+        ↻ Re-draft with your answers
+      </button>
+    </div>
   );
 }

@@ -229,10 +229,10 @@ export function QuoteBuilder({
         </label>
 
         <div className="kicker" style={{ margin: "24px 0 4px" }}>
-          Scope by epic
+          Scope by focus area
         </div>
         <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "var(--muted)" }}>
-          Group deliverables under an epic. The phase is one fixed price (set on the right) — deliverables have no individual prices.
+          Group deliverables under a focus area. The phase is one fixed price (set on the right) — deliverables have no individual prices.
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -241,7 +241,7 @@ export function QuoteBuilder({
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <input
                   style={{ ...inputStyle, fontWeight: 700, fontSize: 14.5, border: "1px solid transparent", background: "var(--surface-soft)" }}
-                  placeholder="Epic name (e.g. Authentication & Identity)"
+                  placeholder="Focus area (e.g. Authentication & Identity)"
                   value={epic.name}
                   onChange={(e) => setEpicName(epic.id, e.target.value)}
                 />
@@ -249,8 +249,8 @@ export function QuoteBuilder({
                   <button
                     type="button"
                     onClick={() => removeEpic(epic.id)}
-                    aria-label="Remove epic"
-                    title="Remove epic"
+                    aria-label="Remove focus area"
+                    title="Remove focus area"
                     style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 15, flex: "none" }}
                   >
                     ✕
@@ -315,7 +315,7 @@ export function QuoteBuilder({
           onClick={addEpic}
           style={{ marginTop: 14, width: "100%", padding: "11px 12px", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, cursor: "pointer" }}
         >
-          + Add epic
+          + Add focus area
         </button>
       </div>
 
@@ -338,7 +338,7 @@ export function QuoteBuilder({
             />
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
-            {nEpics} epic{nEpics === 1 ? "" : "s"} · {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"} · the client pays this one fixed price
+            {nEpics} focus area{nEpics === 1 ? "" : "s"} · {nDeliverables} deliverable{nDeliverables === 1 ? "" : "s"} · the client pays this one fixed price
           </div>
         </div>
 
