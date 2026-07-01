@@ -147,8 +147,9 @@ export function QuoteBuilder({
     setError(null);
     try {
       if (await save()) {
-        setSaved(true);
-        router.refresh();
+        // Land on the stage detail as if the staffer re-navigated from scratch —
+        // no lingering "editing" state, no unsaved indicator, fresh server data.
+        router.push(`/dashboard/stages/${stageId}`);
       }
     } catch {
       setError("Network error — please try again.");
