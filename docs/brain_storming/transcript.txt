@@ -1,0 +1,252 @@
+              SUPERIOR COURT
+              
+
+PLAINTIFF,             )
+         Plaintiff,           )
+   vs.                        )   No. 
+DEFENDANT,             )
+         Defendant.           )
+_____________________________ )
+
+          DEPOSITION
+          
+
+
+  1   ADAM:  Okay. Where do you wanna start?
+  2   JASON:  I want your, I want your feedback on this.
+  3   A.   I mean, it's too much. It's too much.
+  4   JASON:  So- I knew you were gonna say that.
+  5   A.   I feel like some of these things are even loops, you know? You get the lead, that makes sense, you could easily put that in a piece of software. Discovery, kind of self-explanatory, I think. I think the requirements are part of that and the design, like feedback in themselves until it's all ironed out.
+  6   JASON:  Cool. So let's chat about this,
+  7   A.   okay?
+  8   Q.   The reason, the reason you would want to have so many, is not everybody is the same. So just like I was explaining to you earlier A lead is guaranteed, like that has to happen before anything else. Cool. Discovery may be the first conversation. Somebody signs up for the web, at our website, I get the ticket, I call them. Well, the guy that signed up is the assistant to the assistants that really makes the decision So that person's task was to qualify that we're not Indian, that we're not-- whatever, like they had some objective, and we're still in the discovery phase. So, cool. They're like, at the end of that call, they're like, "Hey, I'm gonna bring in Bob and Steve, and they're gonna, you know, we're gonna talk to you about our app. All right?" So at the end of that, about their
+  9   A.   app
+ 10   JASON:  idea, about their idea, like our needs, we're gonna, we're gonna talk to you about our broader needs, what we
+ 11   A.   wanna pay for,
+ 12   Q.   right? So that call ends, the second call ends, and I move it to business requirements. We can change the title of these, it's fine, don't get-- But I move it to there because we didn't get into solution design that call, but we moved out of discovery. Right, as a salesperson, I feel that we moved out of discovery and we're-- they're still, I had more questions than they had answers, so we're still in that business requirements phase. You know, there was data they needed to send over, whatever it is. There's gonna be, it's different disposition. Once we have that, now I'm ready for a third call, which could be the solution design call. Hey, high level, here's- You guys tell me exactly what you want now. I understand your business.
+ 13   A.   Yeah.
+ 14   JASON:  You start telling me what you want, I'm gonna pause, pause you throughout the process and ask you questions to, to dive deeper so we truly understand it.
+ 15   A.   Yeah, I get the business now. What problems are we solving?
+ 16   JASON:  Right. So the solution design, that's just designing like their, their workflow. Like that's, that's understanding deeply What it is, that's the call, whether I'm taking notes or it's being recorded, that's a bad name for it.
+ 17   A.   That's how they're doing it today. Is that what it is? That's how they're solving their problem now?
+ 18   Q.   No, it's how we're-- like it's, it's the-- We're stiffening those assholes. And this is the way they, like, they didn't wanna dive into this and let me capture these at the same time, like, there is a time where that happened. Yeah. Did I capture fifty percent of what I needed here from this one? Maybe I did. Yeah. But we're gonna have a specific call to- Make sure. Maybe we don't. Maybe I got this and this all on that one call. It was two hours instead of an hour, and we send them a proposal, so we skip solution design. Just because it's there, it doesn't mean we have to anchor on-- we don't have to land on that one. We can skip. We anchor, we say, "Hey, there has to be a lead always, and this, this, and this can happen in one phone call if everyone's there and attends." We go straight to proposed solution. But you want to have those because initial discovery call is there's a ten percent chance that we're gonna make it to the next phase. You know what I mean? Yeah. But if I get the business requirements, if I can get the business requirements for you, there's a twenty percent chance that we're gonna get to the proposal phase. You know? And then if, if- If I get to this one, there's a ninety percent chance that I'm gonna get to the proposal phase, and that's-- this is the hundred percent that we need to get here. So the percentage resets at proposal, the percentage resets.
+ 19   A.   Okay.
+ 20   Q.   And now we have to win the proposal. So we've got to get him to sign a contract. We've gotta go through project planning, right? It's, once they get here, once we get from proposal to here, that's huge. Am I, is there gonna have to be, right? Is there gonna be more of this in between here and here? Probably will.
+ 21   A.   Yeah.
+ 22   Q.   Do you add, should we add negot- should we add another stage in between proposal and contract? Probably should. Negotiating, you know, whatever, whatever we wanna call it, we probably should have more.
+ 23   A.   Yeah.
+ 24   Q.   I just thought there was so much power in this whole blob for you to get the, like, it put the concepts in words that I thought would be good for you to get in that mind space so we could have this discussion. I'll tweak what I'll tweak it from here, you know what I mean? I didn't wanna, that's why I said I don't wanna tweak it more until we've hashed some of those things out. But now overall, does this make more sense now than before?
+ 25   A.   I mean, it, I, I kinda had the basic of this already, I guess, more than I realized, but, So these aren't really definitive states, these are, it's Bob. It's almost like you could have initial conversations as a sub under discovery, business requirements as a sub under discovery, you know what I mean? Yeah, yeah, yeah. Initial design concepts as a sub under discovery, and then they all are free for all, you know? They could jump around back and forth.
+ 26   JASON:  The danger of- But what is the
+ 27   A.   first proposal? Does the first proposal include statement of work? Or is it just a over-- overall summary of like, hey, here's a thing that we can do, if you're in agreement with this, and we'll make an itemized list with a price tag on it, or is the price tag coming with that first proposal?
+ 28   Q.   Yep. So-- Or both. Correct. There's, in my mind, it depends on the business that you're dealing with. There needs, there, there should be, right? This proposed solution is, is the overall that we send in, right? Like that's the- It's set it up here. There it is. Oh, no, that's the
+ 29   A.   solution.
+ 30   SPEAKER 3:  No, there it was, proposal.
+ 31   Q.   Yeah. So the proposal phase includes option A, option B. So this is where we-- this is the initial proposal that we send it, right? We've got enough information to generically give them a proposal that they're Maybe the person we're talking to isn't the one that signs the check. They still need to bring this back to their business and, you know, to their decision makers and get, and show them this and talk through it. So, but that's the A-B thing that I think is, is gonna be a big win for us Maybe we'll learn that it's too confusing and then nobody wants to see A and they all want B and we only ever quote B, like maybe that's what it changes to, great.
+ 32   A.   Yeah.
+ 33   JASON:  It's still the,
+ 34   A.   well, and like you said, it's probably different depending on the market.
+ 35   Q.   Think of it like your, think of it like a shopping cart. You're adding items to your shopping cart, that's the quote. The proposal is when you check out. Right? I'm calling this a proposal because in big business, they don't wanna hear the word quote. Quote means a transactional thing, proposal means a business thing. They're the same fucking thing. Yeah. But we're effectively giving them a quote, and maybe we should call it quote. Maybe we should go quote then proposal. I'm fine with that, fuck it.
+ 36   A.   ADAM: Or would they be in the same thing, you know? Well, you're proposing-- There's a decision here. You're proposing option A, proposing option B. I mean, quote depends on what they picked. Yeah, I got it. But why would you quote before proposal then, if they haven't picked which option?
+ 37   Q.   JASON: Again, I think quote proposal is one of those things that's usually- So honestly, so either way, call it what we wanna call it, there's gonna be the initial quote phase. I'm not, I'm not perfect. Maybe I, maybe they got past my fucking lidar and they really don't have the funds to do it, or the guy I'm talking to claimed he had the funds, but then the real money people pushed back and were like, "Mm, I don't think so." You know what I mean? So again We want them to see that we're open to negotiation, but we wanna control the negotiation, and that's the option A, option B. That's why I think it's so powerful to do option A, option B always. As dumb as
+ 38   A.   ADAM: that
+ 39   JASON:  sounds.
+ 40   A.   ADAM: No, it's how you deal with not saying yes or no to a kid. It is. Do you wanna mow the yard this morning or this afternoon? Right. Not, do you wanna mow the yard? Right. Yeah, it's the same thing. It is.
+ 41   SPEAKER 4:  Anyways. That's great. It. That makes sense. We quote it. So you always do that? Always, every
+ 42   SPEAKER 3:  time. You always do options? Fuck yeah, you always do options. A, option B. I didn't know that. Every time I do it.
+ 43   ADAM:  That's good.
+ 44   Q.   JASON: Always. So does that, again, the-- I'll go through and clean up based on our conversations, the titles. I don't give a fuck what Number that is, right? It can be wherever, but we've got sales discovery. I mean, this is broad. Look, understanding the customer's business
+ 45   A.   ADAM: Most of this knowledge is lost after the meeting.
+ 46   SPEAKER 4:  It's the
+ 47   ADAM:  truth. Yeah. Well, not with our system, it won't be. That's the goal, that's what we're solving.
+ 48   JASON:  Right, and you and I know from that flowchart that's down there, this is the first three fucking steps before it got to proposal. And this is phase one. Right. So phases and statuses are different things. That's where I think you were saying there was contradiction earlier.
+ 49   A.   ADAM: No, I, I was getting hung up because there's also, there's phases of- Deliverables. Yeah. Of delivering your work. And that's real, like, to me, but there's also phases of the business transa-- the business proposition transaction, all that. And I
+ 50   Q.   JASON: think this is where engineering won always is, so they called them statuses, instead of phases. Stages, I'm sorry, they called them stages. So this is the stages of the, the stage of the sales cycle I'm in, and that's your whole funnel. You've seen the sales funnel before? That's
+ 51   A.   ADAM: literally I had it change the terminology. So what? To phases in the work and stages in the process of the program. Like that's literally what it just did. That's funny, that's
+ 52   JASON:  funny. Cool. So you get the concept there. It's, we're on the same page, I feel like. Right, deliverables, business profile, current workflow, business goals, pain points, success metrics, decision makers, initial opportunity. If I can do this well, we walk away from fifty percent of the opportunities.
+ 53   A.   ADAM: Yeah,
+ 54   JASON:  I, I get that. It's amazing. Yeah.
+ 55   A.   ADAM: 'Cause they're
+ 56   Q.   JASON: not real. Yeah. Or they're not for us. They're not for us. Yeah. Or they're not for us, we're too demanding, you know? Whatever it is, I'm okay with liking, I'm okay with losing.
+ 57   A.   ADAM: Yeah. I don't wanna waste time. I don't wanna waste time. Yeah. I've done that quite a bit.
+ 58   JASON:  Once Wahala understands the business discovery is complete everything collected becomes the input to solution design right solution design This one's huge. This is my quote, like I fucking quoted that.
+ 59   A.   ADAM: Yeah, that'd be great. Put on the app. It seems like it gets fuzzy for me between the statement of work and the proposal. So like if the proposal is like a top-down, layman's kind of thing, it almost seems like a lot of the statement of work would have already had to have been determined, they've-- and they, they just don't get handed it until they've, until they've agreed on the proposal.
+ 60   Q.   JASON: Close. The statement of work is what I showed you we sent to Billy. This thing over here, right? Super high level. Super high level. The statement of work is A hundred pages or digital on our platform, right? I don't want it to be a hundred pages, I want it to be digital on our platform.
+ 61   A.   ADAM: A hundred pages isn't high level.
+ 62   JASON:  No, no, no, no, no. Proposal is high level. Yeah, that's- Statement of work isn't.
+ 63   A.   ADAM: That's what I said.
+ 64   JASON:  Okay.
+ 65   A.   ADAM: I meant, I meant you almost have to do them at the same time internally because the statement of work is where you're fleshing out those gory details that you might not have thought about while you're doing the overall summary. So they, they like, hey, unfortunately no, really? Unfortunately no. Unfortunately no. I think that's part of why a lot of these things struggle in the past because the proposal ends up coming from people that weren't in the engineering, and then when they're just like, "Ah, just do off," we said it would take two days. Oh, no,
+ 66   JASON:  like,
+ 67   A.   ADAM: and it turns out that what they really meant was, "We want the--
+ 68   Q.   JASON: We're solving that here. I want this, I want this to go through a pass here." And I want us to learn over some period of time, like, hey, a Mickey Mouse project doesn't need fucking Adam to sit in on it and double, triple check a million things, right? Like, one to, one to five, this project's a three, anything three and under, quote it and move on, you know? Fast track it, whatever. Three, you know, three point one and over Needs to go to engineering for hardcore review. There needs to be ten meetings, lots of coffee and food, like whatever. What
+ 69   A.   ADAM: determines three point one and higher? Money?
+ 70   JASON:  Complexity, money. Like what our AI thinks complexity is.
+ 71   A.   ADAM: How hard it's gonna be.
+ 72   Q.   JASON: You know, is this a ChatGPT wrapper or is this a true agentic 'Cause we'll do a million fucking ChatGPT wrappers, we'll do a million, you know, hey, I need, what they really want is an interactive website. You know, like most people that are, that I've talked to around town are looking for an interactive website for scheduling, like some bullshit, but they'll pay fucking twenty grand for it. Why not? You know what I mean? Yeah. Fuck it, that's fast money. Anyways. The difference here, proposal and contract, high level stuff, once they sign the proposal, we may go back and forth three or four times, the negotiation happens on the proposal. The, the reason I said you don't do the statement of work, excuse me, you don't do the statement of work at the same time you do the proposal, is they may be like, "Oh, During discovery, they didn't tell us they already have auth, they already have this, they already have the Tilden guy, a fucking ChatGPT, they've got a Vercel vibe-coded project that they want us to start from and reuse some shit.
+ 73   A.   ADAM: Cool. That's almost like proposal negotiation and then accepted proposal.
+ 74   JASON:  The, the proposal gets negotiated and you don't move to contract until the proposal's signed. So negotiation is a function within proposal.
+ 75   A.   ADAM: What, what happens when they sign the proposal? What are they locked into? It's really a good faith, right? There's nothing they're really locked into. They're not obligated to pay for anything. No, they aren't. No, they
+ 76   JASON:  aren't. They aren't. No, they aren't.
+ 77   A.   ADAM: At proposal
+ 78   Q.   stage. In most cases, in most cases, in software from what I've read recently, there's a good faith deposit that gets put down on a proposal. I'd like to circumvent that. I think that's why a lot of the, the shops lose, is because they require that good faith deposit. You never get that money back. On a proposal, no. So I think, I think that's where the, you know what I mean? Like, well,
+ 79   ADAM:  what would-- So you would rather than pay the whole thing?
+ 80   JASON:  I would rather than not pay anything until we get the contract.
+ 81   A.   Oh, yeah, I agree with that. But I feel like the proposal is the contract if they're signing it. And at the sign-in, the sign-in- The proposal
+ 82   JASON:  is the, the way the dev shops handle this that I've seen and understand, the proposal, they sign this and they write a five percent check when they sign this. And that means we're gonna enter the contract phase. That's your agreement,
+ 83   A.   and then you're turning the agreement into executable product.
+ 84   JASON:  Yeah.
+ 85   A.   And that's your contract?
+ 86   Q.   The contract, this is a phase. It's not a single object, it's a phase. This is where you get deposits, insurance, NDAs, MSAs, statement of work, all the bullshit, right? The statement of work is going to be digitally in our platform. Will we let them export it? Sure. Do we-- Are we gonna have to export it so they can sign it? Maybe.
+ 87   A.   So it's not separate from the proposal statement of work, it's inside the proposal. With the NDA and the MSA and the--
+ 88   JASON:  They're all individual documents though.
+ 89   A.   Yeah, I get that.
+ 90   Q.   Okay. It's the contract, like it is in business referred to as the contract. Like I said, the proposal is the agreement. You're agreeing that we're gonna do work together. Yeah. You're agreeing that we're gonna move to this phase and write up a contract. You're signing this, saying, "Can they back out?" If it, again, this is where, this is why dev shops take five percent down on the proposal phase, 'cause
+ 91   A.   it's a big waste of time if they don't- Because
+ 92   Q.   they, they used to before AI, they would fucking burn four, five weeks coming up with this piece of it. You know what I mean? This is, this is written out in this proposal. It's written out, right? It's, this stuff is the commercial options. This is written out. I
+ 93   A.   don't know what that means. Oh. It's option A, option B.
+ 94   Q.   Commercial and contract are, are, God, business is so fucked up, isn't it? So these are our commercials, MSA, NDA, insurance, the statement of work, right? Like all of that. This is explaining to them that they're agreeing that we're gonna generate the commercials. So part of the proposal will have a section about our commercials. So not, you're not just getting the software from us. Here's also the deliverables that come after this step. You're agreeing that you're willing to move forward to this next phase. Again, it's why they collect five percent.
+ 95   A.   I never heard the word commercial in this stuff.
+ 96   JASON:  It's, it's a broad term that encompasses The statement of work, the NDA, MSA, all that shit.
+ 97   SPEAKER 3:  Okay.
+ 98   Q.   Anyway, so that's, they're signing that, they're agreeing that we're gonna move to the contracting phase, and we have sent them a proposal one. They're gonna choose option B. We're gonna rewrite proposal, we're gonna rewrite the proposal, and it's gonna be proposal two, and it's only gonna have the, the way we go tomorrow, the way we do business with them for option B. In d-in more detail, right? Like so it'll describe in more detail. We get there, we get the contract, while we're doing this, 'cause this is gonna be back and forth, blah, blah, blah. This may have already happened, by the way.
+ 99   A.   Yeah, it's usually early on.
+100   JASON:  This doesn't happen.
+101   A.   I'm not familiar with that one.
+102   JASON:  A master service agreement. So this is-
+103   A.   What happens when
+104   JASON:  it's all
+105   A.   said and done?
+106   Q.   The master service agreement, it, it protects us as an entity broadly. It's the, it's the, the broad scope of doing business with us. Here's the SLA. The master service agreement's gonna have our app in it. It's gonna have all these things in it, like in our Master Service Agreement, you have access to the Wahala app. You only have access to the Wahala, Wahala app when you're a customer in good faith and, blabla, like we'll have to go through, I'll build all that shit out, you know what I mean? Like how the legalese of doing business with us, they'll have to sign that and agree to doing business with us. The statement of work is gonna be the EPICS. Statement of work I get. It's, it's gonna be the epics. These are the, what would you call this? I wanna use your terminology. The, in the proposal, right? This proposal? What would you call, oh, it's this stuff here. What would you call this? Those? Yeah. I mean-
+107   SPEAKER 4:  Would you, do you see that as an epic? User registration?
+108   ADAM:  No. I would see that as, a deliverable. Okay. Higher level than an epic, right? No, an epic is like- Almost the highest level.
+109   JASON:  So then that would be an epic then. Like the epic would be called user registration. It'd
+110   A.   be more- It would be more that this would- Oh,
+111   JASON:  authentication. Sorry, I missed that one. That's the one I was looking for.
+112   A.   Yeah.
+113   Q.   Cool. So we're gonna give them the, the epic in the story title here. And then in the statement of work, we're gonna take each one of these epic and description, what is story title? Well, a story is inside of an epic, right? You have to have stories inside of it. Description.
+114   A.   I would call it a description.
+115   Q.   But stories have, in Scrum, you have epic, story, and then the story gets tasks. The story is the User registration. As an admin user, I wanna fucking click this button. As a regular user, I wanna do this. And then within that, you have all the tasks. Hey, we need to create, rollback, blah, blah, blah, blah, right?
+116   A.   Yeah.
+117   Q.   So, or that's how I understand it. If you understand it different, then I'll do it your way, I'm fine with it. No, that's fine. So we're gonna give them this and this for our proposal. The statement of work is gonna have This, this, and then there's gonna be a subsection under this that is the story. We're not gonna give them the tasks, but we're gonna give them the story. In the statement of work, they're gonna see the story. And I don't literally mean the story, but we're gonna give them detail. There's gonna be bullets. Okay. Right? I'm trying to use generic terms and I shouldn't. We're gonna give them more detail on user registration in the statement of work. They're gonna sign off on that.
+118   A.   So we're, we're kinda giving them the, the tasks as layman's description. Yeah. Like,
+119   Q.   I mean, user stories are supposed to be layman's description, right? So
+120   A.   Okay, so user story and story is the same thing?
+121   JASON:  Yeah, yeah, user story and story are the same, sorry. How, how they're gonna use it, yeah. So effectively, the statement of work is gonna be the user story with acceptance criteria.
+122   SPEAKER 3:  Okay.
+123   Q.   JASON: Because I found that the user story people will gloss over, but when they get to the, you know, twenty bullets at the end for acceptance criteria, they're like, "Oh no, I don't agree with that. I don't accept that." You link, that's linked to a story, or that's linked to part of the user somewhere in the user story, anyways. We'll generate that as the statement of work. That we're gonna go back, we may go back and forth on that with them for two or three meetings, who knows? You know what I mean? Hopefully they do it Through our app and interact with our prompts and agents and whatever they are, and life's good, you know what I mean? But that's the statement of work. Does that help clear up statement of work then?
+124   A.   ADAM: I think so.
+125   Q.   JASON: Once they sign off on the statement of work, now we get to build the tasks. Right? So this is contract Bullshit, bullshit, bullshit, right? Like, boom, we're gonna collect the money, right? The proposal's gonna be part of the contract, even though they've signed it already, it's still part of the, the overall contract that, that, the overall, the over-encompassing deliverable. Yeah. Executed contract, signed statement of work, payment, project authorization. Signed contract automatically creates a project. Maybe we already have a project in here. Great. I think we- I think we're breaking the mold a little bit. I think we're-- and maybe I'm using the term from a-- because my brain lives in both spaces. Maybe we don't call 'em epic on the sales side. I don't know. I'm-- whatever's good for communication for you and I and, and other people-- Probably wouldn't.
+126   A.   ADAM: Yeah. I never-- don't think I've ever heard a sales guy say anything about epic.
+127   Q.   JASON: I wouldn't use the term epic to a customer. Yeah. But I'm talking to you, so I'm trying to speak more of that, that yeah. So whatever epic means here to us from the dev side, that's when the, the tasks, to me, the tasks get broken. We build the task list here in our platform. Do we have some of that already? Did we do that while we were doing the statement of work?
+128   SPEAKER 3:  Yeah,
+129   Q.   JASON: we could have, that's fine. You know what I mean? Like- Yeah. Did they, are we throwing some away? Maybe we do. Generate the stories, acceptance criteria, database design, blah, blah, blah, blah. Right? So they're gonna see, this is the big one for me. I want them to see this. Once they sign the contract, they're gonna have, you know A huge dump of stuff that they're gonna get to see, and that's when they're gonna get to see these, these epics, these stories are assigned to, maybe they don't see who, but where they see we're actively working on it, you know, who knows how we wanna do that. And then, you know, from there, again, our app is-- I want our app to do a lot of this programmatically. But so, are we already in phase six here? Do we ever have phase six? I don't know. Like, that's stages of the development process, I think.
+130   A.   ADAM: Yeah, we kind of started in phase six.
+131   Q.   JASON: Yeah. Does that help? Do you have more questions? Is there- I,
+132   A.   ADAM: I will, but I think that's definitely enough.
+133   Q.   JASON: Filled your brain? Do you want me- Do you wanna go through this and do we wanna agree on terminology now so it's clearer when we communicate?
+134   A.   ADAM: No, I don't really have a reason to debate that terminology necessarily yet.
+135   JASON:  Okay. I don't care.
+136   A.   ADAM: To me, an epic is usually a series of milestones that are within the same broad field, cool? I agree, you know? So I agree. But I don't think there's a stage is more of a, I mean, stage and phase can be Synonymous in some, some ways,
+137   SPEAKER 4:  but sure. I think people-- Sales always call them stages. Yeah,
+138   ADAM:  I'm
+139   SPEAKER 4:  okay with that. I mean, this is the sales stage I'm in.
+140   ADAM:  Yeah, and phases are more engineering, I think.
+141   SPEAKER 4:  There, oh, it's phase one, phase
+142   ADAM:  two, phase three, profit.
+143   Q.   JASON: Yeah. So, I'm fine. And again, this is a good starting point? If we add 10 more, it doesn't matter. You know what I mean? Like, in, in my opinion, if we start here with these stages, we can add some, take them away, like whatever. It- What, what cheap CRMs do? Is they don't have stages like this. They, they take the salesperson gut feel and they let the salesperson choose a percentage. So instead of having text, there's an array of percentages and the percentage they're gonna close this deal, and the salesperson picks, "I'm fifty percent sure, I'm sixty percent sure, I'm, you know, whatever it is." That, that's the The old way of doing it, having this allows us to anchor what we, we feel is true. Once they realize the metrics, they'll, they fake it anymore. Like, and then you end up making it like, "You have to get to this phase before you get to this phase," you know? And I'm not, I'm not with all that. But it, if I need help Right? Like if we're having our Monday meeting and we start to see there's like Jason has 20 deals in solution design and one deal in discovery and one deal in business requirement, why does Jason have 20 deals stuck in solution design?
+144   A.   ADAM: Yeah.
+145   Q.   JASON: Is it because I'm not communicating with Adam to help? Is it because, you know? Engineering's not jumping in on the automation, I don't know. We need to, you know, we need to solve that problem.
+146   A.   ADAM: Yeah. I mean, to me, a lead is a person or an entity. Oh. Discovery is a phase. There's the age-old
+147   JASON:  problem there on lead.
+148   A.   ADAM: Why?
+149   Q.   JASON: A lead? So in a CRM, it's fucked up. A lead doesn't belong to A salesperson, yeah. A lead has to exist. A record in the database needs to be able to exist without ownership. And then the lead can't be qualified. Until some criteria, and this is sales one-on-one bullshit, I, I get that. Until some criteria. Why they would do that, though? It's real. It isn't just-- The lead could
+150   A.   ADAM: just be a name and a phone number. Yeah, whatever. And it doesn't mean anything until a sales person, somebody, fucking, vetted them and smashed the button. Yeah. No, I get that. That makes sense to me. I get why they would do that. Yeah.
+151   Q.   JASON: So you end up with contact and company. So because of contact Can belong to technically the person, right? Yeah, yeah. A contact can belong to multiple companies. So you have this, Adam worked for company A, and then now Adam went to work for company B, he's still the same Adam in our platform, but now he's with company B.
+152   A.   ADAM: So wouldn't the lead entail some kind of Detail, not just the name, since contact is a person. Lead isn't a person. Lead could be a person, but in a context, right? Lead could be, "Hey, remember Adam, our contact? He's working for a company that's looking for, and that's your lead." Wouldn't that be a right way to say that? Never been a sales guy, so I don't- Yeah,
+153   JASON:  it. I like the airport thing. I got a lead. I met you at the airport, we had a beer at the airport bar, I got your phone number, we talked about our families and a little about work and parted ways. It's a lead.
+154   A.   ADAM: It's
+155   JASON:  only a lead. It's not
+156   A.   ADAM: what you talked about is relative could lead to
+157   Q.   JASON: It's, it's not a qualified lead unless I call you the next day or two days later and say, "Hey, man, great talk, I like to work with you, can we get started on that project?"
+158   A.   ADAM: Yeah. So, so-
+159   JASON:  Yeah, it's like dating. Yeah. So you end up with a lead, and then you've got, 'cause again, that's a stage. You've got a lead, and then you have, I may transfer that lead to Josh. Josh, I met this guy, you're a good fit for him, you guys both speak RME, you know, whatever, right? So I'm gonna hand over that lead to Josh, and Josh is gonna be the, the owner of, of the contact, decide, you know, like converts it that way. I don't know. It's, it's a place to trap name, phone number, it's a place to trap a form before you assign it to a person, yeah. In the
+160   ADAM:  business. No, I get it. That can actually, so that's, like a lead could, could include an industry, you know, hey, this guy, here's his name, here's his number, he, he works in this industry. Oh. Now you're talking marketing. Yeah. Of course they do.
+161   JASON:  Yeah, so marketing is there to generate leads for sales. But you are a hundred percent correct on marketing is looking at a vertical to convert those, their success metric is converting leads out of a vertical.
+162   ADAM:  So in, in and of itself, that is a discovery for marketing. It is. To get the leads. It is. Yeah.
+163   JASON:  It
+164   ADAM:  is.
+165   SPEAKER 4:  Okay.
+166   JASON:  I think this is good, like, for you to get into the business piece of it. No, I, I
+167   ADAM:  was just looking at the way we've done fragmented product development and sales historically over decades, not we, you and me, people I've worked for and stuff, and it's always that separation. Engineering doesn't care about sales, they don't want anything to do with it, sales don't want to know anything technical, but if you had a lean team of people that had their heads in all of those spaces, which is, I'm not promising that's gonna be an easy thing for me to do, then everybody's at the table at the same time, you cover a shit ton of ground. Yeah. No, I get it.
+168   JASON:  Yeah, you find the fucking problems, solutions, answers, all of it. Yeah,
+169   ADAM:  I'm looking. Now you're gonna have to find the people with the money who are, who are quick thinkers. To move as fast as we wanna move. We don't wanna spend four months, four weeks doing all the vetting and back and forth and bullshit. We wanna get to the point really fucking fast. We saw for you, and I saw for that already. Yeah. No, no, no, we, we can't speed up their thinking. Yes we can. We can try. You ever try to make somebody think faster or, or harder than they have the bandwidth for? Yeah. They zone out, they lose. I do. That's okay. No, they're not gonna get rid of their, they're not gonna let go of their money if they're zoned out. They're gonna be like, "Hey, can we pick this back up tomorrow? This is, I'm busting my head."
+170   JASON:  You got like this? See ya. There
+171   SPEAKER 4:  it is. Yeah. Here it is. Yeah, that's us. You know
+172   JASON:  what I mean? Like, we can try. That's the proof of concept. Yeah. What you just described is the proof of concept piece. That's why it was hard for me to give you a, a concrete answer of where that proof of concept piece lives. But I want us, me, you, if fucking Carrie gets engaged, Carrie, on the boat. But I want, at least I want you and I to brainstorm and have these ideas like legal speech to text. If we can spawn a few apps that trickle coin in. Oh, I'm all about that idea.
+173   ADAM:  That was a great idea. I don't care about the fucking money that it's gonna generate. I was excited enough about that idea that I, I told Marie, like, I came home and was like, "This, Jason's got this cool way that we can pay for our services." Yeah. You know? No, I like that idea. Did she like it? Yeah. She, I mean, she shared, she, she saw how excited I was, so she probably wasn't gonna negate me. Yeah. 'Cause I don't shit on my idea, or don't, don't shit my Cheerios or whatever, and piss on my Cheerios.
+174   JASON:  If, if we can, if we can spawn a couple of those things that trickle money in, it pays for us to bypass-- I don't wanna use the term bypass, but it allows us to expedite this process for our users.
+175   ADAM:  Yeah, 'cause we can use things that cost money.
+176   JASON:  You know? We can build some shit for Caldan and be like, okay, here you go. We can
+177   ADAM:  have like a bunch of shit in the cloud already pre-prepped that maybe costs five bucks a month, ten bucks a month that, but it's ready to go, yeah, yeah, yeah.
+178   JASON:  If Renee, if Renee met me and you, let's say Caleb was running the show at Voice Group and I met Renee at the airport and we spun a fucking proof of concept for that guy, that was a valid proof of concept that could, we could defend to Caleb. Renee would fucking throw money our way like, "Yeah, he would put-- You sure try? He would fucking stuff Caleb in the dirt so fast and give us money like, it's every CEO is that way. Yeah. I know what appeals to the CEOs, I know how they think.
+179   ADAM:  Yeah. I've been on a weird end of that, so I know what you're talking about. It sucks. I would, I would deliver things to prove my own worth, yeah. And then they'd wanna sell the damn thing that I wasn't-- Right. Yeah. Right? I'm like, I didn't want you to like it that much. Yeah. But I'm with you, like, that's-- I'm just showing you what could be done.
+180   JASON:  We are in a unique position. We don't wanna do it for everyone, maybe we do. Maybe we find it's-- Maybe we hire Carrie and Jake to pick up after the, oops. Maybe Carrie and Jake pick up right here at the engineering phase. Right, we've got, that's the B team. That's what I did on the whiteboard, you and I did on the whiteboard three, four months ago, whatever it was. You and I are gonna do everything up to here, and then we're gonna hand this off to the B team, and the B team's gonna implement it while you and I are on the next ADD fucking whim with the next customer, giving them to this part. Yeah. My biggest fear is we can't find good carrying jigs to scale it. I think me and you can crush it up to here. I think you and I could take it all the way to the end, I know we can. But can we do that ten times a quarter?
+181   ADAM:  I don't think we could, I don't think I could.
+182   JASON:  We can't. But could you and I do ten of these a quarter? Yes. Yes, we could. Could we do twenty a quarter? Fuck yes. That's four a month or five a month. No, quarters, yeah, three months. Sorry.
+183   ADAM:  There's a lot of, there's a, a new type of engineer that's still in the making that would need to be-- We'd need those
+184   SPEAKER 4:  to do the top half or the bottom half? The bottom half. Which is-- Oh, yeah, not the current year.
+185   ADAM:  Yeah. Well, maybe it could be. You've gotta take- You've gotta take a history of knowing how whatever tech you're working in works really, really well. That's the tribal knowledge part, and become proficient with guiding AI. That's the new engineer, right? Yeah. You can't just come out of school and be an AI engineer and actually win against these engineers. You won't do it because you don't, you don't have those caveats. That's why fucking Cooper and Ryan fell flat on their face. Yeah. I'm trying to help get Carrie there, but I can't get him excited about it. If he got excited about it like he does CB radios, he'd be up all night picking it apart. I didn't, I still struggle to get excited about. I mean, I'm excited about us doing this venture. Fuck yeah, it's gonna be cool. But, but just the general, like, hey, pilot AI to do some work, it's like, it was, it's cool. But what really got me going back in the day, you know, it's, it's hard to make those connections for someone like Kerry because he's even lower level than I ever was, like, you know?
+186   JASON:  The legal speech to text app is two things to me personally. One, it's a revenue generator. Two, it, it's proving This model. It's taking the customer out of the loop, but, you know, I'm- It's taking
+187   A.   ADAM: the Renee out of the loop too.
+188   JASON:  It is, which is the customer's doing it. It's taking the customer out of the loop, but it's proving I am at day seven. Yeah, I am at day seven right now.
+189   A.   ADAM: And you could, you could sell this today. If you don't bring the price tag up enough, they won't point, point out the short cons, whatever it might be missing. But
+190   JASON:  I think if I could have-- and this is real, this is why I wanted to do it, this is why I personally wanted to do it. I had meetings, I had, you know, distractions in my life, it's gonna happen regardless. If I think if I had four more hours on the app, I truly think it's ready to sell in, in four more hours. If I stayed till eight o'clock tonight, I think tomorrow I would publish, I would post something on Reddit.
+191   Q.   ADAM: Have you been using Reddit?
+192   Q.   JASON: Have you been posting on Reddit?
+193   A.   JASON: No. But Dylan gave me a piece of insight that the other day, I'm gonna get my glasses on.
+194   A.   ADAM: The AIs go to Reddit pretty quickly when they're looking for data.
+195   JASON:  So Dylan gave me a piece of insight That was gold, I think. I haven't got to prove it yet. But he said that, his biggest marketing tool lately has been Reddit.
+196   A.   ADAM: I believe it. There, there's, it's, it's, I mean, I'm on it all the time, but I'm not a publisher. I'm only on it to either- Hear people that I respect's opinion, and I will look into them in their threads. So he goes, it's like the GitHub of knowledge or of, brain trust, you know?
+197   Q.   JASON: He goes to Reddit as two personas. Persona one, a how-to guy. Persona two, "Hey, I'm trying to use this app called Legal Speech to Text." And the speech to text is amazing, but I'm not understanding the editor. Has anybody else used it? And he's like, "Jason,
+198   A.   ADAM: send a one comes down and he'll answer the same question."
+199   JASON:  No. He's like, "There's so many fucking trolls out there that want to be the person to answer somebody's question. Oh, yeah. They fucking will sign up for an account just to answer your question, and then it gets a whole discussion going and..." The trolls fight, he's like, the trolls fight over each other to sign up for these accounts to get, to help people.
+200   A.   ADAM: Do, do you remember what this was? Code, Code Guru. Co-Code Guru, you're right. It was littered with fucking trolls. And half of them, you're right, you're fucking right, half of them wanted to just-- 'Cause you got points for good answers. So they, the community lashed back. And found all the trolls that were just trying to build up a point, bunch of points, and they'd negative the shit out of them, no matter what they posted, always.
+201   SPEAKER 3:  Even if it was good shit,
+202   ADAM:  they wouldn't care. If they, if they blacklist a guy, that's it. And that's what could group probably faded away. It's still there, but...
+203   JASON:  Anyways, it, Jeremy was one of them. It was crazy that he gave me, like, I don't know, he didn't like tell me that to- Pirated, but when he told me, my fucking brain was like, "Oh, that's a fucking gem right there." It is funny. That's a fucking gem.
+204   SPEAKER 4:  I never thought to make any connections to some of that old shit either. Dude, he fucking sells this shit. He's like, "I
+205   Q.   JASON: get more leads from Reddit for free than anything else." That's crazy. It's fucking nuts. Like, are you gonna get on Reddit tonight? When, when Legal Speech to Text is ready, I'm gonna create a persona. A Reddit account under some alias bullshit, and, you know,
+206   A.   ADAM: I might have a couple of ones that have been around for like a long time. If you need one that has like, age, you know, 'cause they'll, they'll nail you for being new too. Katie's gonna do it for me. Okay. Or maybe you can get Marie to
+207   SPEAKER 3:  do
+208   ADAM:  it.
+209   JASON:  I
+210   SPEAKER 3:  think
+211   ADAM:  that
+212   SPEAKER 3:  she
+213   JASON:  burns up
+214   A.   ADAM: enough time
+215   JASON:  already. We need a check for the speech to text app. To
+216   A.   ADAM: Australia and back
+217   Q.   JASON: in b-b I want Renee and Vadim to come to me and be like, "Jason, have you heard a legal speech to text?"
+218   A.   ADAM: And you wanna know, you, you wanna, you want that to happen because of her. That would be fucking hilarious. That's all I want. 'Cause that would put you so detached from it. You know what I mean? It's not like the other one where you, right. You dropped it in a review of, right. Someone in company that brought it up.
+219   SPEAKER 4:  So if we could, if we
+220   Q.   JASON: could do, do it that way, 'cause the Reddit people, like, the, the ladies that will find it or whatever, however they troll that shit, maybe it's Stino or one of these companies, and they get, Stino gets to us first and wants to buy it or whatever, you know what I mean? Who gives a fuck? Either way, you get there, and then they post it on Facebook. So now somebody used it, signed up for it, and now they're posting it on Facebook, positive or negative, it makes it to Patty, and then Patty will tell Renee, and Renee will be like, "Jason, have you heard of this illegal speech to text? I'm gonna make it based on a-
+221   SPEAKER 3:  Some fucked up, you know, Georgia or something.
+222   ADAM:  Well, remember it's legal space, so oh, like Georgia, Georgia, United States Georgia.
+223   JASON:  Yeah, yeah, yeah. Or Texas or Alabama or somewhere, Kentucky. Kentucky, there you go.
+224   A.   ADAM: That's where James is from.
+225   Q.   JASON: Who gives a shit, you know what I mean? Some PO box somewhere that- I guess
+226   A.   ADAM: we can generate some names by mixing and matching the, the roster from Jabs. They look like ex-employees. Can
+227   SPEAKER 3:  I get my, phone number, sorry, area code from you? And have it ring to-
+228   ADAM:  I know, I had a whole rant with Chat one time. Probably a year or so ago, where it fucking roasted the phone companies. 'Cause it, it got, it got down to the point where it was like, "Look, they get to buy these channel banks and they don't vet them, they don't stop them because they're making money off them. It's a scummy thing to do." It was like, and then it just kinda went on, on my behalf kinda roasted them a little bit as to what they could do to, to stop these. Scammers for buy-buying up all these channel blocks and scamming other people,
+229   SPEAKER 4:  you know?
+230   ADAM:  It's like if I buy a block of numbers and ninety-eight percent of them were flagged as spam, the phone company should probably be like, "I ain't giving you no block of numbers, yeah, fucker, you know?" But they're like, "I'll give you another block of numbers." Yeah,
+231   JASON:  because they're probably paying top tier for the minutes on those numbers, probably. Because they're scammers. Yeah. It, Quest Blue had tier three numbers? That were free almost. But when you used a Tier 3 number, your rate was 2 cents a minute. If you bought a Tier 1 number for a dollar a month, your rate was 0.003 cents. That was how they decided to do it.
+232   ADAM:  No, that's smart. I mean, 'cause you're getting the money either way. And if you don't use it, who cares?
+233   Q.   Yeah. You don't use the cheap one anyway. So we're, you feel like we're better aligned again?
+234   A.   Yeah.
+235   JASON:  I know it's gonna happen ten more times. Yeah,
+236   ADAM:  it is. But, yeah, this was really good.
+237   JASON:  Good. Yeah, it's recorded.
+238   ADAM:  Yeah.
