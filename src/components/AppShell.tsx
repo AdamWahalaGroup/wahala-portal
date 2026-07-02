@@ -232,7 +232,8 @@ export function AppShell({
       </aside>
 
       <main style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ maxWidth: wide ? 1180 : 960, margin: "0 auto", padding: "36px 36px 64px" }}>{children}</div>
+        {/* Left-aligned so content sits next to the nav, not centered with big gutters. */}
+        <div style={{ maxWidth: wide ? 1180 : 960, padding: "36px 36px 64px" }}>{children}</div>
       </main>
     </div>
   );
