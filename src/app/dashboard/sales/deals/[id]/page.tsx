@@ -70,7 +70,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck }}
         org={{ id: org.id, name: org.name, status: org.status }}
         owner={owner ? { name: owner.name } : null}
-        contact={contact ? { name: contact.name, email: contact.email, phone: contact.phone } : null}
+        contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
         provenance={sourceLead ? { source: sourceLead.source, notes: sourceLead.notes, createdAt: sourceLead.createdAt.toISOString() } : null}
         scout={{ md: sourceLead?.scoutMd ?? null, score: sourceLead?.scoutScore ?? null, verdict: sourceLead?.scoutVerdict ?? null }}
         proposalNode={proposalNode}

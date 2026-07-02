@@ -16,6 +16,7 @@ import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 import { ScoreChip, DaysTag, STAGE_COLORS } from "@/components/SalesChips";
 import { DealStageSelect } from "@/components/DealEditor";
 import { PeopleCard } from "@/components/People";
+import { ContactBlock } from "@/components/ContactBlock";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 
 type Tab = "overview" | "proposal" | "contract" | "history";
@@ -43,7 +44,7 @@ export function DealDrawer({
   deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean };
   org: { id: string; name: string; status: string };
   owner: { name: string } | null;
-  contact: { name: string; email: string | null; phone: string | null } | null;
+  contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   provenance: { source: string | null; notes: string | null; createdAt: string } | null;
   scout: { md: string | null; score: number | null; verdict: "pursue" | "probe" | "pass" | null };
   proposalNode: React.ReactNode;
@@ -163,19 +164,16 @@ export function DealDrawer({
               </section>
             )}
 
-            {/* People */}
-            {(owner || contact) && (
+            {/* Contact — shared, editable from here (edits apply everywhere) */}
+            {contact && (
+              <ContactBlock contactId={contact.id} name={contact.name} orgName={org.name} email={contact.email} phone={contact.phone} canManage={canManage} />
+            )}
+
+            {/* Deal owner */}
+            {owner && (
               <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div className="kicker">People</div>
-                {owner && <PeopleCard name={owner.name} role="Deal owner" variant="owner" />}
-                {contact && (
-                  <div>
-                    <PeopleCard name={contact.name} role="Primary contact" variant="lead" />
-                    {(contact.email || contact.phone) && (
-                      <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 6 }}>{[contact.email, contact.phone].filter(Boolean).join(" · ")}</div>
-                    )}
-                  </div>
-                )}
+                <div className="kicker">Deal owner</div>
+                <PeopleCard name={owner.name} role="Deal owner" variant="owner" />
               </section>
             )}
 

@@ -204,7 +204,16 @@ Identical AppShell + header (List tab active). Then:
   filled = `#2563EB`, rest `#EDEDF1`).
 - Body leads with the **Next step card** (active-highlight style `1.5px #C9D0FB` bg
   `#FAFBFF`): title + "set by · due" + ink **Done → next** button. Then **Scout report ·
-  from lead** (mono well) · **Latest** activity snippets.
+  from lead** (mono well) · **Contact** block · **Latest** activity snippets.
+- **Contact block** (fixes "can't edit a lead's email after qualify"): the person/org is a
+  SHARED contact record — qualifying a lead must NOT freeze its fields. The deal drawer's
+  Overview shows an editable contact card (avatar initials `#F1F2F4` · name 12.5/700 + mono
+  org · detail row · cobalt **Edit** link). A missing required field renders as an amber
+  dashed chip that is itself the input trigger: `⚠ add email` (`color:#B45309;
+  background:#FFF7ED; border:1px DASHED #FADCB4; radius:999px`). Section header carries the
+  mono caption "edits apply everywhere — lead, deal & client". Data model: `contacts` /
+  `orgs` are first-class tables; leads and deals reference them (contact_id), so an edit
+  from any drawer updates every surface. Never require moving a card backwards to edit data.
 - Footer bar (border-top): **Draft proposal** (ink) · **Log a call** (secondary) · right
   mono hint "Esc closes · board unchanged behind".
 

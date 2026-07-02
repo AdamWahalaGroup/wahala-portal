@@ -169,7 +169,7 @@ export async function qualifyLead(
   ctx: AuthContext,
   leadId: string,
   input: { organizationId?: string; dealName?: string; valueCents?: number },
-): Promise<{ dealId: string; organizationId: string }> {
+): Promise<{ dealId: string; organizationId: string; contactId: string }> {
   assertSalesManager(ctx, "qualify_lead");
   const db = getDb();
   const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
@@ -244,7 +244,7 @@ export async function qualifyLead(
   );
 
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-  return { dealId, organizationId };
+  return { dealId, organizationId, contactId };
 }
 
 // ---------------------------------------------------------------- deals
