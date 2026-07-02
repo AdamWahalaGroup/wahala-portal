@@ -37,6 +37,7 @@ export function AppShell({
   orgName,
   accountOwner,
   leadCount,
+  wide,
   children,
 }: {
   active: NavKey;
@@ -45,6 +46,8 @@ export function AppShell({
   accountOwner?: { name: string } | null;
   /** "To qualify" count for the Leads sub-nav badge (pass from sales pages that know it). */
   leadCount?: number | null;
+  /** Wider main column for deep detail pages (lead workspace, proposal editor). */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const inSales = active === "sales" || active.startsWith("sales-");
@@ -229,7 +232,7 @@ export function AppShell({
       </aside>
 
       <main style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "36px 36px 64px" }}>{children}</div>
+        <div style={{ maxWidth: wide ? 1180 : 960, margin: "0 auto", padding: "36px 36px 64px" }}>{children}</div>
       </main>
     </div>
   );

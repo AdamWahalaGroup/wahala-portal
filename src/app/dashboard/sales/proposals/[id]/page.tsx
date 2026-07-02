@@ -1,13 +1,14 @@
 /**
- * Proposal editor page (frame 25) — slim breadcrumb chrome for width; the A/B
- * comparison is the centerpiece. Staff only.
+ * Proposal editor page (frame 25) — full app sidebar (the left nav never disappears)
+ * with a wide content column; the A/B comparison is the centerpiece. Staff only.
  */
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getProposal } from "@/services/proposals";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
-import { SlimShell } from "@/components/SlimShell";
+import { AppShell } from "@/components/AppShell";
 import { ProposalStatusPill } from "@/components/SalesChips";
 import { ProposalEditor } from "@/components/ProposalEditor";
 
@@ -26,16 +27,18 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   return (
-    <SlimShell
-      crumbs={[
-        { label: "Sales", href: "/dashboard/sales" },
-        { label: "Proposals", href: "/dashboard/sales/proposals" },
-        { label: p.dealName, href: `/dashboard/sales/deals/${p.dealId}` },
-        { label: `v${p.version}` },
-      ]}
-      user={{ name: ctx.user.name, role: ctx.user.role }}
-      maxWidth={1120}
+    <AppShell
+      active="sales-proposals"
+      user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
+      orgName="Wahala Group"
+      accountOwner={null}
+      wide
     >
+      <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
+        <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales/proposals">Proposals</Link> /{" "}
+        <Link href={`/dashboard/sales/deals/${p.dealId}`}>{p.dealName}</Link> /{" "}
+        <span style={{ color: "var(--ink)" }}>v{p.version}</span>
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: "-.025em" }}>{p.title}</h1>
         <ProposalStatusPill status={p.status} version={p.version} />
@@ -45,6 +48,6 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
       </div>
 
       <ProposalEditor proposal={p} canManage={canManage} />
-    </SlimShell>
+    </AppShell>
   );
 }

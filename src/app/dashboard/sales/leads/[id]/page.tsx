@@ -1,7 +1,7 @@
 /**
- * Lead workspace (frame 23) — the scout's dossier. Slim breadcrumb chrome for
- * content width; the dump + scout report lead in the main column (~2/3), the
- * record fields sit compact in the right rail. Staff only.
+ * Lead workspace (frame 23) — the scout's dossier. Full app sidebar (the left nav
+ * never disappears) with a wide content column; the dump + scout report lead in the
+ * main column (~2/3), the record fields sit compact in the right rail. Staff only.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -11,7 +11,7 @@ import { listWahalaStaff } from "@/services/clients";
 import { scopedDb } from "@/db/scoped";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
-import { SlimShell } from "@/components/SlimShell";
+import { AppShell } from "@/components/AppShell";
 import { LeadRow } from "@/components/SalesBoard";
 import { LeadRecordEditor, LeadFilesPanel, LeadScoutPanel } from "@/components/LeadWorkspace";
 
@@ -41,14 +41,17 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const chip = STATUS_CHIP[lead.status];
 
   return (
-    <SlimShell
-      crumbs={[
-        { label: "Sales", href: "/dashboard/sales" },
-        { label: "Leads", href: "/dashboard/sales/leads" },
-        { label: lead.name },
-      ]}
-      user={{ name: ctx.user.name, role: ctx.user.role }}
+    <AppShell
+      active="sales-leads"
+      user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
+      orgName="Wahala Group"
+      accountOwner={null}
+      wide
     >
+      <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
+        <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales/leads">Leads</Link> /{" "}
+        <span style={{ color: "var(--ink)" }}>{lead.name}</span>
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>{lead.name}</h1>
         <span className="kicker" style={{ fontSize: 10, padding: "4px 10px", borderRadius: 999, background: chip.bg, color: chip.color }}>
@@ -130,6 +133,6 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           />
         </aside>
       </div>
-    </SlimShell>
+    </AppShell>
   );
 }
