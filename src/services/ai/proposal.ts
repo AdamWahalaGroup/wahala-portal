@@ -13,6 +13,7 @@ import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { COMPLEXITY_MAX, COMPLEXITY_MIN } from "@/domain/sales";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
+import { resolveAgentConfig } from "./agent-config";
 
 export type ProposalDraftOutput = {
   title: string;
@@ -122,11 +123,14 @@ export async function draftProposal(
   }
 
   const provider = await getDraftProvider();
+  const cfg = await resolveAgentConfig("proposal");
   const { output, usage } = await provider.completeStructured<ProposalDraftOutput>({
     system: SYSTEM_PROMPT,
     parts,
     schemaName: "ProposalDraft",
     schema: proposalJsonSchema,
+    model: cfg.model,
+    reasoningEffort: cfg.reasoningEffort,
   });
 
   if (!Array.isArray(output.options) || output.options.length !== 2) {

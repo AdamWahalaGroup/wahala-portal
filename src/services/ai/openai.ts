@@ -24,6 +24,8 @@ export class OpenAiDraftProvider implements AiDraftProvider {
     parts: DraftPart[];
     schemaName: string;
     schema: object;
+    model?: string;
+    reasoningEffort?: string | null;
   }): Promise<{ output: T; usage: DraftUsage }> {
     const key = openaiApiKey();
     if (!key) {
@@ -32,7 +34,7 @@ export class OpenAiDraftProvider implements AiDraftProvider {
         "OPENAI_API_KEY is not configured. Set it in .dev.vars locally or via `wrangler secret put OPENAI_API_KEY` in production.",
       );
     }
-    const model = aiDraftModel();
+    const model = args.model?.trim() || aiDraftModel();
 
     const content: OpenAiContentPart[] = args.parts.map((p) => {
       if (p.kind === "text") return { type: "text", text: p.text };
@@ -40,7 +42,7 @@ export class OpenAiDraftProvider implements AiDraftProvider {
       return { type: "file", file: { filename: p.name, file_data: `data:application/pdf;base64,${p.b64}` } };
     });
 
-    const body = {
+    const body: Record<string, unknown> = {
       model,
       messages: [
         { role: "system", content: args.system },
@@ -51,6 +53,8 @@ export class OpenAiDraftProvider implements AiDraftProvider {
         json_schema: { name: args.schemaName, strict: true, schema: args.schema },
       },
     };
+    // Only sent when the admin configured it — non-reasoning models reject the param.
+    if (args.reasoningEffort) body.reasoning_effort = args.reasoningEffort;
 
     const res = await fetch(ENDPOINT, {
       method: "POST",
@@ -86,12 +90,19 @@ export class OpenAiDraftProvider implements AiDraftProvider {
     return { output, usage };
   }
 
-  async draftProject(args: { system: string; parts: DraftPart[] }): Promise<{ draft: ProjectDraft; usage: DraftUsage }> {
+  async draftProject(args: {
+    system: string;
+    parts: DraftPart[];
+    model?: string;
+    reasoningEffort?: string | null;
+  }): Promise<{ draft: ProjectDraft; usage: DraftUsage }> {
     const { output, usage } = await this.completeStructured<ProjectDraft>({
       system: args.system,
       parts: args.parts,
       schemaName: "ProjectDraft",
       schema: projectDraftJsonSchema,
+      model: args.model,
+      reasoningEffort: args.reasoningEffort,
     });
     return { draft: output, usage };
   }

@@ -5,6 +5,7 @@
  * INTERNAL — "we're not gonna give them the tasks, we're gonna give them the story."
  */
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
+import { resolveAgentConfig } from "./agent-config";
 import { StageError } from "@/domain/stage-machine";
 
 export type GeneratedTask = {
@@ -83,11 +84,14 @@ export async function generateTaskBreakdown(input: {
   ];
 
   const provider = await getDraftProvider();
+  const cfg = await resolveAgentConfig("taskgen");
   const { output, usage } = await provider.completeStructured<{ tasks: GeneratedTask[] }>({
     system: SYSTEM_PROMPT,
     parts,
     schemaName: "TaskBreakdown",
     schema: taskgenJsonSchema,
+    model: cfg.model,
+    reasoningEffort: cfg.reasoningEffort,
   });
 
   const tasks = (output.tasks ?? []).filter(

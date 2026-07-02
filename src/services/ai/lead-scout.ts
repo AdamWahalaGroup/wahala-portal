@@ -11,9 +11,10 @@
  *     an opinion, associations the salesperson may have missed, and a rough 1–10
  *     effort-worthiness score with a pursue / probe / pass verdict.
  */
-import { aiSearchModel, openaiApiKey } from "@/auth/server-env";
+import { openaiApiKey } from "@/auth/server-env";
 import { StageError } from "@/domain/stage-machine";
 import { getDraftProvider, estimateCostCents, type DraftPart, type DraftUsage } from "./provider";
+import { resolveAgentConfig } from "./agent-config";
 
 export type LeadScoutResult = {
   analysisMd: string;
@@ -89,7 +90,7 @@ came up empty — do NOT fill gaps with guesses.`;
 /** Web recon via the search-capable model. Returns null (never throws) when unavailable. */
 export async function webRecon(query: string): Promise<{ text: string; usage: DraftUsage } | null> {
   const key = openaiApiKey();
-  const model = aiSearchModel();
+  const model = (await resolveAgentConfig("lead_recon")).model;
   if (!key || !model) return null;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -151,11 +152,14 @@ export async function scoutLead(input: {
   }
 
   const provider = await getDraftProvider();
+  const cfg = await resolveAgentConfig("lead_scout");
   const { output, usage } = await provider.completeStructured<LeadScoutResult>({
     system: SYSTEM_PROMPT,
     parts,
     schemaName: "LeadScout",
     schema: scoutJsonSchema,
+    model: cfg.model,
+    reasoningEffort: cfg.reasoningEffort,
   });
   if (!output.analysisMd?.trim()) throw new StageError("VALIDATION", "The scout returned an empty analysis — try again.");
   return { result: { ...output, analysisMd: output.analysisMd.trim() }, usage };

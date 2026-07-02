@@ -36,17 +36,25 @@ export type DraftUsage = {
 };
 
 export interface AiDraftProvider {
-  draftProject(args: { system: string; parts: DraftPart[] }): Promise<{ draft: ProjectDraft; usage: DraftUsage }>;
+  draftProject(args: {
+    system: string;
+    parts: DraftPart[];
+    model?: string;
+    reasoningEffort?: string | null;
+  }): Promise<{ draft: ProjectDraft; usage: DraftUsage }>;
   /**
    * Generic strict-JSON completion — same multi-modal parts, caller-supplied schema.
    * New AI features (discovery packages, estimators…) build on this instead of adding
-   * per-feature provider methods.
+   * per-feature provider methods. `model`/`reasoningEffort` come from the per-agent
+   * admin settings; omitted = the env default model, no reasoning param sent.
    */
   completeStructured<T>(args: {
     system: string;
     parts: DraftPart[];
     schemaName: string;
     schema: object;
+    model?: string;
+    reasoningEffort?: string | null;
   }): Promise<{ output: T; usage: DraftUsage }>;
 }
 

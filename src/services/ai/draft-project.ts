@@ -13,6 +13,7 @@ import { canAccessOrg } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { securityLog } from "@/lib/security-log";
 import { getDraftProvider, type DraftPart, type DraftUsage, type ProjectDraft } from "./provider";
+import { resolveAgentConfig } from "./agent-config";
 
 /** Hard cap on total bytes across all files+paste to keep the call cheap and bounded. */
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -159,5 +160,6 @@ export async function draftProject(ctx: AuthContext, input: DraftInput): Promise
   parts.unshift({ kind: "text", text: groundingLines.join("\n\n") });
 
   const provider = await getDraftProvider();
-  return provider.draftProject({ system: SYSTEM_PROMPT, parts });
+  const cfg = await resolveAgentConfig("project_draft");
+  return provider.draftProject({ system: SYSTEM_PROMPT, parts, model: cfg.model, reasoningEffort: cfg.reasoningEffort });
 }

@@ -18,6 +18,7 @@ import { STAGE_META } from "@/domain/sales";
 import { assertSalesManager } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
+import { resolveAgentConfig } from "./agent-config";
 
 type DiscoveryOutput = { discoveryMd: string };
 
@@ -108,11 +109,14 @@ export async function generateDiscovery(
   parts.push({ kind: "text", text: `NEW SOURCE MATERIAL (transcript / notes)\n\n${pasted}` });
 
   const provider = await getDraftProvider();
+  const cfg = await resolveAgentConfig("discovery");
   const { output, usage } = await provider.completeStructured<DiscoveryOutput>({
     system: SYSTEM_PROMPT,
     parts,
     schemaName: "DiscoveryPackage",
     schema: discoveryJsonSchema,
+    model: cfg.model,
+    reasoningEffort: cfg.reasoningEffort,
   });
 
   const discoveryMd = output.discoveryMd.trim();

@@ -66,6 +66,16 @@ export const DEAL_STAGES = [
 export const PROPOSAL_STATUSES = ["draft", "sent", "approved", "declined", "superseded"] as const;
 export const CONTRACT_ITEM_KINDS = ["msa", "nda", "insurance", "other"] as const;
 
+// ---- App settings (admin-tunable key/value; JSON values) ----
+// Runtime configuration that shouldn't need a redeploy — e.g. per-AI-agent model +
+// reasoning effort (`agent:<key>` rows). Read with env-var fallback.
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value", { mode: "json" }).notNull(),
+  updatedByUserId: text("updated_by_user_id"),
+  updatedAt: updatedAt(),
+});
+
 // ---- Organizations (client companies = tenants) ----
 export const organizations = sqliteTable("organizations", {
   id: pk(),
