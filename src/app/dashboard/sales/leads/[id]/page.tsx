@@ -12,6 +12,7 @@ import { scopedDb } from "@/db/scoped";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
+import { BackButton } from "@/components/BackButton";
 import { LeadRow } from "@/components/SalesBoard";
 import { LeadRecordEditor, LeadFilesPanel, LeadScoutPanel } from "@/components/LeadWorkspace";
 
@@ -48,9 +49,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       accountOwner={null}
       wide
     >
-      <div className="mono" style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
-        <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales/leads">Leads</Link> /{" "}
-        <span style={{ color: "var(--ink)" }}>{lead.name}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <BackButton fallbackHref="/dashboard/sales/leads" />
+        <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+          <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales/leads">Leads</Link> /{" "}
+          <span style={{ color: "var(--ink)" }}>{lead.name}</span>
+        </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>{lead.name}</h1>

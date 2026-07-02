@@ -15,6 +15,7 @@ import { STAGE_META } from "@/domain/sales";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
+import { BackButton } from "@/components/BackButton";
 import { Money } from "@/components/Money";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { PeopleCard } from "@/components/People";
@@ -105,9 +106,12 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       orgName="Wahala Group"
       accountOwner={null}
     >
-      <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-        <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales">Board</Link> /{" "}
-        <span style={{ color: "var(--ink)" }}>{deal.name}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <BackButton fallbackHref="/dashboard/sales" />
+        <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+          <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales">Board</Link> /{" "}
+          <span style={{ color: "var(--ink)" }}>{deal.name}</span>
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
