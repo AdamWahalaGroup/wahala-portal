@@ -117,7 +117,7 @@ function LeadCaptureForm() {
 
 // ---------------------------------------------------------------- lead inbox row
 
-function LeadRow({
+export function LeadRow({
   lead,
   orgs,
   staff,
@@ -153,7 +153,24 @@ function LeadRow({
     <div style={{ background: "#fffdf5", border: "1px solid #f0e6c8", borderRadius: 11, padding: "11px 14px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 160 }}>
-          <span style={{ fontWeight: 700, fontSize: 14.5 }}>{lead.name}</span>
+          <Link href={`/dashboard/sales/leads/${lead.id}`} style={{ fontWeight: 700, fontSize: 14.5, color: "inherit", textDecoration: "none" }}>
+            {lead.name} <span style={{ color: "var(--muted-line)" }}>›</span>
+          </Link>
+          {lead.aiScore !== null && (
+            <span
+              className="kicker"
+              style={{
+                fontSize: 9,
+                marginLeft: 8,
+                padding: "2px 7px",
+                borderRadius: 5,
+                background: lead.aiVerdict === "pursue" ? "#e8f7ee" : lead.aiVerdict === "pass" ? "#fdeeee" : "#fff7ed",
+                color: lead.aiVerdict === "pursue" ? "#15803d" : lead.aiVerdict === "pass" ? "#b91c1c" : "#b45309",
+              }}
+            >
+              {lead.aiScore}/10
+            </span>
+          )}
           {detail && (
             <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginLeft: 10 }}>
               {detail}
@@ -377,8 +394,11 @@ export function SalesBoard({
 
       {/* Lead inbox */}
       <section style={{ marginTop: 28 }}>
-        <div className="kicker" style={{ marginBottom: 10 }}>
-          Leads ({newLeads.length} to qualify)
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
+          <span className="kicker">Leads ({newLeads.length} to qualify)</span>
+          <Link href="/dashboard/sales/leads" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--cobalt-text)", textDecoration: "none" }}>
+            All leads →
+          </Link>
         </div>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <LeadCaptureForm />

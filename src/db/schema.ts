@@ -124,10 +124,34 @@ export const leads = sqliteTable(
     assignedToUserId: text("assigned_to_user_id").references(() => users.id), // null = unowned
     createdByUserId: text("created_by_user_id").references(() => users.id),
     convertedDealId: text("converted_deal_id"), // set on qualify (no FK: deals is defined below)
+    // The AI lead scout's take (expert opinion + web recon + associations), a rough
+    // 1–10 effort-worthiness score, and a verdict. Regenerated on demand.
+    aiAnalysisMd: text("ai_analysis_md"),
+    aiScore: integer("ai_score"),
+    aiVerdict: text("ai_verdict", { enum: ["pursue", "probe", "pass"] }),
+    aiAnalyzedAt: integer("ai_analyzed_at", { mode: "timestamp" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [index("leads_status_idx").on(t.status)],
+);
+
+// ---- Lead assets (the unorganized dump: files, photos, anything about a lead) ----
+// Leads are pre-organization, so these can't live in `assets` (org_id NOT NULL there).
+// Bytes in R2 under leads/<leadId>/…, metadata here. Staff-only, always internal.
+export const leadAssets = sqliteTable(
+  "lead_assets",
+  {
+    id: pk(),
+    leadId: text("lead_id").notNull().references(() => leads.id),
+    fileName: text("file_name").notNull(),
+    r2Key: text("r2_key").notNull(),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    uploadedByUserId: text("uploaded_by_user_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_assets_lead_idx").on(t.leadId)],
 );
 
 // ---- Contacts (a person, distinct from portal users; may never log in) ----

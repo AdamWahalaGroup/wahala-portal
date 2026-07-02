@@ -57,6 +57,11 @@ export function aiDraftModel(): string {
   return vars().AI_DRAFT_MODEL?.trim() || "gpt-4o-mini";
 }
 
+/** Model with built-in web search, used for lead recon. Empty string disables web lookup. */
+export function aiSearchModel(): string {
+  return vars().AI_SEARCH_MODEL?.trim() || "gpt-4o-mini-search-preview";
+}
+
 /** OpenAI API key (set via `wrangler secret put OPENAI_API_KEY`). Empty if unconfigured. */
 export function openaiApiKey(): string {
   return vars().OPENAI_API_KEY ?? "";

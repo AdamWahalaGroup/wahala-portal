@@ -48,6 +48,8 @@ export type LeadItem = {
   status: "new" | "qualified" | "disqualified";
   assignedToUserId: string | null;
   assignedToName: string | null;
+  aiScore: number | null;
+  aiVerdict: "pursue" | "probe" | "pass" | null;
   createdAt: Date;
 };
 
@@ -76,6 +78,8 @@ export async function listLeads(ctx: AuthContext): Promise<LeadItem[]> {
     status: l.status,
     assignedToUserId: l.assignedToUserId,
     assignedToName: l.assignedToUserId ? names.get(l.assignedToUserId) ?? null : null,
+    aiScore: l.aiScore,
+    aiVerdict: l.aiVerdict,
     createdAt: l.createdAt,
   }));
 }
