@@ -10,24 +10,12 @@
  * types lag it — hence the narrow cast below rather than relying on the binding type.
  */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { emailFrom } from "@/auth/server-env";
-
-interface EmailSendable {
-  send(message: {
-    to: string;
-    from: { email: string; name?: string };
-    subject: string;
-    text?: string;
-    html?: string;
-  }): Promise<unknown>;
-}
+import { sendEmail, type EmailEnv } from "@/auth/send-email";
 
 export async function sendMagicLinkEmail(to: string, url: string): Promise<void> {
   const { env } = getCloudflareContext();
-  const email = env.EMAIL as unknown as EmailSendable;
-  await email.send({
+  await sendEmail(env as unknown as EmailEnv, {
     to,
-    from: { email: emailFrom(), name: "Wahala Portal" },
     subject: "Your Wahala Portal sign-in link",
     text: `Sign in to Wahala Portal:\n\n${url}\n\nThis link expires in 15 minutes and can be used once. If you didn't request it, ignore this email.`,
     html: `<p>Sign in to <strong>Wahala Portal</strong>:</p>
@@ -39,10 +27,8 @@ export async function sendMagicLinkEmail(to: string, url: string): Promise<void>
 /** Invitation email — a magic link that accepts the invite and signs the client in. */
 export async function sendInviteEmail(to: string, url: string, orgName: string): Promise<void> {
   const { env } = getCloudflareContext();
-  const email = env.EMAIL as unknown as EmailSendable;
-  await email.send({
+  await sendEmail(env as unknown as EmailEnv, {
     to,
-    from: { email: emailFrom(), name: "Wahala Portal" },
     subject: "You're invited to Wahala Portal",
     text: `You've been invited to the ${orgName} client portal on Wahala Portal.\n\nAccept your invitation and sign in:\n${url}\n\nThis link expires in 15 minutes. If you weren't expecting this, you can ignore it.`,
     html: `<p>You've been invited to the <strong>${orgName}</strong> client portal on <strong>Wahala Portal</strong>.</p>

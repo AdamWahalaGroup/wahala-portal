@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <rect width="900" height="900" fill="#f7f3e8"/>
+  <rect x="20" y="20" width="860" height="860" fill="none" stroke="#d8cfb8" stroke-width="3" stroke-dasharray="1 7" rx="18"/>
+  <g font-family="Marker Felt, Chalkboard, Comic Sans MS, sans-serif" fill="#2b2b6e">
+    <text x="60" y="90" font-size="34" font-weight="bold">TOOL RENTAL BOOKING — Ace (Dale)</text>
+    <g font-size="21">
+      <rect x="55" y="140" width="130" height="64" fill="none" stroke="#2b2b6e" stroke-width="3" rx="10" transform="rotate(-1 120 172)"/>
+      <text x="80" y="180">STORE</text>
+      <rect x="245" y="136" width="150" height="64" fill="none" stroke="#2b2b6e" stroke-width="3" rx="10" transform="rotate(1 320 168)"/>
+      <text x="262" y="176">PICK TOOL</text>
+      <rect x="455" y="140" width="115" height="64" fill="none" stroke="#2b2b6e" stroke-width="3" rx="10"/>
+      <text x="482" y="180">DATE</text>
+      <rect x="630" y="136" width="150" height="64" fill="none" stroke="#2b2b6e" stroke-width="3" rx="10" transform="rotate(-1 705 168)"/>
+      <text x="648" y="176">DEPOSIT $</text>
+      <path d="M185 172 L240 169" stroke="#2b2b6e" stroke-width="3" fill="none" marker-end="url(#a)"/>
+      <path d="M395 168 L450 171" stroke="#2b2b6e" stroke-width="3" fill="none" marker-end="url(#a)"/>
+      <path d="M570 171 L625 168" stroke="#2b2b6e" stroke-width="3" fill="none" marker-end="url(#a)"/>
+    </g>
+    <text x="60" y="300" font-size="27">3 stores (GA) — start w/ Marietta??</text>
+    <text x="60" y="360" font-size="27">budget ~ $20k / store</text>
+    <text x="60" y="430" font-size="27" fill="#8b2222">RentalHQ fees = 12%?! Dale HATES</text>
+    <text x="60" y="500" font-size="27">txt reminders → fewer no-shows</text>
+    <text x="60" y="570" font-size="27">brother-in-law: equip leasing biz — intro?</text>
+    <circle cx="660" cy="710" r="100" fill="none" stroke="#8b2222" stroke-width="4" transform="rotate(-3 660 710)"/>
+    <text x="592" y="700" font-size="26" fill="#8b2222">CALL DALE</text>
+    <text x="614" y="738" font-size="26" fill="#8b2222">THURS</text>
+    <text x="60" y="820" font-size="22" fill="#6b6b6b">-- napkin @ trade show bar, 6/28</text>
+  </g>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 z" fill="#2b2b6e"/></marker></defs>
+</svg>

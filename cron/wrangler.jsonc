@@ -1,0 +1,28 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "wahala-nudges",
+  "main": "index.ts",
+
+  // Match the main worker's runtime.
+  "compatibility_date": "2026-06-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Daily at 13:00 UTC (~9am ET). The dynamic adminDigest cadence (off/monday/daily)
+  // is enforced inside runNudges, so a single daily trigger honours whatever the admin set.
+  "triggers": { "crons": ["0 13 * * *"] },
+
+  // EMAIL_FROM must be on the domain onboarded to Email Sending (wahala-services.com).
+  "vars": { "EMAIL_FROM": "login@wahala-services.com" },
+
+  // Same D1 database + Email binding as the main app (a Worker can share bindings).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wahala-db",
+      "database_id": "740b65ab-773a-4ed1-a468-fed90d4684bf",
+      "migrations_dir": "../drizzle/migrations"
+    }
+  ],
+  "send_email": [{ "name": "EMAIL", "remote": true }]
+}

@@ -17,9 +17,14 @@ deals exit on the right — so the workflow is self-evident with zero instructio
 4. The 4 stat cards on the Board collapse into **one condensed summary strip** (the
    per-stage $ and counts now live in each column header). The List view keeps the 4 cards.
 5. **Won / Lost** become dashed **drop zones** below the columns.
-6. **Leads** page: copy now frames its "To qualify" list as the list view of the Board's
-   Triage column; "Qualify" ≡ "drag right into Discovery".
-7. **Deal room** breadcrumb: `Sales › Deals ›` → `Sales › Board ›`.
+6. **One-surface navigation model** (frame `29`, canonical): the Board is the ONLY sales
+   destination. The Board/Leads/Proposals sub-nav is REMOVED; lead workspace, deal room,
+   and proposal editor open as a right-side **drawer over the board** (deep-linkable).
+   The old Leads/Proposals pages become **filter chips** on the board.
+7. **Leads** page content is absorbed: its "To qualify" list = the Triage column; its
+   workspace = the lead drawer. "Qualify" ≡ "drag right into Discovery".
+8. **Deal room** becomes the deal drawer's content (tabs: Overview · Proposal · Contract ·
+   History). Its route now renders as a drawer over the board.
 
 ## About the design files
 The file in this bundle (`Wahala Portal.dc.html`) is a **design reference created in
@@ -33,9 +38,12 @@ server components; only small interactive pieces are client islands — the **ka
 The relevant frames on the canvas are:
 - **`21 — Board · kanban (canonical)`** (id `21a`) — the new default Board.
 - **`21 · List toggle`** (id `21b`) — the ☰ List view.
+- **`21c — Board · card peek`** — click-a-card popover.
+- **`29 — Sales flow · one surface (canonical)`** — the navigation model + the drawer.
+- **`28 — Admin settings · SLAs & nudges`** — admin thresholds.
 - **`21 — retired`** — the OLD design, dimmed, kept only for reference. **Do not build this.**
-- **`22 — Leads · triage`** — copy alignment only.
-- **`24 — Deal room`** — breadcrumb change only.
+- **`22 — Leads · triage`** / **`24 — Deal room`** — pre-existing frames; their CONTENT is
+  reused inside the drawer, but they are no longer separate destinations.
 
 ## Fidelity
 **High-fidelity.** Exact colors, typography, spacing, and radii are specified below and
@@ -47,16 +55,25 @@ match `src/lib/theme.ts`. Recreate pixel-accurately using existing components.
 
 ### Layout
 - Full **AppShell**: dark ink sidebar (228px) + main content on `#FBFBFC`.
-- Sidebar: Sales is active; sub-nav **Board / Leads (badge 3) / Proposals**, Board = cobalt pill.
+- Sidebar: **Sales is a single active item (cobalt pill) with the lead-count badge — NO
+  Board/Leads/Proposals sub-nav** (removed in the one-surface model, frame `29`).
 - Main padding `26px 30px 30px`.
 - **Header row** (flex, space-between, align flex-end):
   - Left: mono kicker "Sales" (`#9AA0AA`, 11px, `.12em`, uppercase) + `<h1>` "Pipeline"
-    (25px/800, `letter-spacing:-.025em`).
+    (25px/800, `letter-spacing:-.025em`) + **filter chips** (see below).
   - Right: **view toggle** segmented control + **"+ Capture lead"** button.
 - **Summary strip** (below header, `margin-bottom:18px`): white card, `1px #E7E8EC`,
   radius 11px, padding `11px 18px`, flex row of items separated by 1px `#EDEDF1` dividers.
 - **Kanban**: `display:grid; grid-template-columns:repeat(7,1fr); gap:12px; align-items:start`.
 - **Won/Lost zones**: `display:grid; grid-template-columns:1fr 260px; gap:12px; margin-top:14px`.
+
+### Filter chips (the old pages, as lenses — frame 29)
+Pill row beside the title. Active chip: `background:#16181D; color:#FFF; font:700 11.5px;
+padding:5px 11px; radius:999px`. Inactive: `border:1px #E2E3E8; color:#5A6069; font:600`.
+Chips: **All** · **Mine** · **To qualify 3** (count in cobalt — replaces the Leads page) ·
+**Proposals out 4** (count `#0891B2` — replaces the Proposals page) · **⚠ Stuck 5**
+(amber treatment: `border:1px #FADCB4; background:#FFF7ED; color:#B45309`). A chip filters
+the board in place — it never navigates.
 
 ### View toggle (segmented control)
 - Container: `background:#F1F2F4; border-radius:9px; padding:3px; display:flex`.
@@ -170,21 +187,40 @@ Identical AppShell + header (List tab active). Then:
 
 ## Adjacent screens — copy/nav only
 
-### Leads (`/dashboard/sales/leads`)
-- No layout change. Subtitle/intent now states it is **the list view of the Board's Triage
-  column**.
-- The **"To qualify"** section header gains a mono hint: "*same items as the Board's Triage
-  column — Qualify ≡ drag right into Discovery*".
-- Behavior to preserve: **Qualify** converts a lead into a deal in **Discovery** (this is the
-  same operation as dragging a Triage card into the Discovery column on the Board). **Pass**
-  = the `×` on a Triage card. The Leads list and the Board Triage column are **two views of
-  the same underlying "unqualified leads" data**, not separate stores.
+### Leads (absorbed into the board — no separate page)
+- The Triage column IS the lead list (`status = to_qualify`); the **"To qualify" chip**
+  filters to it. **Quick Capture** stays as the "+ Capture lead" button/modal.
+- The **lead workspace** (frame 23's content: dossier, notes, ◆ Analyze scout report)
+  renders inside the **lead drawer** — same shell as the deal drawer.
+- Behavior to preserve: **Qualify** converts a lead into a deal in **Discovery** (≡ dragging
+  the Triage card right). **Pass** = the `×` on a Triage card. One underlying store.
 
-### Deal room (`/dashboard/sales/deals/[id]`)
-- **Only** change: breadcrumb text `Sales › Deals › {deal}` → `Sales › Board › {deal}`
-  (mono 11px `#9AA0AA`, current crumb `#16181D`). Deals are reached via the Board now.
+### Deal room (absorbed into the deal drawer)
+- Route `/dashboard/sales/deals/[id]` → renders the **deal drawer over the board**.
+- Drawer tabs: **Overview · Proposal · Contract · History** — the deal room's existing
+  content (stepper, proposal A/B, contract checklist, history timeline) redistributed.
+- Header: `← Board` (cobalt) top-left · mono route echo + `×` top-right · deal name +
+  `$` (mono tnum) · mono meta line · **mini stage progress bar** (6 equal 5px segments,
+  filled = `#2563EB`, rest `#EDEDF1`).
+- Body leads with the **Next step card** (active-highlight style `1.5px #C9D0FB` bg
+  `#FAFBFF`): title + "set by · due" + ink **Done → next** button. Then **Scout report ·
+  from lead** (mono well) · **Latest** activity snippets.
+- Footer bar (border-top): **Draft proposal** (ink) · **Log a call** (secondary) · right
+  mono hint "Esc closes · board unchanged behind".
 
 ---
+
+## Navigation contract (frame 29 — applies everywhere in Sales)
+One surface, three depths. This is the core of the redesign for non-technical users:
+1. **Click a card = peek** (popover beside the card).
+2. **"Open →" = drawer** — lead workspace, deal room, and proposal editor are all the SAME
+   right-side drawer shell (520px, `border-left:1px #E7E8EC`,
+   shadow `-24px 0 60px -24px rgba(0,0,0,.28)`) over the dimmed board. One gesture to learn.
+3. **Esc / ← Board / browser-back** all close the drawer and return to the EXACT board
+   state (scroll + active filters). Implement drawers as routes (parallel/intercepting
+   routes work well) so they're deep-linkable: `/sales/deal/meridian` opens the drawer over
+   the board — links from Messages/email never land on a dead-end page.
+4. The ONLY separate sales page left is the client-facing **public proposal** (frame 26).
 
 ## Interactions & behavior
 - **Click any card = peek panel** (see frame `21c — Board · card peek`). The WHOLE card is
@@ -194,10 +230,10 @@ Identical AppShell + header (List tab active). Then:
   (`1.5px #C9D0FB` + `0 0 0 3px #F3F5FF`).
   - **Lead (Triage) peek**: name + score chip + mono meta · **Scout report** in a mono
     well (`#FBFBFC`, `1px #EDEDF1`) · actions: **Qualify → Discovery** (ink), **Pass**
-    (secondary), right-aligned cobalt link **Open lead workspace →**.
-  - **Deal peek**: same shell — value, stage, days-in-stage, next step + **Open deal
-    room →**. The scout report travels with the deal after qualify, so it's readable
-    from the deal peek/deal room too — no switching to the Leads tab.
+    (secondary), right-aligned cobalt link **Open →** (expands the peek into the drawer).
+  - **Deal peek**: same shell — value, stage, days-in-stage, next step + **Open →**
+    (the deal drawer). The scout report travels with the deal after qualify, so it's
+    readable from the peek and drawer — no switching pages.
 - **Drag a Triage card → Discovery**: this IS "qualify". Creates a deal from the lead;
   the card leaves Triage. Log the event.
 - **Drag any deal card between columns**: stages are **dispositions** — any→any allowed,
@@ -207,7 +243,7 @@ Identical AppShell + header (List tab active). Then:
 - **Drag a deal → Won**: deal is won and **becomes a project**. **→ Lost**: prompt for a
   reason, then log it.
 - **`×` on a Triage card**: pass/dismiss the lead.
-- **Deal card title click**: navigate to the Deal room.
+- **Card title click**: opens the peek (NOT a page navigation).
 - **View toggle** persists the user's Board/List preference.
 - Column **overflow**: show a capped number of cards, then a "+N more · $Xk" line that
   expands the column.
@@ -286,7 +322,8 @@ No images. All glyphs are Unicode text (`▦ ☰ + × ⚠ ▾ →`). Logo is a C
 ## Files
 - `Wahala Portal.dc.html` — the full canvas. Look for frames labeled
   `21 — Board · kanban (canonical)`, `21 · List toggle`, `21c — Board · card peek`,
-  `22 — Leads · triage`, `24 — Deal room`, `28 — Admin settings · SLAs & nudges`.
+  `29 — Sales flow · one surface (canonical)`, `28 — Admin settings · SLAs & nudges`,
+  plus `22/23/24/25` for the content that now lives inside the drawer.
   Ignore the dimmed `21 — retired` frame.
 - `sales/sales-home.md` — narrative spec for the Board (this redesign).
 - `sales/00-overview.md` — cross-cutting sales decisions (chip system, dropdowns, IA).

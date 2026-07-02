@@ -566,6 +566,26 @@ export const auditLog = sqliteTable("audit_log", {
   createdAt: createdAt(),
 });
 
+// ---- Notifications (in-app nudges from the scheduled SLA job; staff-facing) ----
+export const NOTIFICATION_KINDS = ["deal_stuck", "proposal_followup", "lead_overdue"] as const;
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: pk(),
+    userId: text("user_id").notNull().references(() => users.id), // recipient (staff)
+    kind: text("kind", { enum: NOTIFICATION_KINDS }).notNull(),
+    entityType: text("entity_type", { enum: ["deal", "proposal", "lead"] }).notNull(),
+    entityId: text("entity_id").notNull(),
+    href: text("href").notNull(), // deep link into the app
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    readAt: integer("read_at", { mode: "timestamp" }),
+    emailedAt: integer("emailed_at", { mode: "timestamp" }), // escalation email sent (once per spell)
+    createdAt: createdAt(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.readAt)],
+);
+
 // ---- relations (for Drizzle's query API) ----
 export const organizationsRelations = relations(organizations, ({ one, many }) => ({
   accountOwner: one(users, {

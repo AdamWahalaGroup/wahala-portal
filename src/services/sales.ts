@@ -21,7 +21,7 @@ import { getSlaSettings } from "@/services/sla-settings";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 
-function assertStaff(ctx: AuthContext, action: string): void {
+export function assertStaff(ctx: AuthContext, action: string): void {
   if (!ctx.isStaff) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_staff" });
     throw new StageError("FORBIDDEN", "Wahala staff only.");

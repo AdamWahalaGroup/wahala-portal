@@ -7,8 +7,9 @@
  * STAGE_META probability anchors). The stored settings row carries only overrides; the
  * effective settings are default ⊕ stored.
  */
-import type { DealStage } from "@/domain/sales";
-import { FUNNEL_STAGES, STAGE_META, STUCK_AFTER_DAYS, daysInStage } from "@/domain/sales";
+// Relative imports (not the @/ alias) so the standalone cron Worker can bundle this chain.
+import type { DealStage } from "./sales";
+import { FUNNEL_STAGES, STAGE_META, STUCK_AFTER_DAYS, daysInStage } from "./sales";
 
 export type NudgeDigest = "off" | "monday" | "daily";
 

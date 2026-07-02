@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { Avatar } from "@/components/People";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
@@ -210,23 +211,26 @@ export function AppShell({
                 </div>
               </div>
             </div>
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                style={{
-                  background: "transparent",
-                  border: "1px solid #2c2f36",
-                  color: "#aeb2bb",
-                  borderRadius: 8,
-                  padding: "5px 10px",
-                  fontSize: 11.5,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Sign out
-              </button>
-            </form>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+              {user.isStaff && <NotificationsBell />}
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #2c2f36",
+                    color: "#aeb2bb",
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                    fontSize: 11.5,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </aside>

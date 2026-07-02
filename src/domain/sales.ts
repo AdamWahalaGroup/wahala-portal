@@ -10,7 +10,8 @@
  * Probability anchors come from the funnel model: pre-proposal percentages are the
  * chance of REACHING proposal; the percentage resets at proposal (a new race to close).
  */
-import { DEAL_STAGES } from "@/db/schema";
+// Relative import (not the @/ alias) so the standalone cron Worker can bundle this chain.
+import { DEAL_STAGES } from "../db/schema";
 
 export type DealStage = (typeof DEAL_STAGES)[number];
 
