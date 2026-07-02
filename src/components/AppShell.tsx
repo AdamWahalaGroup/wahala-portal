@@ -13,23 +13,14 @@ const NAV = [
   { key: "settings", label: "Settings", href: "/dashboard/settings" as string | null, staffOnly: true, adminOnly: true },
 ] as const;
 
-// Sales is a first-class destination with a sub-nav (design handoff, sales/00-overview.md).
-const SALES_SUBNAV = [
-  { key: "sales-board", label: "Board", href: "/dashboard/sales" },
-  { key: "sales-leads", label: "Leads", href: "/dashboard/sales/leads" },
-  { key: "sales-proposals", label: "Proposals", href: "/dashboard/sales/proposals" },
-] as const;
-
-// Settings gains a sub-nav too (frame 28): AI agents · SLAs & nudges.
+// Settings gains a sub-nav (frame 28): AI agents · SLAs & nudges. Sales is one item now
+// (frame 29, one-surface model) — leads/deals/proposals open as a drawer over the board.
 const SETTINGS_SUBNAV = [
   { key: "settings-agents", label: "AI agents", href: "/dashboard/settings" },
   { key: "settings-slas", label: "SLAs & nudges", href: "/dashboard/settings/slas" },
 ] as const;
 
-type NavKey =
-  | (typeof NAV)[number]["key"]
-  | (typeof SALES_SUBNAV)[number]["key"]
-  | (typeof SETTINGS_SUBNAV)[number]["key"];
+type NavKey = (typeof NAV)[number]["key"] | (typeof SETTINGS_SUBNAV)[number]["key"];
 
 /** Ink sidebar (brand, nav, account-owner card) + main column. Wraps dashboard pages. */
 export function AppShell({
@@ -99,6 +90,11 @@ export function AppShell({
                 }}
               >
                 {item.label}
+                {item.key === "sales" && user.isStaff && typeof leadCount === "number" && leadCount > 0 && (
+                  <span className="tabular" style={{ fontSize: 10, fontWeight: 800, background: isActive ? "rgba(255,255,255,.25)" : "#2c2f36", color: "var(--white)", borderRadius: 999, padding: "1px 7px" }}>
+                    {leadCount}
+                  </span>
+                )}
                 {!href && (
                   <span className="kicker" style={{ fontSize: 9, color: "#595e67" }}>
                     soon
@@ -114,38 +110,6 @@ export function AppShell({
                   </Link>
                 ) : (
                   inner
-                )}
-                {/* Sales sub-nav: Board · Leads · Proposals — indented, left-ruled */}
-                {item.key === "sales" && user.isStaff && inSales && (
-                  <div style={{ margin: "2px 0 4px 18px", borderLeft: "1px solid #2c2f36", paddingLeft: 8, display: "flex", flexDirection: "column", gap: 1 }}>
-                    {SALES_SUBNAV.map((sub) => {
-                      const subActive = active === sub.key;
-                      return (
-                        <Link key={sub.key} href={sub.href} style={{ textDecoration: "none" }}>
-                          <span
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              fontSize: 12.5,
-                              fontWeight: 600,
-                              color: subActive ? "var(--white)" : "#8b909a",
-                              background: subActive ? "var(--cobalt)" : "transparent",
-                            }}
-                          >
-                            {sub.label}
-                            {sub.key === "sales-leads" && typeof leadCount === "number" && leadCount > 0 && (
-                              <span className="tabular" style={{ fontSize: 10, fontWeight: 800, background: subActive ? "rgba(255,255,255,.25)" : "#2c2f36", color: "var(--white)", borderRadius: 999, padding: "1px 7px" }}>
-                                {leadCount}
-                              </span>
-                            )}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
                 )}
                 {/* Settings sub-nav: AI agents · SLAs & nudges — same indented, left-ruled pattern */}
                 {item.key === "settings" && isAdmin && inSettings && (

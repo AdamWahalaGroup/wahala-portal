@@ -150,9 +150,11 @@ export function CardPeek({
                     {btn("Pass", "danger", () => onPass(l))}
                     <Link
                       href={`/dashboard/sales/leads/${l.id}`}
+                      scroll={false}
+                      onClick={onClose}
                       style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}
                     >
-                      Open lead workspace →
+                      Open →
                     </Link>
                   </div>
                 </>
@@ -197,9 +199,11 @@ export function CardPeek({
                   <div style={{ display: "flex", alignItems: "center", marginTop: 14 }}>
                     <Link
                       href={`/dashboard/sales/deals/${d.id}`}
+                      scroll={false}
+                      onClick={onClose}
                       style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}
                     >
-                      Open deal room →
+                      Open →
                     </Link>
                   </div>
                 </>

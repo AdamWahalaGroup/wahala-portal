@@ -255,6 +255,7 @@ export type DealItem = {
   stage: DealStage;
   organizationId: string;
   organizationName: string;
+  ownerUserId: string | null;
   ownerName: string | null;
   contactName: string | null;
   valueCents: number;
@@ -312,6 +313,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
     stage: d.stage,
     organizationId: d.organizationId,
     organizationName: orgName.get(d.organizationId) ?? "Unknown",
+    ownerUserId: d.ownerUserId,
     ownerName: d.ownerUserId ? ownerName.get(d.ownerUserId) ?? null : null,
     contactName: d.primaryContactId ? contactName.get(d.primaryContactId) ?? null : null,
     valueCents: d.valueCents,
@@ -419,7 +421,7 @@ export type DealDetail = {
   org: { id: string; name: string; status: string };
   owner: { id: string; name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
-  sourceLead: { source: string | null; notes: string | null; createdAt: Date } | null;
+  sourceLead: { source: string | null; notes: string | null; createdAt: Date; scoutMd: string | null; scoutScore: number | null; scoutVerdict: "pursue" | "probe" | "pass" | null } | null;
   history: DealHistoryItem[];
   /** Stages this deal actually passed through (for the spine's skipped-vs-visited render). */
   visitedStages: DealStage[];
@@ -506,7 +508,9 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
     org: { id: org.id, name: org.name, status: org.status },
     owner: owner ? { id: owner.id, name: owner.name } : null,
     contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null,
-    sourceLead: lead ? { source: lead.source, notes: lead.notes, createdAt: lead.createdAt } : null,
+    sourceLead: lead
+      ? { source: lead.source, notes: lead.notes, createdAt: lead.createdAt, scoutMd: lead.aiAnalysisMd, scoutScore: lead.aiScore, scoutVerdict: lead.aiVerdict }
+      : null,
     history,
     visitedStages: [...visited],
   };

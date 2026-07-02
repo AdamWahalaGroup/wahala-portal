@@ -1,7 +1,7 @@
 /**
- * Lead workspace (frame 23) — the scout's dossier. Full app sidebar (the left nav
- * never disappears) with a wide content column; the dump + scout report lead in the
- * main column (~2/3), the record fields sit compact in the right rail. Staff only.
+ * Lead workspace (frame 29) — the scout's dossier as a drawer over the board. Single
+ * column at 520px: header, qualify/pass row (while new), the dump, the scout report,
+ * and the record editor stacked. Staff only.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -11,8 +11,7 @@ import { listWahalaStaff } from "@/services/clients";
 import { scopedDb } from "@/db/scoped";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
-import { AppShell } from "@/components/AppShell";
-import { BackButton } from "@/components/BackButton";
+import { SalesDrawer } from "@/components/SalesDrawer";
 import { LeadRow } from "@/components/SalesBoard";
 import { LeadRecordEditor, LeadFilesPanel, LeadScoutPanel } from "@/components/LeadWorkspace";
 
@@ -24,7 +23,7 @@ const STATUS_CHIP: Record<string, { bg: string; color: string; label: string }> 
   disqualified: { bg: "#F1F2F4", color: "#6B7280", label: "Passed" },
 };
 
-export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeadDrawerPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isStaff) redirect("/dashboard");
@@ -42,32 +41,19 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const chip = STATUS_CHIP[lead.status];
 
   return (
-    <AppShell
-      active="sales-leads"
-      user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
-      orgName="Wahala Group"
-      accountOwner={null}
-      wide
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-        <BackButton fallbackHref="/dashboard/sales/leads" />
-        <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-          <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales/leads">Leads</Link> /{" "}
-          <span style={{ color: "var(--ink)" }}>{lead.name}</span>
-        </div>
-      </div>
+    <SalesDrawer routeEcho={`sales / lead / ${lead.name}`}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>{lead.name}</h1>
+        <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, letterSpacing: "-.02em", flex: 1, minWidth: 0 }}>{lead.name}</h1>
         <span className="kicker" style={{ fontSize: 10, padding: "4px 10px", borderRadius: 999, background: chip.bg, color: chip.color }}>
           {chip.label}
           {lead.status === "new" && !lead.assignedToName ? " · unowned" : ""}
         </span>
-        {lead.convertedDealId && (
-          <Link href={`/dashboard/sales/deals/${lead.convertedDealId}`} style={{ fontSize: 13, fontWeight: 700 }}>
-            View the deal →
-          </Link>
-        )}
       </div>
+      {lead.convertedDealId && (
+        <Link href={`/dashboard/sales/deals/${lead.convertedDealId}`} style={{ display: "inline-block", marginTop: 8, fontSize: 13, fontWeight: 700 }}>
+          View the deal →
+        </Link>
+      )}
 
       {/* Qualify / pass / assign while the lead is still open */}
       {lead.status === "new" && (
@@ -98,45 +84,28 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </div>
       )}
 
-      {/* Dossier: dump + scout lead; the record sits in the rail */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)", gap: 28, marginTop: 22, alignItems: "start" }}>
-        <div>
-          <LeadFilesPanel
-            leadId={lead.id}
-            files={lead.files.map((f) => ({
-              id: f.id,
-              fileName: f.fileName,
-              mimeType: f.mimeType,
-              sizeBytes: f.sizeBytes,
-              uploaderName: f.uploaderName,
-            }))}
-            canDelete={canManage}
-          />
-          <LeadScoutPanel
-            leadId={lead.id}
-            analysisMd={lead.aiAnalysisMd}
-            score={lead.aiScore}
-            verdict={lead.aiVerdict}
-            analyzedAt={lead.aiAnalyzedAt}
-            canRun={canManage}
-          />
-        </div>
-        <aside>
-          <LeadRecordEditor
-            leadId={lead.id}
-            initial={{
-              name: lead.name,
-              company: lead.company ?? "",
-              email: lead.email ?? "",
-              phone: lead.phone ?? "",
-              source: lead.source ?? "",
-              industry: lead.industry ?? "",
-              notes: lead.notes ?? "",
-            }}
-            editable={lead.status === "new" || canManage}
-          />
-        </aside>
+      {/* The dump, the scout report, then the record — stacked */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 20 }}>
+        <LeadFilesPanel
+          leadId={lead.id}
+          files={lead.files.map((f) => ({ id: f.id, fileName: f.fileName, mimeType: f.mimeType, sizeBytes: f.sizeBytes, uploaderName: f.uploaderName }))}
+          canDelete={canManage}
+        />
+        <LeadScoutPanel leadId={lead.id} analysisMd={lead.aiAnalysisMd} score={lead.aiScore} verdict={lead.aiVerdict} analyzedAt={lead.aiAnalyzedAt} canRun={canManage} />
+        <LeadRecordEditor
+          leadId={lead.id}
+          initial={{
+            name: lead.name,
+            company: lead.company ?? "",
+            email: lead.email ?? "",
+            phone: lead.phone ?? "",
+            source: lead.source ?? "",
+            industry: lead.industry ?? "",
+            notes: lead.notes ?? "",
+          }}
+          editable={lead.status === "new" || canManage}
+        />
       </div>
-    </AppShell>
+    </SalesDrawer>
   );
 }

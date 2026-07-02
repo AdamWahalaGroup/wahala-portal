@@ -8,7 +8,7 @@
  * The old stacked layout survives as the ☰ List view.
  */
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
@@ -345,9 +345,20 @@ function dragPayload(e: React.DragEvent): { kind: "lead" | "deal"; id: string } 
   return { kind, id: raw.slice(idx + 1) };
 }
 
-function KanbanView({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+function KanbanView({ overview, canManage, filter, currentUserId }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string }) {
   const router = useRouter();
-  const newLeads = overview.leads.filter((l) => l.status === "new");
+  // Filter chips lens the board (frame 29). Counts in the summary strip stay whole.
+  const dealPred = (d: DealItem): boolean => {
+    if (filter === "mine") return d.ownerUserId === currentUserId;
+    if (filter === "stuck") return d.stuck;
+    if (filter === "proposals_out") return d.stage === "proposal" || d.stage === "negotiation";
+    if (filter === "to_qualify") return false; // leads-only lens
+    return true;
+  };
+  const showLeads = filter === "all" || filter === "to_qualify" || filter === "mine";
+  const newLeads = overview.leads.filter(
+    (l) => l.status === "new" && showLeads && (filter !== "mine" || l.assignedToUserId === currentUserId),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -443,12 +454,13 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
   };
 
   const column = (col: FunnelColumn) => {
-    const sum = col.deals.reduce((n, d) => n + d.valueCents, 0);
-    const stuckHere = col.deals.filter((d) => d.stuck).length;
+    const cdeals = col.deals.filter(dealPred);
+    const sum = cdeals.reduce((n, d) => n + d.valueCents, 0);
+    const stuckHere = cdeals.filter((d) => d.stuck).length;
     const amber = stuckHere > 0;
     const isOpen = !!expanded[col.stage];
-    const shown = isOpen ? col.deals : col.deals.slice(0, CARD_CAP);
-    const hidden = col.deals.slice(shown.length);
+    const shown = isOpen ? cdeals : cdeals.slice(0, CARD_CAP);
+    const hidden = cdeals.slice(shown.length);
     return (
       <div
         key={col.stage}
@@ -484,7 +496,7 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
                 marginLeft: "auto",
               }}
             >
-              {col.deals.length}
+              {cdeals.length}
               {amber ? ` · ${stuckHere}⚠` : ""}
             </span>
           </div>
@@ -512,7 +524,7 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
   // Won / Lost containers — terminal drop targets that also HOLD the deals dropped in.
   const dropZone = (kind: "won" | "lost") => {
     const won = kind === "won";
-    const deals = won ? overview.wonDeals : overview.lostDeals;
+    const deals = (won ? overview.wonDeals : overview.lostDeals).filter(dealPred);
     const sum = deals.reduce((n, d) => n + d.valueCents, 0);
     const c = won
       ? { bg: "#DCF5E3", dash: "#9FD9B4", solid: "#16A34A", text: "#15803D", pill: "#C6ECD2", hint: "drop a deal here → becomes a project" }
@@ -856,8 +868,23 @@ function ListView({ overview, canManage }: { overview: SalesOverview; canManage:
 
 const VIEW_KEY = "wahala.sales-view";
 
-export function SalesBoard({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+export type SalesFilter = "all" | "mine" | "to_qualify" | "proposals_out" | "stuck";
+
+export function SalesBoard({ overview, canManage, currentUserId }: { overview: SalesOverview; canManage: boolean; currentUserId?: string }) {
+  const router = useRouter();
+  const search = useSearchParams();
+  const filter = (search.get("filter") as SalesFilter) || "all";
   const [view, setView] = useState<"board" | "list">("board");
+  const [capturing, setCapturing] = useState(false);
+
+  // Chip counts come from the FULL overview (they're lenses into the whole board).
+  const toQualifyN = overview.leads.filter((l) => l.status === "new").length;
+  const proposalsOutN = overview.columns.reduce((n, c) => n + (c.stage === "proposal" || c.stage === "negotiation" ? c.deals.length : 0), 0);
+  const stuckN = overview.stuckCount;
+
+  function setFilter(f: SalesFilter) {
+    router.push(f === "all" ? "/dashboard/sales" : `/dashboard/sales?filter=${f}`, { scroll: false });
+  }
 
   useEffect(() => {
     try {
@@ -895,34 +922,83 @@ export function SalesBoard({ overview, canManage }: { overview: SalesOverview; c
     </button>
   );
 
+  const chip = (f: SalesFilter, label: string, count?: number, countColor?: string) => {
+    const on = filter === f;
+    const stuckLens = f === "stuck";
+    return (
+      <button
+        onClick={() => setFilter(f)}
+        style={{
+          border: on ? "1px solid transparent" : `1px solid ${stuckLens ? "#FADCB4" : "#E2E3E8"}`,
+          background: on ? "var(--ink)" : stuckLens ? "#FFF7ED" : "var(--white)",
+          color: on ? "var(--white)" : stuckLens ? "#B45309" : "#5A6069",
+          borderRadius: 999,
+          padding: "5px 11px",
+          fontSize: 11.5,
+          fontWeight: on ? 700 : 600,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        {label}
+        {typeof count === "number" && count > 0 && (
+          <span className="tabular" style={{ fontWeight: 800, color: on ? "var(--white)" : countColor ?? "inherit" }}>{count}</span>
+        )}
+      </button>
+    );
+  };
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
           <div className="kicker">Sales</div>
-          <h1 style={{ margin: "6px 0 0", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Pipeline</h1>
+          <h1 style={{ margin: "6px 0 8px", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Pipeline</h1>
+          {/* Filter chips — the old Leads/Proposals pages, as lenses (frame 29) */}
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            {chip("all", "All")}
+            {currentUserId && chip("mine", "Mine")}
+            {chip("to_qualify", "To qualify", toQualifyN, "var(--cobalt-text)")}
+            {chip("proposals_out", "Proposals out", proposalsOutN, "#0891B2")}
+            {chip("stuck", "⚠ Stuck", stuckN)}
+          </div>
         </div>
         <div style={{ display: "flex", background: "#F1F2F4", borderRadius: 9, padding: 3, flex: "none" }}>
           {tab("board", "▦ Board")}
           {tab("list", "☰ List")}
         </div>
-        <Link
-          href="/dashboard/sales/leads"
+        <button
+          onClick={() => setCapturing((v) => !v)}
           style={{
-            background: "var(--ink)",
-            color: "var(--white)",
+            background: capturing ? "var(--surface-soft)" : "var(--ink)",
+            color: capturing ? "var(--ink)" : "var(--white)",
+            border: "1px solid transparent",
             borderRadius: 9,
             padding: "9px 15px",
             fontSize: 13,
             fontWeight: 600,
-            textDecoration: "none",
+            cursor: "pointer",
             flex: "none",
           }}
         >
-          + Capture lead
-        </Link>
+          {capturing ? "Cancel" : "+ Capture lead"}
+        </button>
       </div>
-      {view === "board" ? <KanbanView overview={overview} canManage={canManage} /> : <ListView overview={overview} canManage={canManage} />}
+
+      {capturing && (
+        <div style={{ marginTop: 14, background: "var(--cobalt-wash)", border: "2px dashed var(--cobalt-wash-border)", borderRadius: 14, padding: 16 }}>
+          <div className="kicker" style={{ color: "var(--cobalt-text)", marginBottom: 10 }}>Quick capture — trap it now, qualify it later</div>
+          <LeadCaptureForm />
+        </div>
+      )}
+
+      {view === "board" ? (
+        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} />
+      ) : (
+        <ListView overview={overview} canManage={canManage} />
+      )}
     </div>
   );
 }
