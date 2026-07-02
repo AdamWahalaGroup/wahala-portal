@@ -45,11 +45,12 @@ export function ContactBlock({
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name, email: email ?? "", phone: phone ?? "" });
 
-  function edit(focus?: "email" | "phone") {
+  const missing = !email || !phone;
+
+  function edit() {
     setForm({ name, email: email ?? "", phone: phone ?? "" });
     setError(null);
     setOpen(true);
-    if (focus) queueMicrotask(() => document.getElementById(`contact-${focus}`)?.focus());
   }
 
   async function save() {
@@ -77,25 +78,6 @@ export function ContactBlock({
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const missingChip = (label: string, focus: "email" | "phone") => (
-    <button
-      onClick={() => canManage && edit(focus)}
-      disabled={!canManage}
-      className="kicker"
-      style={{
-        fontSize: 9.5,
-        padding: "3px 9px",
-        borderRadius: 999,
-        color: "#B45309",
-        background: "#FFF7ED",
-        border: "1px dashed #FADCB4",
-        cursor: canManage ? "pointer" : "default",
-      }}
-    >
-      ⚠ {label}
-    </button>
-  );
-
   return (
     <section>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
@@ -115,25 +97,22 @@ export function ContactBlock({
             <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)" }}>{orgName}</div>
           </div>
           {canManage && !open && (
-            <button onClick={() => edit()} style={{ border: "none", background: "transparent", color: "var(--cobalt-text)", fontSize: 12.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
+            <button
+              onClick={() => edit()}
+              title={missing ? "Missing contact details" : "Edit contact"}
+              style={{ border: "none", background: "transparent", color: missing ? "#B45309" : "var(--cobalt-text)", fontSize: 12.5, fontWeight: 700, cursor: "pointer", flex: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
+            >
+              {missing && <span aria-hidden>⚠</span>}
               Edit
             </button>
           )}
         </div>
 
         {!open && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {email ? (
-              <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{email}</span>
-            ) : (
-              missingChip("add email", "email")
-            )}
-            {(email || phone) && phone && <span style={{ color: "var(--muted-line)" }}>·</span>}
-            {phone ? (
-              <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{phone}</span>
-            ) : (
-              missingChip("add phone", "phone")
-            )}
+          <div className="mono" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10, fontSize: 11.5 }}>
+            <span style={{ color: email ? "var(--ink-soft)" : "var(--muted-line)" }}>{email || "no email"}</span>
+            <span style={{ color: "var(--muted-line)" }}>·</span>
+            <span style={{ color: phone ? "var(--ink-soft)" : "var(--muted-line)" }}>{phone || "no phone"}</span>
           </div>
         )}
 
