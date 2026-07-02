@@ -12,7 +12,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
-import { CardPeek, type PeekTarget, type PeekAnchor } from "@/components/CardPeek";
 import type { SalesOverview, DealItem, LeadItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
@@ -363,12 +362,9 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [peek, setPeek] = useState<{ target: PeekTarget; anchor: PeekAnchor } | null>(null);
 
-  function openPeek(target: PeekTarget, e: React.MouseEvent) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setPeek({ target, anchor: { top: r.top, left: r.left, width: r.width, height: r.height } });
-  }
+  // A card click goes straight to its drawer (soft nav — the board stays behind).
+  const openDrawer = (href: string) => router.push(href, { scroll: false });
 
   async function run(url: string, body: unknown) {
     setBusy(true);
@@ -411,18 +407,10 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
 
   async function passLead(lead: LeadItem) {
     if (!window.confirm(`Pass on ${lead.name}?`)) return;
-    setPeek(null);
     await run(`/api/leads/${lead.id}`, { action: "disqualify" });
   }
 
-  async function qualifyFromPeek(leadId: string) {
-    setPeek(null);
-    await run(`/api/leads/${leadId}`, { action: "qualify" });
-  }
-
-  const dealCard = (d: DealItem) => {
-    const isPeeked = peek?.target.kind === "deal" && peek.target.deal.id === d.id;
-    return (
+  const dealCard = (d: DealItem) => (
     <div
       key={d.id}
       draggable={canManage}
@@ -430,11 +418,11 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
         e.dataTransfer.setData("text/plain", `deal:${d.id}`);
         e.dataTransfer.effectAllowed = "move";
       }}
-      onClick={(e) => openPeek({ kind: "deal", deal: d }, e)}
+      onClick={() => openDrawer(`/dashboard/sales/deals/${d.id}`)}
       style={{
         background: "var(--white)",
-        border: isPeeked ? "1.5px solid #C9D0FB" : "1px solid #EDEDF1",
-        boxShadow: isPeeked ? "0 0 0 3px #F3F5FF" : "0 1px 2px rgba(0,0,0,.04)",
+        border: "1px solid #EDEDF1",
+        boxShadow: "0 1px 2px rgba(0,0,0,.04)",
         borderRadius: 10,
         padding: "11px 12px",
         cursor: canManage ? "grab" : "pointer",
@@ -450,8 +438,7 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
         <DaysTag days={d.daysInStage} stuck={d.stuck} />
       </div>
     </div>
-    );
-  };
+  );
 
   const column = (col: FunnelColumn) => {
     const cdeals = col.deals.filter(dealPred);
@@ -632,9 +619,7 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
             </div>
             <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 3 }}>new leads land here</div>
           </div>
-          {newLeads.map((l) => {
-            const isPeeked = peek?.target.kind === "lead" && peek.target.lead.id === l.id;
-            return (
+          {newLeads.map((l) => (
             <div
               key={l.id}
               draggable={canManage}
@@ -642,11 +627,10 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
                 e.dataTransfer.setData("text/plain", `lead:${l.id}`);
                 e.dataTransfer.effectAllowed = "move";
               }}
-              onClick={(e) => openPeek({ kind: "lead", lead: l }, e)}
+              onClick={() => openDrawer(`/dashboard/sales/leads/${l.id}`)}
               style={{
                 background: "var(--white)",
-                border: isPeeked ? "1.5px solid #C9D0FB" : `1px solid ${l.overdue ? "#FADCB4" : "#E7E8EC"}`,
-                boxShadow: isPeeked ? "0 0 0 3px #F3F5FF" : "none",
+                border: `1px solid ${l.overdue ? "#FADCB4" : "#E7E8EC"}`,
                 borderRadius: 10,
                 padding: "11px 12px",
                 cursor: canManage ? "grab" : "pointer",
@@ -677,8 +661,7 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
                 <ScoreChip score={l.aiScore} verdict={l.aiVerdict} />
               </div>
             </div>
-            );
-          })}
+          ))}
           <div className="mono" style={{ fontSize: 9.5, color: "#B4B9C1", textAlign: "center", padding: "2px 0" }}>
             {newLeads.length > 0 ? "drag right to qualify →" : "inbox zero"}
           </div>
@@ -692,17 +675,6 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
         {dropZone("won")}
         {dropZone("lost")}
       </div>
-
-      {peek && (
-        <CardPeek
-          target={peek.target}
-          anchor={peek.anchor}
-          busy={busy}
-          onClose={() => setPeek(null)}
-          onQualify={qualifyFromPeek}
-          onPass={passLead}
-        />
-      )}
     </div>
   );
 }
