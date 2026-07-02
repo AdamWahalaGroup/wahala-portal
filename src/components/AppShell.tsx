@@ -19,7 +19,16 @@ const SALES_SUBNAV = [
   { key: "sales-proposals", label: "Proposals", href: "/dashboard/sales/proposals" },
 ] as const;
 
-type NavKey = (typeof NAV)[number]["key"] | (typeof SALES_SUBNAV)[number]["key"];
+// Settings gains a sub-nav too (frame 28): AI agents · SLAs & nudges.
+const SETTINGS_SUBNAV = [
+  { key: "settings-agents", label: "AI agents", href: "/dashboard/settings" },
+  { key: "settings-slas", label: "SLAs & nudges", href: "/dashboard/settings/slas" },
+] as const;
+
+type NavKey =
+  | (typeof NAV)[number]["key"]
+  | (typeof SALES_SUBNAV)[number]["key"]
+  | (typeof SETTINGS_SUBNAV)[number]["key"];
 
 /** Ink sidebar (brand, nav, account-owner card) + main column. Wraps dashboard pages. */
 export function AppShell({
@@ -39,6 +48,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const inSales = active === "sales" || active.startsWith("sales-");
+  const inSettings = active === "settings" || active.startsWith("settings-");
   const isAdmin = user.role === "wahala_admin";
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-soft)" }}>
@@ -67,7 +77,7 @@ export function AppShell({
 
         <nav style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.filter((item) => (!item.staffOnly || user.isStaff) && (!item.adminOnly || isAdmin)).map((item) => {
-            const isActive = item.key === active || (item.key === "sales" && inSales);
+            const isActive = item.key === active || (item.key === "sales" && inSales) || (item.key === "settings" && inSettings);
             // Staff get the cross-client Projects index; clients keep their dashboard.
             const href = item.key === "projects" && user.isStaff ? "/dashboard/projects" : item.href;
             const inner = (
@@ -127,6 +137,32 @@ export function AppShell({
                                 {leadCount}
                               </span>
                             )}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Settings sub-nav: AI agents · SLAs & nudges — same indented, left-ruled pattern */}
+                {item.key === "settings" && isAdmin && inSettings && (
+                  <div style={{ margin: "2px 0 4px 18px", borderLeft: "1px solid #2c2f36", paddingLeft: 8, display: "flex", flexDirection: "column", gap: 1 }}>
+                    {SETTINGS_SUBNAV.map((sub) => {
+                      const subActive = active === sub.key;
+                      return (
+                        <Link key={sub.key} href={sub.href} style={{ textDecoration: "none" }}>
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "6px 10px",
+                              borderRadius: 999,
+                              fontSize: 12.5,
+                              fontWeight: 600,
+                              color: subActive ? "var(--white)" : "#8b909a",
+                              background: subActive ? "var(--cobalt)" : "transparent",
+                            }}
+                          >
+                            {sub.label}
                           </span>
                         </Link>
                       );

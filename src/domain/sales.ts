@@ -75,3 +75,25 @@ export const ENGINEERING_REVIEW_ABOVE = 3;
 export function needsEngineeringReview(score: number | null): boolean {
   return score !== null && score > ENGINEERING_REVIEW_ABOVE;
 }
+
+/** One-line "what to do next" for a deal in this stage — used by the board card peek. */
+export function nextStepFor(stage: DealStage): string {
+  switch (stage) {
+    case "discovery":
+      return "Capture the discovery call, then distill the package.";
+    case "business_requirements":
+      return "Confirm requirements and who signs off.";
+    case "solution_design":
+      return "Shape the approach, then draft the proposal.";
+    case "proposal":
+      return "Price both options and send the share link.";
+    case "negotiation":
+      return "Close the open questions and get a decision.";
+    case "contract":
+      return "Commercials, invite the client, execute.";
+    case "won":
+      return "Handed off — deal room is now a project.";
+    case "lost":
+      return "Closed lost — reason is in the history.";
+  }
+}

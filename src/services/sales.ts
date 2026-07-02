@@ -15,7 +15,9 @@ import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { isDealStage, daysInStage, isStuck, FUNNEL_STAGES, STAGE_META, type DealStage } from "@/domain/sales";
+import { isDealStage, daysInStage, FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
+import { isStuckWith, isLeadOverdue, type SlaSettings } from "@/domain/sla";
+import { getSlaSettings } from "@/services/sla-settings";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 
@@ -50,13 +52,21 @@ export type LeadItem = {
   assignedToName: string | null;
   aiScore: number | null;
   aiVerdict: "pursue" | "probe" | "pass" | null;
+  /** The scout's full opinion (markdown), shown in the board card peek. */
+  aiAnalysisMd: string | null;
+  /** Still-new past the triage SLA — flags ⚠ on its Triage card. */
+  overdue: boolean;
   createdAt: Date;
 };
 
 export async function listLeads(ctx: AuthContext): Promise<LeadItem[]> {
   assertStaff(ctx, "list_leads");
   const db = getDb();
-  const rows = await db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt));
+  const [rows, sla] = await Promise.all([
+    db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt)),
+    getSlaSettings(),
+  ]);
+  const now = new Date();
   const userIds = [...new Set(rows.map((l) => l.assignedToUserId).filter((v): v is string => !!v))];
   const names = new Map<string, string>();
   if (userIds.length > 0) {
@@ -80,6 +90,8 @@ export async function listLeads(ctx: AuthContext): Promise<LeadItem[]> {
     assignedToName: l.assignedToUserId ? names.get(l.assignedToUserId) ?? null : null,
     aiScore: l.aiScore,
     aiVerdict: l.aiVerdict,
+    aiAnalysisMd: l.aiAnalysisMd,
+    overdue: l.status === "new" && isLeadOverdue(l.createdAt, now, sla),
     createdAt: l.createdAt,
   }));
 }
@@ -250,9 +262,15 @@ export type DealItem = {
   stuck: boolean;
   stageEnteredAt: Date;
   notes: string | null;
+  /** One-line next step for this stage (board card peek). */
+  nextStep: string;
+  /** Scout opinion carried from the source lead, so it's readable from the deal too. */
+  scoutMd: string | null;
+  scoutScore: number | null;
+  scoutVerdict: "pursue" | "probe" | "pass" | null;
 };
 
-async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
+async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealItem[]> {
   const db = getDb();
   let rows = await db.select().from(schema.deals).orderBy(desc(schema.deals.createdAt));
   // Non-admin staff see deals only for orgs in their access scope, matching listClients.
@@ -263,8 +281,9 @@ async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
   const orgIds = [...new Set(rows.map((d) => d.organizationId))];
   const userIds = [...new Set(rows.map((d) => d.ownerUserId).filter((v): v is string => !!v))];
   const contactIds = [...new Set(rows.map((d) => d.primaryContactId).filter((v): v is string => !!v))];
+  const leadIds = [...new Set(rows.map((d) => d.sourceLeadId).filter((v): v is string => !!v))];
 
-  const [orgs, owners, people] = await Promise.all([
+  const [orgs, owners, people, sourceLeads] = await Promise.all([
     db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds)),
     userIds.length > 0
       ? db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
@@ -272,13 +291,22 @@ async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
     contactIds.length > 0
       ? db.select({ id: schema.contacts.id, name: schema.contacts.name }).from(schema.contacts).where(inArray(schema.contacts.id, contactIds))
       : Promise.resolve([]),
+    leadIds.length > 0
+      ? db
+          .select({ id: schema.leads.id, aiAnalysisMd: schema.leads.aiAnalysisMd, aiScore: schema.leads.aiScore, aiVerdict: schema.leads.aiVerdict })
+          .from(schema.leads)
+          .where(inArray(schema.leads.id, leadIds))
+      : Promise.resolve([]),
   ]);
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const ownerName = new Map(owners.map((u) => [u.id, u.name]));
   const contactName = new Map(people.map((c) => [c.id, c.name]));
+  const leadScout = new Map(sourceLeads.map((l) => [l.id, l]));
 
   const now = new Date();
-  return rows.map((d) => ({
+  return rows.map((d) => {
+    const scout = d.sourceLeadId ? leadScout.get(d.sourceLeadId) : undefined;
+    return {
     id: d.id,
     name: d.name,
     stage: d.stage,
@@ -288,10 +316,15 @@ async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
     contactName: d.primaryContactId ? contactName.get(d.primaryContactId) ?? null : null,
     valueCents: d.valueCents,
     daysInStage: daysInStage(d.stageEnteredAt, now),
-    stuck: d.stage !== "won" && d.stage !== "lost" && isStuck(d.stageEnteredAt, now),
+    stuck: isStuckWith(d.stage, d.stageEnteredAt, now, sla),
     stageEnteredAt: d.stageEnteredAt,
     notes: d.notes,
-  }));
+    nextStep: nextStepFor(d.stage),
+    scoutMd: scout?.aiAnalysisMd ?? null,
+    scoutScore: scout?.aiScore ?? null,
+    scoutVerdict: scout?.aiVerdict ?? null,
+    };
+  });
 }
 
 /**
@@ -457,6 +490,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
   }
 
   const now = new Date();
+  const sla = await getSlaSettings();
   return {
     deal: {
       id: deal.id,
@@ -467,7 +501,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       discoveryMd: deal.discoveryMd,
       createdAt: deal.createdAt,
       daysInStage: daysInStage(deal.stageEnteredAt, now),
-      stuck: deal.stage !== "won" && deal.stage !== "lost" && isStuck(deal.stageEnteredAt, now),
+      stuck: isStuckWith(deal.stage, deal.stageEnteredAt, now, sla),
     },
     org: { id: org.id, name: org.name, status: org.status },
     owner: owner ? { id: owner.id, name: owner.name } : null,
@@ -507,12 +541,17 @@ export type SalesOverview = {
 /** Everything the Sales page needs: lead inbox + stage-grouped open pipeline. */
 export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   assertStaff(ctx, "sales_overview");
-  const [leads, deals] = await Promise.all([listLeads(ctx), loadDealItems(ctx)]);
+  const sla = await getSlaSettings();
+  const [leads, deals] = await Promise.all([listLeads(ctx), loadDealItems(ctx, sla)]);
+
+  // Effective anchors come from SLA settings (admin-tunable); STAGE_META supplies the label/toward.
+  const anchorFor = (stage: DealStage): number | null =>
+    stage in sla.probabilityAnchors ? sla.probabilityAnchors[stage] : STAGE_META[stage].probabilityPct;
 
   const columns: FunnelColumn[] = FUNNEL_STAGES.map((stage) => ({
     stage,
     label: STAGE_META[stage].label,
-    probabilityPct: STAGE_META[stage].probabilityPct,
+    probabilityPct: anchorFor(stage),
     toward: STAGE_META[stage].toward,
     deals: deals.filter((d) => d.stage === stage),
   }));
@@ -533,7 +572,7 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
     lostCount: deals.filter((d) => d.stage === "lost").length,
     openPipelineCents: open.reduce((n, d) => n + d.valueCents, 0),
     openWeightedCents: Math.round(
-      open.reduce((n, d) => n + d.valueCents * ((STAGE_META[d.stage].probabilityPct ?? 50) / 100), 0),
+      open.reduce((n, d) => n + d.valueCents * ((anchorFor(d.stage) ?? 50) / 100), 0),
     ),
     stuckCount: open.filter((d) => d.stuck).length,
     wonThisQCount: wonThisQ.length,

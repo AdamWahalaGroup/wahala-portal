@@ -80,6 +80,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               assignedToName: lead.assignedToName,
               aiScore: lead.aiScore,
               aiVerdict: lead.aiVerdict,
+              aiAnalysisMd: lead.aiAnalysisMd,
+              overdue: false,
               createdAt: lead.createdAt,
             }}
             orgs={orgs.map((o) => ({ id: o.id, name: o.name }))}

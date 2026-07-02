@@ -2286,6 +2286,10 @@
         <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>▤</span>Projects</div>
         <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>✉</span>Messages</div>
         <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; background:#23262e; color:#fff; font-size:13px; font-weight:600;"><span style="color:#7aa2ff;">⚙</span>Settings</div>
+        <div style="display:flex; flex-direction:column; gap:1px; margin:2px 0 2px 19px; padding-left:11px; border-left:1px solid #2c2f38;">
+          <div style="padding:6px 10px; border-radius:7px; background:#2b3ee6; color:#fff; font-size:12px; font-weight:600;">AI agents</div>
+          <div style="padding:6px 10px; border-radius:7px; color:#9aa0aa; font-size:12px;">SLAs &amp; nudges</div>
+        </div>
       </div>
     </div>
     <div style="padding:26px 30px 32px; background:#fbfbfc;">
@@ -2324,10 +2328,10 @@
         <div style="border:1px solid #e7e8ec; border-radius:12px; padding:14px 18px; background:#fff; display:flex; align-items:center; gap:14px;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:9px;"><span style="font-size:13.5px; font-weight:700;">Lead recon (web search)</span><span style="font-size:10px; font-weight:600; color:#4b5159; background:#f1f2f4; padding:2px 8px; border-radius:999px;">default · <span class="mono">gpt-4o-search</span></span><span style="font-size:10px; color:#9aa0aa;">· no reasoning knob</span></div><div style="font-size:12px; color:#767b85; margin-top:2px;">The web-research pass before the scout. Must be a search-capable model.</div></div><span style="font-size:12px; font-weight:600; color:#2b3ee6; cursor:pointer;">Edit →</span></div>
       </div>
 
-      <!-- room to grow -->
+      <!-- moved to SLAs & nudges -->
       <div style="margin-top:16px; border:1px dashed #d7d9df; border-radius:12px; padding:14px 18px; background:#fff;">
-        <div class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#b4b9c1; margin-bottom:6px;">Coming to this page</div>
-        <div style="font-size:12.5px; color:#9aa0aa; line-height:1.5;">Complexity-review threshold · stuck-days window · pipeline probability anchors.</div>
+        <div class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#b4b9c1; margin-bottom:6px;">Looking for thresholds?</div>
+        <div style="font-size:12.5px; color:#9aa0aa; line-height:1.5;">Stuck-days window · probability anchors · response SLAs now live in <span style="color:#2536c4; font-weight:600; cursor:pointer;">SLAs &amp; nudges →</span></div>
       </div>
     </div>
   </div>
@@ -2913,6 +2917,192 @@
           <span style="font-size:11px; font-weight:700; color:#15803d; background:#c6ecd2; padding:2px 8px; border-radius:999px;">7 this quarter</span>
           <span class="mono tnum" style="font-size:12px; color:#15803d; font-weight:600;">$212k</span>
           <span style="font-size:12px; font-weight:600; color:#15803d; margin-left:auto; cursor:pointer;">View won deals →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ FRAME 21c : BOARD · card peek (click a card → panel in place) ============ -->
+<div id="21c" style="position:absolute; left:3720px; top:20800px; width:980px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#2b3ee6;">21c — Board · card peek</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">click any card → info in place · no tab-switching to see the scout report</span>
+  </div>
+  <div style="background:#fbfbfc; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); padding:24px; display:grid; grid-template-columns:220px 220px 1fr; gap:14px; align-items:start;">
+
+    <!-- Triage column (backdrop, selected card highlighted) -->
+    <div style="background:#f4f5f7; border:1.5px dashed #d7d9df; border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; opacity:.92;">
+      <div style="display:flex; align-items:center; gap:8px; padding:4px 4px 0;">
+        <span style="width:9px; height:9px; border-radius:2px; background:#2b3ee6;"></span>
+        <span style="font-size:13px; font-weight:700;">Triage</span>
+        <span style="font-size:10.5px; font-weight:700; color:#2b3ee6; background:#eef0fe; padding:1px 7px; border-radius:999px;">3</span>
+      </div>
+      <!-- selected card: active-row highlight -->
+      <div style="background:#fff; border:1.5px solid #c9d0fb; box-shadow:0 0 0 3px #f3f5ff; border-radius:10px; padding:11px 12px; cursor:pointer;">
+        <div style="font-size:12.5px; font-weight:700; line-height:1.3;">Marcus Reilly</div>
+        <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:3px;">airport bar · fintech</div>
+        <div style="margin-top:8px;"><span style="display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; background:#dcf5e3; color:#15803d; padding:2px 8px; border-radius:999px;"><span style="width:5px; height:5px; border-radius:50%; background:#16a34a;"></span><span class="mono">8/10</span> PURSUE</span></div>
+      </div>
+      <div style="background:#fff; border:1px solid #e7e8ec; border-radius:10px; padding:11px 12px; opacity:.65;">
+        <div style="font-size:12.5px; font-weight:700; line-height:1.3;">Priya N. (Loomis)</div>
+        <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:3px;">referral · healthcare</div>
+      </div>
+    </div>
+
+    <!-- Discovery column (backdrop) -->
+    <div style="background:#fff; border:1px solid #e7e8ec; border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px; opacity:.65;">
+      <div style="display:flex; align-items:center; gap:8px; padding:4px 4px 0;">
+        <span style="width:9px; height:9px; border-radius:2px; background:#2563eb;"></span>
+        <span style="font-size:13px; font-weight:700;">Discovery</span>
+        <span style="font-size:10.5px; font-weight:600; color:#767b85; background:#f1f2f4; padding:1px 7px; border-radius:999px;">5</span>
+      </div>
+      <div style="background:#fff; border:1px solid #ededf1; border-radius:10px; padding:11px 12px; box-shadow:0 1px 2px rgba(0,0,0,.04);">
+        <div style="font-size:12.5px; font-weight:700; color:#2b3ee6; line-height:1.3;">Meridian — data platform</div>
+        <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:3px;">Meridian Co. · Ada</div>
+      </div>
+    </div>
+
+    <!-- PEEK PANEL (anchored beside the clicked card) -->
+    <div style="background:#fff; border:1px solid #e7e8ec; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 24px 60px -24px rgba(0,0,0,.35); overflow:hidden;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px 18px 0;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:16px; font-weight:800; letter-spacing:-.02em;">Marcus Reilly</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:3px 9px; border-radius:999px;"><span style="width:6px; height:6px; border-radius:50%; background:#16a34a;"></span><span class="mono">8/10</span> PURSUE</span>
+          </div>
+          <div class="mono" style="font-size:10.5px; color:#9aa0aa; margin-top:5px;">lead · airport bar · fintech · via Ada · 2d ago</div>
+        </div>
+        <span style="color:#c4c8cf; font-size:16px; cursor:pointer; line-height:1;">×</span>
+      </div>
+      <div style="padding:14px 18px 16px;">
+        <div class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; margin-bottom:8px;">Scout report</div>
+        <div style="border:1px solid #ededf1; border-radius:10px; background:#fbfbfc; padding:12px 14px;">
+          <div class="mono" style="font-size:11px; line-height:1.75; color:#3a3f47;">
+            <span style="color:#15803d; font-weight:700;">Pursue.</span> VP Eng at a Series-B fintech (~120 ppl); budget owner.<br/>
+            Pain: reporting pipeline is manual, board asks weekly.<br/>
+            Warm intro path: Ada shared a flight; asked <em>us</em> to follow up.<br/>
+            <span style="color:#9aa0aa;">Risk: procurement runs through parent co — expect 2–3 wk legal.</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:14px;">
+          <button style="border:0; background:#16181d; color:#fff; font:600 12.5px 'Hanken Grotesk'; padding:9px 16px; border-radius:8px; cursor:pointer;">Qualify → Discovery</button>
+          <button style="border:1px solid #e2e3e8; background:#fff; color:#767b85; font:600 12.5px 'Hanken Grotesk'; padding:9px 14px; border-radius:8px; cursor:pointer;">Pass</button>
+          <span style="margin-left:auto; font-size:12.5px; font-weight:600; color:#2b3ee6; cursor:pointer;">Open lead workspace →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- behavior note -->
+    <div style="grid-column:1 / -1; display:flex; gap:18px; align-items:baseline; border-top:1px solid #ededf1; padding-top:12px;">
+      <span class="mono" style="font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa; white-space:nowrap;">Behavior</span>
+      <span class="mono" style="font-size:10.5px; color:#9aa0aa; line-height:1.7;">whole card is the click target · click = peek · drag = move (5px threshold disambiguates) · Esc or × closes · deal cards peek the same way: value, stage, days, next step + <span style="color:#2536c4;">Open deal room →</span> · the scout report travels with the deal after qualify</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 28 : ADMIN SETTINGS · SLAs & nudges ============ -->
+<div id="28" style="position:absolute; left:2260px; top:27400px; width:940px;">
+  <div data-drags-parent="1" style="display:flex; align-items:baseline; gap:12px; margin-bottom:14px;">
+    <span class="mono" style="font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#2b3ee6;">28 — Admin settings · SLAs &amp; nudges</span>
+    <span class="mono" style="font-size:12px; color:#c4c8cf;">/dashboard/settings · admin only · drives every ⚠ on the Board</span>
+  </div>
+  <div style="background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px -24px rgba(0,0,0,.18); overflow:hidden; display:grid; grid-template-columns:210px 1fr;">
+    <div style="background:#16181d; padding:24px 14px; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:10px; padding:0 6px 22px;"><div style="width:26px; height:26px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center;"><div style="width:9px; height:9px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div><span style="font-size:17px; font-weight:800; letter-spacing:-.02em; color:#fff;">wahala</span></div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>◧</span>Home</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>◭</span>Sales</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>◰</span>Clients</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>▤</span>Projects</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; color:#9aa0aa; font-size:13px;"><span>✉</span>Messages</div>
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:8px; background:#23262e; color:#fff; font-size:13px; font-weight:600;"><span style="color:#7aa2ff;">⚙</span>Settings</div>
+        <div style="display:flex; flex-direction:column; gap:1px; margin:2px 0 2px 19px; padding-left:11px; border-left:1px solid #2c2f38;">
+          <div style="padding:6px 10px; border-radius:7px; color:#9aa0aa; font-size:12px;">AI agents</div>
+          <div style="padding:6px 10px; border-radius:7px; background:#2b3ee6; color:#fff; font-size:12px; font-weight:600;">SLAs &amp; nudges</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:26px 30px 32px; background:#fbfbfc;">
+      <div class="mono" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9aa0aa;">Settings · admin</div>
+      <h1 style="margin:5px 0 4px; font-size:23px; font-weight:800; letter-spacing:-.025em;">SLAs &amp; nudges</h1>
+      <p style="margin:0 0 20px; font-size:13px; color:#767b85; line-height:1.55; max-width:560px;">Thresholds that decide when something turns amber. SLAs never block anything — they nudge.</p>
+
+      <div style="display:flex; flex-direction:column; gap:11px;">
+
+        <!-- Pipeline SLAs -->
+        <div style="border:1px solid #e7e8ec; border-radius:12px; padding:16px 18px; background:#fff;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:14px; font-weight:700;">Deal stuck window</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:#b45309; background:#fff7ed; border:1px solid #fadcb4; padding:2px 8px; border-radius:6px;">⚠ drives the stuck tags</span></div>
+          <div style="font-size:12.5px; color:#767b85; line-height:1.5; margin-top:4px;">A deal that hasn't moved stage in this many days flags ⚠ on the Board, tints its column, and counts in "Stuck".</div>
+          <div style="display:flex; align-items:end; gap:10px; margin-top:13px;">
+            <div><label class="mono" style="font-size:9.5px; color:#9aa0aa; text-transform:uppercase; letter-spacing:.08em;">Default</label><div style="display:flex; align-items:center; gap:7px; margin-top:4px;"><input value="14" style="width:58px; padding:8px 11px; border:1px solid #e2e3e8; border-radius:8px; font:600 13px 'IBM Plex Mono', monospace; color:#16181d; text-align:right;" /><span class="mono" style="font-size:11px; color:#9aa0aa;">days</span></div></div>
+          </div>
+          <div class="mono" style="font-size:9.5px; color:#9aa0aa; text-transform:uppercase; letter-spacing:.08em; margin:14px 0 8px;">Per-stage overrides</div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px;">
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#2563eb;"></span><span style="font-size:11px; font-weight:700;">Discovery</span></div><div class="mono" style="font-size:11px; color:#b4b9c1; margin-top:6px;">default</div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#0d9488;"></span><span style="font-size:11px; font-weight:700;">Business req.</span></div><div class="mono" style="font-size:11px; color:#b4b9c1; margin-top:6px;">default</div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#7c3aed;"></span><span style="font-size:11px; font-weight:700;">Solution design</span></div><div class="mono" style="font-size:11px; color:#b4b9c1; margin-top:6px;">default</div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#0891b2;"></span><span style="font-size:11px; font-weight:700;">Proposal</span></div><div class="mono" style="font-size:11px; color:#b4b9c1; margin-top:6px;">default</div></div>
+            <div style="border:1.5px solid #c9d0fb; background:#fafbff; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#d97706;"></span><span style="font-size:11px; font-weight:700;">Negotiation</span></div><div class="mono" style="font-size:11px; color:#16181d; font-weight:600; margin-top:6px;">7 days</div></div>
+            <div style="border:1.5px solid #c9d0fb; background:#fafbff; border-radius:9px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:2px; background:#4b5159;"></span><span style="font-size:11px; font-weight:700;">Contract</span></div><div class="mono" style="font-size:11px; color:#16181d; font-weight:600; margin-top:6px;">7 days</div></div>
+          </div>
+        </div>
+
+        <!-- Triage + proposal SLAs -->
+        <div style="border:1px solid #e7e8ec; border-radius:12px; padding:16px 18px; background:#fff;">
+          <span style="font-size:14px; font-weight:700;">Response SLAs</span>
+          <div style="display:flex; flex-direction:column; gap:9px; margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Lead triage</div><div style="font-size:11.5px; color:#767b85; margin-top:1px;">A new lead must be scored and qualified/passed within this window, or its Triage card flags ⚠.</div></div>
+              <div style="display:flex; align-items:center; gap:7px;"><input value="3" style="width:48px; padding:7px 10px; border:1px solid #e2e3e8; border-radius:8px; font:600 13px 'IBM Plex Mono', monospace; text-align:right;" /><span class="mono" style="font-size:11px; color:#9aa0aa;">days</span></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Proposal follow-up</div><div style="font-size:11.5px; color:#767b85; margin-top:1px;">A sent proposal with no client action prompts the owner to follow up.</div></div>
+              <div style="display:flex; align-items:center; gap:7px;"><input value="7" style="width:48px; padding:7px 10px; border:1px solid #e2e3e8; border-radius:8px; font:600 13px 'IBM Plex Mono', monospace; text-align:right;" /><span class="mono" style="font-size:11px; color:#9aa0aa;">days</span></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Client "waiting on you"</div><div style="font-size:11.5px; color:#767b85; margin-top:1px;">Delivery side: how long a stage can wait on the client before the amber "waiting on you" nudge escalates to email.</div></div>
+              <div style="display:flex; align-items:center; gap:7px;"><input value="2" style="width:48px; padding:7px 10px; border:1px solid #e2e3e8; border-radius:8px; font:600 13px 'IBM Plex Mono', monospace; text-align:right;" /><span class="mono" style="font-size:11px; color:#9aa0aa;">days</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Probability anchors -->
+        <div style="border:1px solid #e7e8ec; border-radius:12px; padding:16px 18px; background:#fff;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:14px; font-weight:700;">Probability anchors</span><span style="font-size:10.5px; font-weight:600; color:#4b5159; background:#f1f2f4; padding:2px 9px; border-radius:999px;">drives weighted pipeline · "≈N% close"</span></div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:13px;">
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Discovery</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">10<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Bus. req.</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">25<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Sol. design</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">40<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Proposal</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">60<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Negotiation</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">75<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+            <div style="border:1px solid #ededf1; border-radius:9px; padding:9px 10px; text-align:center;"><div class="mono" style="font-size:9px; color:#9aa0aa; text-transform:uppercase;">Contract</div><div class="mono" style="font-size:14px; font-weight:700; margin-top:4px;">90<span style="font-size:10px; color:#9aa0aa;">%</span></div></div>
+          </div>
+        </div>
+
+        <!-- Nudges -->
+        <div style="border:1px solid #e7e8ec; border-radius:12px; padding:16px 18px; background:#fff;">
+          <span style="font-size:14px; font-weight:700;">Who gets nudged, and when</span>
+          <div style="display:flex; flex-direction:column; gap:9px; margin-top:12px;">
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><span style="font-size:13px; font-weight:600;">Notify the deal owner</span><span style="font-size:11.5px; color:#767b85; margin-left:8px;">in-app, when an SLA breaches</span></div>
+              <span style="width:34px; height:20px; border-radius:999px; background:#16181d; position:relative; display:inline-block;"><span style="position:absolute; right:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><span style="font-size:13px; font-weight:600;">Admin digest</span><span style="font-size:11.5px; color:#767b85; margin-left:8px;">all breaches, rolled up</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:20px; padding:7px 11px; border:1px solid #e2e3e8; border-radius:8px; font-size:12.5px; color:#3a3f47; background:#fff;">Monday morning <span style="color:#b4b9c1; font-size:10px;">▾</span></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; padding:10px 13px; border:1px solid #ededf1; border-radius:10px;">
+              <div style="flex:1;"><span style="font-size:13px; font-weight:600;">Escalate to email</span><span style="font-size:11.5px; color:#767b85; margin-left:8px;">only if unactioned 3 days after the in-app nudge</span></div>
+              <span style="width:34px; height:20px; border-radius:999px; background:#d7d9df; position:relative; display:inline-block;"><span style="position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button style="border:1px solid #e2e3e8; background:#fff; color:#5a6069; font:600 12.5px 'Hanken Grotesk'; padding:9px 16px; border-radius:8px; cursor:pointer;">Reset to defaults</button>
+          <button style="border:0; background:#16181d; color:#fff; font:600 12.5px 'Hanken Grotesk'; padding:9px 18px; border-radius:8px; cursor:pointer;">Save changes</button>
         </div>
       </div>
     </div>

@@ -187,6 +187,17 @@ Identical AppShell + header (List tab active). Then:
 ---
 
 ## Interactions & behavior
+- **Click any card = peek panel** (see frame `21c — Board · card peek`). The WHOLE card is
+  the click target; click vs drag is disambiguated by a ~5px movement threshold. The peek
+  anchors beside the card (popover, modal shadow `0 24px 60px -24px rgba(0,0,0,.35)`,
+  radius 14px); Esc or × closes; the source card gets the active-row highlight
+  (`1.5px #C9D0FB` + `0 0 0 3px #F3F5FF`).
+  - **Lead (Triage) peek**: name + score chip + mono meta · **Scout report** in a mono
+    well (`#FBFBFC`, `1px #EDEDF1`) · actions: **Qualify → Discovery** (ink), **Pass**
+    (secondary), right-aligned cobalt link **Open lead workspace →**.
+  - **Deal peek**: same shell — value, stage, days-in-stage, next step + **Open deal
+    room →**. The scout report travels with the deal after qualify, so it's readable
+    from the deal peek/deal room too — no switching to the Leads tab.
 - **Drag a Triage card → Discovery**: this IS "qualify". Creates a deal from the lead;
   the card leaves Triage. Log the event.
 - **Drag any deal card between columns**: stages are **dispositions** — any→any allowed,
@@ -201,8 +212,40 @@ Identical AppShell + header (List tab active). Then:
 - Column **overflow**: show a capped number of cards, then a "+N more · $Xk" line that
   expands the column.
 - **Motion**: subtle only (≤150ms ease) — small lifts on drag, fades. No flourish.
-- **Days-in-stage** auto-computes; the tag flips to the amber ⚠ stuck style at **≥14 days**.
+- **Days-in-stage** auto-computes; the tag flips to the amber ⚠ stuck style at the
+  **admin-configured stuck window** (default 14 days — see SLA settings below).
   A column containing any stuck deal switches to its amber treatment.
+
+---
+
+## Screen: Admin settings · SLAs & nudges — `/dashboard/settings`, admin only
+New Settings section (frame `28`). Settings gains a sub-nav (same indented left-ruled
+pattern as Sales): **AI agents · SLAs & nudges**. All thresholds **nudge, never block**.
+Same card language as the AI-agents page (white cards, `1px #E7E8EC`, radius 12,
+padding `16px 18px`; mono uppercase field labels 9.5px `#9AA0AA`; number inputs mono,
+right-aligned, with a "days" unit suffix).
+
+Configurable parameters (these replace the previously hardcoded values):
+1. **Deal stuck window** — default `14` days + **per-stage overrides** (6 mini-cards,
+   color square + stage name; unset shows muted "default", overridden shows the value in
+   an active-highlight card `1.5px #C9D0FB` bg `#FAFBFF`). Drives the ⚠ stuck tags,
+   amber column tint, and the "Stuck" summary count.
+2. **Response SLAs** (row cards with a days input each):
+   - *Lead triage* — default `3` days: new lead must be scored & qualified/passed or its
+     Triage card flags ⚠.
+   - *Proposal follow-up* — default `7` days: sent proposal with no client action prompts
+     the owner.
+   - *Client "waiting on you"* — default `2` days: delivery-side wait before the amber
+     nudge escalates to email.
+3. **Probability anchors** — per-stage % (10 / 25 / 40 / 60 / 75 / 90). Drives the
+   weighted-pipeline figure and each column's "≈N% close" line.
+4. **Nudge routing** — toggles/select: notify deal owner in-app (on), admin digest
+   (select: Monday morning), escalate to email if unactioned 3 days (off by default).
+5. Footer: **Reset to defaults** (secondary) + **Save changes** (ink).
+
+State: one org-level `sla_settings` record (JSON) read by the Board, Leads, and
+delivery nudges; changes apply immediately, no redeploy. The AI-agents page's old
+"coming to this page" stub now cross-links here.
 
 ## State & data
 - `deals` grouped by `stage` (Discovery … Contract); `leads` with `status` ∈
@@ -242,8 +285,9 @@ No images. All glyphs are Unicode text (`▦ ☰ + × ⚠ ▾ →`). Logo is a C
 
 ## Files
 - `Wahala Portal.dc.html` — the full canvas. Look for frames labeled
-  `21 — Board · kanban (canonical)`, `21 · List toggle`, `22 — Leads · triage`,
-  `24 — Deal room`. Ignore the dimmed `21 — retired` frame.
+  `21 — Board · kanban (canonical)`, `21 · List toggle`, `21c — Board · card peek`,
+  `22 — Leads · triage`, `24 — Deal room`, `28 — Admin settings · SLAs & nudges`.
+  Ignore the dimmed `21 — retired` frame.
 - `sales/sales-home.md` — narrative spec for the Board (this redesign).
 - `sales/00-overview.md` — cross-cutting sales decisions (chip system, dropdowns, IA).
 - `design-system.md` — full token & component reference.

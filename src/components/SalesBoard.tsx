@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
+import { CardPeek, type PeekTarget, type PeekAnchor } from "@/components/CardPeek";
 import type { SalesOverview, DealItem, LeadItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
@@ -351,6 +352,12 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [peek, setPeek] = useState<{ target: PeekTarget; anchor: PeekAnchor } | null>(null);
+
+  function openPeek(target: PeekTarget, e: React.MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPeek({ target, anchor: { top: r.top, left: r.left, width: r.width, height: r.height } });
+  }
 
   async function run(url: string, body: unknown) {
     setBusy(true);
@@ -393,10 +400,18 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
 
   async function passLead(lead: LeadItem) {
     if (!window.confirm(`Pass on ${lead.name}?`)) return;
+    setPeek(null);
     await run(`/api/leads/${lead.id}`, { action: "disqualify" });
   }
 
-  const dealCard = (d: DealItem) => (
+  async function qualifyFromPeek(leadId: string) {
+    setPeek(null);
+    await run(`/api/leads/${leadId}`, { action: "qualify" });
+  }
+
+  const dealCard = (d: DealItem) => {
+    const isPeeked = peek?.target.kind === "deal" && peek.target.deal.id === d.id;
+    return (
     <div
       key={d.id}
       draggable={canManage}
@@ -404,21 +419,17 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
         e.dataTransfer.setData("text/plain", `deal:${d.id}`);
         e.dataTransfer.effectAllowed = "move";
       }}
+      onClick={(e) => openPeek({ kind: "deal", deal: d }, e)}
       style={{
         background: "var(--white)",
-        border: "1px solid #EDEDF1",
+        border: isPeeked ? "1.5px solid #C9D0FB" : "1px solid #EDEDF1",
+        boxShadow: isPeeked ? "0 0 0 3px #F3F5FF" : "0 1px 2px rgba(0,0,0,.04)",
         borderRadius: 10,
         padding: "11px 12px",
-        boxShadow: "0 1px 2px rgba(0,0,0,.04)",
-        cursor: canManage ? "grab" : "default",
+        cursor: canManage ? "grab" : "pointer",
       }}
     >
-      <Link
-        href={`/dashboard/sales/deals/${d.id}`}
-        style={{ fontSize: 12.5, fontWeight: 700, color: "var(--cobalt)", textDecoration: "none", lineHeight: 1.3, display: "block" }}
-      >
-        {d.name}
-      </Link>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--cobalt)", lineHeight: 1.3 }}>{d.name}</div>
       <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {d.organizationName}
         {d.ownerName ? ` · ${d.ownerName}` : ""}
@@ -428,7 +439,8 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
         <DaysTag days={d.daysInStage} stuck={d.stuck} />
       </div>
     </div>
-  );
+    );
+  };
 
   const column = (col: FunnelColumn) => {
     const sum = col.deals.reduce((n, d) => n + d.valueCents, 0);
@@ -566,7 +578,9 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
             </div>
             <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 3 }}>new leads land here</div>
           </div>
-          {newLeads.map((l) => (
+          {newLeads.map((l) => {
+            const isPeeked = peek?.target.kind === "lead" && peek.target.lead.id === l.id;
+            return (
             <div
               key={l.id}
               draggable={canManage}
@@ -574,24 +588,26 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
                 e.dataTransfer.setData("text/plain", `lead:${l.id}`);
                 e.dataTransfer.effectAllowed = "move";
               }}
+              onClick={(e) => openPeek({ kind: "lead", lead: l }, e)}
               style={{
                 background: "var(--white)",
-                border: "1px solid #E7E8EC",
+                border: isPeeked ? "1.5px solid #C9D0FB" : `1px solid ${l.overdue ? "#FADCB4" : "#E7E8EC"}`,
+                boxShadow: isPeeked ? "0 0 0 3px #F3F5FF" : "none",
                 borderRadius: 10,
                 padding: "11px 12px",
-                cursor: canManage ? "grab" : "default",
+                cursor: canManage ? "grab" : "pointer",
               }}
             >
               <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                <Link
-                  href={`/dashboard/sales/leads/${l.id}`}
-                  style={{ fontSize: 12.5, fontWeight: 700, color: "inherit", textDecoration: "none", lineHeight: 1.3, flex: 1, minWidth: 0 }}
-                >
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: "inherit", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
                   {l.name}
-                </Link>
+                </span>
                 {canManage && (
                   <button
-                    onClick={() => passLead(l)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      passLead(l);
+                    }}
                     title="Pass on this lead"
                     style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, lineHeight: 1, cursor: "pointer", padding: 0, flex: "none" }}
                   >
@@ -599,14 +615,16 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
                   </button>
                 )}
               </div>
-              <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className="mono" style={{ fontSize: 10, color: l.overdue ? "#B45309" : "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {l.overdue ? "⚠ overdue · " : ""}
                 {l.source ? `via ${l.source}` : l.company ?? "—"}
               </div>
               <div style={{ marginTop: 8 }}>
                 <ScoreChip score={l.aiScore} verdict={l.aiVerdict} />
               </div>
             </div>
-          ))}
+            );
+          })}
           <div className="mono" style={{ fontSize: 9.5, color: "#B4B9C1", textAlign: "center", padding: "2px 0" }}>
             {newLeads.length > 0 ? "drag right to qualify →" : "inbox zero"}
           </div>
@@ -667,6 +685,17 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
           <span className="mono" style={{ fontSize: 10, color: "#C58A8A", marginLeft: "auto" }}>reason logged</span>
         </div>
       </div>
+
+      {peek && (
+        <CardPeek
+          target={peek.target}
+          anchor={peek.anchor}
+          busy={busy}
+          onClose={() => setPeek(null)}
+          onQualify={qualifyFromPeek}
+          onPass={passLead}
+        />
+      )}
     </div>
   );
 }
