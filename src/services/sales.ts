@@ -248,6 +248,7 @@ export type DealItem = {
   valueCents: number;
   daysInStage: number;
   stuck: boolean;
+  stageEnteredAt: Date;
   notes: string | null;
 };
 
@@ -288,6 +289,7 @@ async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
     valueCents: d.valueCents,
     daysInStage: daysInStage(d.stageEnteredAt, now),
     stuck: d.stage !== "won" && d.stage !== "lost" && isStuck(d.stageEnteredAt, now),
+    stageEnteredAt: d.stageEnteredAt,
     notes: d.notes,
   }));
 }
@@ -385,6 +387,8 @@ export type DealDetail = {
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   sourceLead: { source: string | null; notes: string | null; createdAt: Date } | null;
   history: DealHistoryItem[];
+  /** Stages this deal actually passed through (for the spine's skipped-vs-visited render). */
+  visitedStages: DealStage[];
 };
 
 /** One deal with its people, provenance, and audited stage history (R2 attaches here). */
@@ -440,6 +444,16 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
     };
   });
 
+  // Reconstruct visited stages from the audit trail: deals start at discovery, and
+  // every logged move contributes its from/to. Anything else on the spine was skipped.
+  const visited = new Set<DealStage>(["discovery", deal.stage]);
+  for (const a of auditRows) {
+    if (a.action !== "deal.stage_changed") continue;
+    const meta = (a.metadata ?? {}) as { from?: string; to?: string };
+    if (meta.from && isDealStage(meta.from)) visited.add(meta.from);
+    if (meta.to && isDealStage(meta.to)) visited.add(meta.to);
+  }
+
   const now = new Date();
   return {
     deal: {
@@ -458,6 +472,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
     contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null,
     sourceLead: lead ? { source: lead.source, notes: lead.notes, createdAt: lead.createdAt } : null,
     history,
+    visitedStages: [...visited],
   };
 }
 
@@ -477,7 +492,14 @@ export type SalesOverview = {
   wonDeals: DealItem[];
   lostCount: number;
   openPipelineCents: number;
+  /** Anchor-weighted pipeline (close-race stages without an anchor weigh 50%). Rough by design. */
+  openWeightedCents: number;
   stuckCount: number;
+  wonThisQCount: number;
+  wonThisQCents: number;
+  lostThisQCount: number;
+  /** Won / (won + lost) this quarter, percent; null when nothing closed this quarter. */
+  winRatePct: number | null;
 };
 
 /** Everything the Sales page needs: lead inbox + stage-grouped open pipeline. */
@@ -494,12 +516,27 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   }));
   const open = deals.filter((d) => d.stage !== "won" && d.stage !== "lost");
 
+  // "This quarter" = deals whose terminal move (stageEnteredAt) landed after Q start.
+  const now = new Date();
+  const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  const wonDeals = deals.filter((d) => d.stage === "won");
+  const wonThisQ = wonDeals.filter((d) => d.stageEnteredAt >= qStart);
+  const lostThisQCount = deals.filter((d) => d.stage === "lost" && d.stageEnteredAt >= qStart).length;
+  const closedThisQ = wonThisQ.length + lostThisQCount;
+
   return {
     leads,
     columns,
-    wonDeals: deals.filter((d) => d.stage === "won"),
+    wonDeals,
     lostCount: deals.filter((d) => d.stage === "lost").length,
     openPipelineCents: open.reduce((n, d) => n + d.valueCents, 0),
+    openWeightedCents: Math.round(
+      open.reduce((n, d) => n + d.valueCents * ((STAGE_META[d.stage].probabilityPct ?? 50) / 100), 0),
+    ),
     stuckCount: open.filter((d) => d.stuck).length,
+    wonThisQCount: wonThisQ.length,
+    wonThisQCents: wonThisQ.reduce((n, d) => n + d.valueCents, 0),
+    lostThisQCount,
+    winRatePct: closedThisQ > 0 ? Math.round((wonThisQ.length / closedThisQ) * 100) : null,
   };
 }

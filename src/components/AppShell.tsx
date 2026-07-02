@@ -3,16 +3,23 @@ import { Brand } from "@/components/Brand";
 import { Avatar } from "@/components/People";
 
 const NAV = [
-  { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false },
-  { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true },
-  { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true },
-  { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false },
-  { key: "files", label: "Files", href: null, staffOnly: false },
-  { key: "messages", label: "Messages", href: "/dashboard/messages" as string | null, staffOnly: false },
-  { key: "settings", label: "Settings", href: "/dashboard/settings" as string | null, staffOnly: true },
+  { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
+  { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
+  { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true, adminOnly: false },
+  { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
+  { key: "files", label: "Files", href: null, staffOnly: false, adminOnly: false },
+  { key: "messages", label: "Messages", href: "/dashboard/messages" as string | null, staffOnly: false, adminOnly: false },
+  { key: "settings", label: "Settings", href: "/dashboard/settings" as string | null, staffOnly: true, adminOnly: true },
 ] as const;
 
-type NavKey = (typeof NAV)[number]["key"];
+// Sales is a first-class destination with a sub-nav (design handoff, sales/00-overview.md).
+const SALES_SUBNAV = [
+  { key: "sales-board", label: "Board", href: "/dashboard/sales" },
+  { key: "sales-leads", label: "Leads", href: "/dashboard/sales/leads" },
+  { key: "sales-proposals", label: "Proposals", href: "/dashboard/sales/proposals" },
+] as const;
+
+type NavKey = (typeof NAV)[number]["key"] | (typeof SALES_SUBNAV)[number]["key"];
 
 /** Ink sidebar (brand, nav, account-owner card) + main column. Wraps dashboard pages. */
 export function AppShell({
@@ -20,14 +27,19 @@ export function AppShell({
   user,
   orgName,
   accountOwner,
+  leadCount,
   children,
 }: {
   active: NavKey;
   user: { name: string; role: string; isStaff: boolean };
   orgName?: string | null;
   accountOwner?: { name: string } | null;
+  /** "To qualify" count for the Leads sub-nav badge (pass from sales pages that know it). */
+  leadCount?: number | null;
   children: React.ReactNode;
 }) {
+  const inSales = active === "sales" || active.startsWith("sales-");
+  const isAdmin = user.role === "wahala_admin";
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--surface-soft)" }}>
       <aside
@@ -54,8 +66,8 @@ export function AppShell({
         </div>
 
         <nav style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 2 }}>
-          {NAV.filter((item) => !item.staffOnly || user.isStaff).map((item) => {
-            const isActive = item.key === active;
+          {NAV.filter((item) => (!item.staffOnly || user.isStaff) && (!item.adminOnly || isAdmin)).map((item) => {
+            const isActive = item.key === active || (item.key === "sales" && inSales);
             // Staff get the cross-client Projects index; clients keep their dashboard.
             const href = item.key === "projects" && user.isStaff ? "/dashboard/projects" : item.href;
             const inner = (
@@ -80,12 +92,48 @@ export function AppShell({
                 )}
               </span>
             );
-            return href ? (
-              <Link key={item.key} href={href} style={{ textDecoration: "none" }}>
-                {inner}
-              </Link>
-            ) : (
-              <div key={item.key}>{inner}</div>
+            return (
+              <div key={item.key}>
+                {href ? (
+                  <Link href={href} style={{ textDecoration: "none" }}>
+                    {inner}
+                  </Link>
+                ) : (
+                  inner
+                )}
+                {/* Sales sub-nav: Board · Leads · Proposals — indented, left-ruled */}
+                {item.key === "sales" && user.isStaff && inSales && (
+                  <div style={{ margin: "2px 0 4px 18px", borderLeft: "1px solid #2c2f36", paddingLeft: 8, display: "flex", flexDirection: "column", gap: 1 }}>
+                    {SALES_SUBNAV.map((sub) => {
+                      const subActive = active === sub.key;
+                      return (
+                        <Link key={sub.key} href={sub.href} style={{ textDecoration: "none" }}>
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "6px 10px",
+                              borderRadius: 999,
+                              fontSize: 12.5,
+                              fontWeight: 600,
+                              color: subActive ? "var(--white)" : "#8b909a",
+                              background: subActive ? "var(--cobalt)" : "transparent",
+                            }}
+                          >
+                            {sub.label}
+                            {sub.key === "sales-leads" && typeof leadCount === "number" && leadCount > 0 && (
+                              <span className="tabular" style={{ fontSize: 10, fontWeight: 800, background: subActive ? "rgba(255,255,255,.25)" : "#2c2f36", color: "var(--white)", borderRadius: 999, padding: "1px 7px" }}>
+                                {leadCount}
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

@@ -57,24 +57,65 @@ export default async function PublicProposalPage({ params }: { params: Promise<{
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
             {p.options.map((o) => {
               const isSelected = p.selectedOptionId === o.id;
+              const isB = o.label === "B";
               return (
                 <div
                   key={o.id}
                   style={{
+                    position: "relative",
                     background: "var(--white)",
-                    border: isSelected ? "2px solid #16a34a" : "1px solid var(--border)",
+                    border: isSelected ? "2px solid #16a34a" : isB ? "2px solid #BFE8CF" : "1px solid var(--border)",
                     borderRadius: 16,
                     padding: "22px 24px",
+                    overflow: "hidden",
                   }}
                 >
-                  <div className="kicker" style={{ color: "var(--muted)" }}>Option {o.label}{isSelected ? " · chosen" : ""}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.015em", marginTop: 4 }}>{o.name}</div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "10px 0 4px" }}>
-                    <Money cents={o.priceCents} style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em" }} />
+                  {isSelected && (
+                    <span
+                      className="kicker"
+                      style={{
+                        position: "absolute",
+                        top: 14,
+                        right: -34,
+                        transform: "rotate(38deg)",
+                        background: "#16a34a",
+                        color: "var(--white)",
+                        fontSize: 9.5,
+                        padding: "4px 40px",
+                        letterSpacing: ".14em",
+                      }}
+                    >
+                      CHOSEN
+                    </span>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 10,
+                        background: isB ? "#16A34A" : "var(--ink)",
+                        color: "var(--white)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: 16,
+                        flex: "none",
+                      }}
+                    >
+                      {o.label}
+                    </span>
+                    <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.015em" }}>{o.name}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "12px 0 4px" }}>
+                    <Money cents={o.priceCents} style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-.02em" }} />
                     {o.priceNote && <span style={{ fontSize: 12.5, color: "var(--muted)" }}>{o.priceNote}</span>}
                   </div>
                   {o.timelineNote && (
-                    <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 10 }}>{o.timelineNote}</div>
+                    <span className="mono" style={{ display: "inline-block", fontSize: 11, color: "var(--ink-soft)", background: "var(--surface)", borderRadius: 999, padding: "3px 10px", marginBottom: 10 }}>
+                      {o.timelineNote}
+                    </span>
                   )}
                   <SimpleMarkdown md={o.summaryMd} size={13.5} />
                 </div>

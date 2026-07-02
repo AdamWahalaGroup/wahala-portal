@@ -141,6 +141,51 @@ export async function listProposalsForDeal(ctx: AuthContext, dealId: string): Pr
   }));
 }
 
+export type ProposalIndexRow = ProposalSummary & {
+  dealId: string;
+  dealName: string;
+  organizationName: string;
+};
+
+/** Every proposal across every deal (staff, scoped) — the Proposals sub-nav index. */
+export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexRow[]> {
+  if (!ctx.isStaff) throw new StageError("FORBIDDEN", "Wahala staff only.");
+  const db = getDb();
+  let rows = await db.select().from(schema.proposals).orderBy(desc(schema.proposals.updatedAt));
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all") rows = rows.filter((p) => scope.orgIds.includes(p.organizationId));
+  if (rows.length === 0) return [];
+
+  const dealIds = [...new Set(rows.map((p) => p.dealId))];
+  const orgIds = [...new Set(rows.map((p) => p.organizationId))];
+  const selectedIds = rows.map((p) => p.selectedOptionId).filter((v): v is string => !!v);
+  const [dealRows, orgRows, selected] = await Promise.all([
+    db.select({ id: schema.deals.id, name: schema.deals.name }).from(schema.deals).where(inArray(schema.deals.id, dealIds)),
+    db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds)),
+    selectedIds.length
+      ? db.select({ id: schema.proposalOptions.id, label: schema.proposalOptions.label }).from(schema.proposalOptions).where(inArray(schema.proposalOptions.id, selectedIds))
+      : Promise.resolve([]),
+  ]);
+  const dealName = new Map(dealRows.map((d) => [d.id, d.name]));
+  const orgName = new Map(orgRows.map((o) => [o.id, o.name]));
+  const selectedLabel = new Map(selected.map((o) => [o.id, o.label]));
+
+  return rows.map((p) => ({
+    id: p.id,
+    version: p.version,
+    status: p.status,
+    title: p.title,
+    complexityScore: p.complexityScore,
+    needsReview: needsEngineeringReview(p.complexityScore),
+    sentAt: p.sentAt,
+    respondedAt: p.respondedAt,
+    selectedLabel: p.selectedOptionId ? selectedLabel.get(p.selectedOptionId) ?? null : null,
+    dealId: p.dealId,
+    dealName: dealName.get(p.dealId) ?? "Deal",
+    organizationName: orgName.get(p.organizationId) ?? "—",
+  }));
+}
+
 export async function getProposal(ctx: AuthContext, proposalId: string): Promise<ProposalDetail> {
   const db = getDb();
   const p = await loadProposal(proposalId);

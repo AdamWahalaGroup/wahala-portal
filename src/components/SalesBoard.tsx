@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * Sales funnel (R1 — docs/brain_storming/synthesis.md): lead inbox + stage-grouped
- * open pipeline. Stages are dispositions — the dropdown moves a deal anywhere, no
- * rules — while days-in-stage + stuck flags give the Monday-meeting view ("why does
- * Jason have 20 deals stuck in solution design?").
+ * Sales home / pipeline board (frame 21) — the Monday-meeting view. Stat cards,
+ * the new-leads-to-qualify strip, six stacked stage sections with sums + probability
+ * anchors (amber when they hold stuck deals), and the green Won strip. Stages are
+ * dispositions: the dropdown moves a deal anywhere, every move is logged.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Money } from "@/components/Money";
+import { ScoreChip, DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
 import type { SalesOverview, DealItem, LeadItem } from "@/services/sales";
+import type { DealStage } from "@/domain/sales";
 
 type StaffOption = { id: string; name: string };
 
@@ -51,9 +53,9 @@ async function patch(url: string, body: unknown): Promise<string | null> {
   }
 }
 
-// ---------------------------------------------------------------- lead capture
+// ---------------------------------------------------------------- lead capture (lives on the Leads page)
 
-function LeadCaptureForm() {
+export function LeadCaptureForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +117,7 @@ function LeadCaptureForm() {
   );
 }
 
-// ---------------------------------------------------------------- lead inbox row
+// ---------------------------------------------------------------- lead row (qualify / pass / assign)
 
 export function LeadRow({
   lead,
@@ -150,39 +152,24 @@ export function LeadRow({
     .join(" · ");
 
   return (
-    <div style={{ background: "#fffdf5", border: "1px solid #f0e6c8", borderRadius: 11, padding: "11px 14px" }}>
+    <div style={{ background: "var(--white)", border: "1px solid #f0e6c8", borderLeft: "3px solid #FADCB4", borderRadius: 11, padding: "11px 14px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <ScoreChip score={lead.aiScore} verdict={lead.aiVerdict} />
         <div style={{ flex: 1, minWidth: 160 }}>
           <Link href={`/dashboard/sales/leads/${lead.id}`} style={{ fontWeight: 700, fontSize: 14.5, color: "inherit", textDecoration: "none" }}>
             {lead.name} <span style={{ color: "var(--muted-line)" }}>›</span>
           </Link>
-          {lead.aiScore !== null && (
-            <span
-              className="kicker"
-              style={{
-                fontSize: 9,
-                marginLeft: 8,
-                padding: "2px 7px",
-                borderRadius: 5,
-                background: lead.aiVerdict === "pursue" ? "#e8f7ee" : lead.aiVerdict === "pass" ? "#fdeeee" : "#fff7ed",
-                color: lead.aiVerdict === "pursue" ? "#15803d" : lead.aiVerdict === "pass" ? "#b91c1c" : "#b45309",
-              }}
-            >
-              {lead.aiScore}/10
-            </span>
-          )}
           {detail && (
             <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginLeft: 10 }}>
               {detail}
             </span>
           )}
         </div>
-        {/* Handoff: any staff can claim a lead or hand it to someone ("Josh, you two speak RME"). */}
         <select
           value={lead.assignedToUserId ?? ""}
           disabled={busy}
           onChange={(e) => act({ action: "assign", assignedToUserId: e.target.value || null })}
-          style={{ ...inputStyle, flex: "none", fontSize: 12.5, padding: "6px 8px" }}
+          style={{ ...stageSelectStyle, flex: "none", fontSize: 12, padding: "6px 8px", fontWeight: 500 }}
           title="Who's working this lead"
         >
           <option value="">Unowned</option>
@@ -308,7 +295,7 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
         background: "var(--white)",
         border: `1px solid ${deal.stuck ? "#fadcb4" : "#ededf1"}`,
         borderRadius: 11,
-        padding: "11px 14px",
+        padding: "10px 14px",
       }}
     >
       <div style={{ flex: 1, minWidth: 170 }}>
@@ -322,28 +309,9 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
         </div>
       </div>
       {deal.valueCents > 0 && <Money cents={deal.valueCents} style={{ fontWeight: 700, fontSize: 14, flex: "none" }} />}
-      <span
-        className="kicker"
-        style={{
-          flex: "none",
-          fontSize: 10,
-          padding: "3px 8px",
-          borderRadius: 6,
-          background: deal.stuck ? "#fff7ed" : "var(--surface-soft)",
-          color: deal.stuck ? "#b45309" : "var(--muted)",
-        }}
-        title={deal.stuck ? "In this stage 14+ days — worth a look at Monday's meeting" : undefined}
-      >
-        {deal.stuck ? "⚠ " : ""}
-        {deal.daysInStage}d in stage
-      </span>
+      <DaysTag days={deal.daysInStage} stuck={deal.stuck} />
       {canManage ? (
-        <select
-          value={deal.stage}
-          disabled={busy}
-          onChange={(e) => move(e.target.value)}
-          style={{ ...inputStyle, flex: "none", fontWeight: 600 }}
-        >
+        <select value={deal.stage} disabled={busy} onChange={(e) => move(e.target.value)} style={{ ...stageSelectStyle, flex: "none" }}>
           {STAGE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -371,43 +339,69 @@ export function SalesBoard({
 }) {
   const newLeads = overview.leads.filter((l) => l.status === "new");
   const openDealCount = overview.columns.reduce((n, c) => n + c.deals.length, 0);
+  const wonCents = overview.wonDeals.reduce((n, d) => n + d.valueCents, 0);
+
+  const cardBase: React.CSSProperties = {
+    background: "var(--white)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: "14px 18px",
+    minWidth: 150,
+    flex: "1 1 150px",
+  };
 
   return (
     <div>
-      {/* Stat strip */}
+      {/* Stat cards */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
-        {[
-          { label: "Open pipeline", value: <Money cents={overview.openPipelineCents} /> },
-          { label: "Open deals", value: openDealCount },
-          { label: "Stuck (14d+)", value: overview.stuckCount },
-          { label: "Won / lost", value: `${overview.wonDeals.length} / ${overview.lostCount}` },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 18px", minWidth: 130 }}
-          >
-            <div className="kicker">{s.label}</div>
-            <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.02em", marginTop: 3 }}>{s.value}</div>
+        <div style={cardBase}>
+          <div className="kicker">Open pipeline</div>
+          <Money cents={overview.openPipelineCents} style={{ display: "block", fontSize: 22, fontWeight: 800, letterSpacing: "-.02em", marginTop: 3 }} />
+          <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+            ≈ <Money cents={overview.openWeightedCents} /> weighted
           </div>
-        ))}
+        </div>
+        <div style={cardBase}>
+          <div className="kicker">Open deals</div>
+          <div className="tabular" style={{ fontSize: 22, fontWeight: 800, marginTop: 3 }}>{openDealCount}</div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+            {newLeads.length} lead{newLeads.length === 1 ? "" : "s"} to qualify
+          </div>
+        </div>
+        <div style={{ ...cardBase, background: "#FFF7ED", border: "1px solid #FADCB4", borderLeft: "4px solid #D97706" }}>
+          <div className="kicker" style={{ color: "#B45309" }}>Stuck 14d+</div>
+          <div className="tabular" style={{ fontSize: 22, fontWeight: 800, marginTop: 3, color: overview.stuckCount > 0 ? "#B45309" : "var(--ink)" }}>
+            {overview.stuckCount}
+          </div>
+          <div className="mono" style={{ fontSize: 11, color: "#B45309", marginTop: 2 }}>
+            {overview.stuckCount > 0 ? "ask why on Monday" : "nothing stalled"}
+          </div>
+        </div>
+        <div style={cardBase}>
+          <div className="kicker">Won / lost this Q</div>
+          <div style={{ fontSize: 22, fontWeight: 800, marginTop: 3 }}>
+            <span className="tabular" style={{ color: "#15803D" }}>{overview.wonThisQCount}</span>
+            <span style={{ color: "var(--muted-line)" }}> / </span>
+            <span className="tabular" style={{ color: "#B91C1C" }}>{overview.lostThisQCount}</span>
+          </div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+            {overview.winRatePct !== null ? `${overview.winRatePct}% win rate` : "no closes yet"}
+          </div>
+        </div>
       </div>
 
-      {/* Lead inbox */}
+      {/* New leads to qualify */}
       <section style={{ marginTop: 28 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
-          <span className="kicker">Leads ({newLeads.length} to qualify)</span>
-          <Link href="/dashboard/sales/leads" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--cobalt-text)", textDecoration: "none" }}>
+          <span className="kicker">New leads to qualify ({newLeads.length})</span>
+          <Link href="/dashboard/sales/leads" style={{ fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}>
             All leads →
           </Link>
         </div>
-        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
-          <LeadCaptureForm />
-          <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--muted)" }}>
-            A lead needs nothing but a name — trap it now, qualify it later.
-          </p>
-        </div>
         {newLeads.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>Inbox zero — every lead is qualified or passed.</p>
+          <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>
+            Inbox zero — <Link href="/dashboard/sales/leads">capture a lead</Link> when you have one.
+          </p>
         ) : (
           <div style={{ display: "grid", gap: 8 }}>
             {newLeads.map((l) => (
@@ -417,56 +411,77 @@ export function SalesBoard({
         )}
       </section>
 
-      {/* Pipeline */}
+      {/* Pipeline — six stacked stage sections */}
       <section style={{ marginTop: 32 }}>
         <div className="kicker" style={{ marginBottom: 12 }}>
           Pipeline
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {overview.columns.map((col) => (
-            <div key={col.stage}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
-                <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.01em" }}>{col.label}</span>
-                <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)" }}>
-                  {col.deals.length} {col.deals.length === 1 ? "deal" : "deals"}
-                </span>
-                {col.probabilityPct !== null && col.toward && (
-                  <span
-                    className="kicker"
-                    style={{ fontSize: 9.5, background: "var(--surface-soft)", color: "var(--muted)", padding: "2px 7px", borderRadius: 5 }}
-                    title="Win-probability anchor — the odds a deal here reaches the proposal"
-                  >
-                    ≈{col.probabilityPct}% → {col.toward}
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          {overview.columns.map((col) => {
+            const sum = col.deals.reduce((n, d) => n + d.valueCents, 0);
+            const stuckHere = col.deals.filter((d) => d.stuck).length;
+            const color = STAGE_COLORS[col.stage as DealStage];
+            return (
+              <div key={col.stage}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flex: "none", alignSelf: "center" }} />
+                  <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.01em", color: stuckHere > 0 ? "#B45309" : "var(--ink)" }}>
+                    {col.label}
                   </span>
+                  <span className="tabular kicker" style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: stuckHere > 0 ? "#FFF7ED" : "var(--surface)", color: stuckHere > 0 ? "#B45309" : "var(--muted)" }}>
+                    {col.deals.length}
+                    {stuckHere > 0 ? ` · ${stuckHere} ⚠ stuck` : ""}
+                  </span>
+                  {sum > 0 && <Money cents={sum} style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-soft)" }} />}
+                  {col.probabilityPct !== null && col.toward && (
+                    <span className="mono" style={{ fontSize: 10.5, color: "var(--muted)" }} title="Win-probability anchor">
+                      anchor ≈{col.probabilityPct}% → {col.toward}
+                    </span>
+                  )}
+                </div>
+                {col.deals.length === 0 ? (
+                  <p style={{ color: "var(--muted-line)", fontSize: 13, margin: "0 0 2px 20px" }}>—</p>
+                ) : (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {col.deals.map((d) => (
+                      <DealRow key={d.id} deal={d} canManage={canManage} />
+                    ))}
+                  </div>
                 )}
               </div>
-              {col.deals.length === 0 ? (
-                <p style={{ color: "var(--muted-line)", fontSize: 13, margin: "0 0 2px" }}>—</p>
-              ) : (
-                <div style={{ display: "grid", gap: 8 }}>
-                  {col.deals.map((d) => (
-                    <DealRow key={d.id} deal={d} canManage={canManage} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
-      {/* Won */}
-      {overview.wonDeals.length > 0 && (
-        <section style={{ marginTop: 32 }}>
-          <div className="kicker" style={{ marginBottom: 10 }}>
-            Won ({overview.wonDeals.length})
-          </div>
-          <div style={{ display: "grid", gap: 8 }}>
+      {/* Won strip */}
+      <section style={{ marginTop: 30 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            background: "#DCF5E3",
+            border: "1px solid #BFE8CF",
+            borderRadius: 12,
+            padding: "12px 16px",
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: "#16A34A", flex: "none" }} />
+          <span style={{ fontWeight: 800, fontSize: 14.5, color: "#15803D" }}>Won ({overview.wonDeals.length})</span>
+          {wonCents > 0 && <Money cents={wonCents} style={{ fontWeight: 700, fontSize: 13.5, color: "#15803D" }} />}
+          <span className="mono" style={{ fontSize: 11, color: "#3f9560", marginLeft: "auto" }}>
+            each links to its deal room
+          </span>
+        </div>
+        {overview.wonDeals.length > 0 && (
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
             {overview.wonDeals.map((d) => (
               <DealRow key={d.id} deal={d} canManage={canManage} />
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }

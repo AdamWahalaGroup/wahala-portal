@@ -89,7 +89,7 @@ export function ContractRoom({ dealId, room, canManage }: { dealId: string; room
   const allSigned = room.items.every((i) => i.status === "signed");
 
   return (
-    <section style={{ marginTop: 24, background: "var(--white)", border: "2px solid var(--ink)", borderRadius: 14, padding: 18 }}>
+    <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <div className="kicker">Contract room</div>
         {room.approvedProposal && (

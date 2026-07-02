@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ProposalStatusPill, ComplexityChip } from "@/components/SalesChips";
 
 type Summary = {
   id: string;
@@ -16,14 +17,6 @@ type Summary = {
   complexityScore: number | null;
   needsReview: boolean;
   selectedLabel: string | null;
-};
-
-const STATUS_STYLE: Record<Summary["status"], { bg: string; color: string; label: string }> = {
-  draft: { bg: "var(--surface)", color: "var(--ink-soft)", label: "Draft" },
-  sent: { bg: "#F5F7FF", color: "#3B5BDB", label: "Sent" },
-  approved: { bg: "#e8f7ee", color: "#15803d", label: "Approved" },
-  declined: { bg: "#fdeeee", color: "#b91c1c", label: "Declined" },
-  superseded: { bg: "var(--surface-soft)", color: "var(--muted)", label: "Superseded" },
 };
 
 export function ProposalsSection({
@@ -93,7 +86,6 @@ export function ProposalsSection({
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           {proposals.map((p) => {
-            const s = STATUS_STYLE[p.status];
             return (
               <Link
                 key={p.id}
@@ -115,22 +107,13 @@ export function ProposalsSection({
                 <span style={{ fontWeight: 700, fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {p.title}
                 </span>
-                {p.complexityScore !== null && (
-                  <span
-                    className="kicker"
-                    style={{ flex: "none", fontSize: 9.5, padding: "3px 7px", borderRadius: 5, background: p.needsReview ? "#fff7ed" : "var(--surface-soft)", color: p.needsReview ? "#b45309" : "var(--muted)" }}
-                  >
-                    {p.needsReview ? "⚠ " : ""}C{p.complexityScore}
-                  </span>
-                )}
+                <ComplexityChip score={p.complexityScore} />
                 {p.selectedLabel && (
-                  <span className="kicker" style={{ flex: "none", fontSize: 9.5, padding: "3px 7px", borderRadius: 5, background: "#e8f7ee", color: "#15803d" }}>
+                  <span className="kicker" style={{ flex: "none", fontSize: 9.5, padding: "3px 7px", borderRadius: 5, background: "#DCF5E3", color: "#15803D" }}>
                     Option {p.selectedLabel}
                   </span>
                 )}
-                <span className="kicker" style={{ flex: "none", fontSize: 10, padding: "3px 9px", borderRadius: 999, background: s.bg, color: s.color }}>
-                  {s.label}
-                </span>
+                <ProposalStatusPill status={p.status} />
                 <span style={{ color: "var(--muted-line)", flex: "none" }}>›</span>
               </Link>
             );

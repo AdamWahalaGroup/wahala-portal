@@ -51,6 +51,12 @@ export default async function SettingsPage() {
         </p>
         <AgentSettings agents={agents} />
       </section>
+
+      {/* Reserved room for future knobs (frame 27) */}
+      <div style={{ marginTop: 20, border: "2px dashed var(--muted-line)", borderRadius: 12, padding: "16px 18px", color: "var(--muted)", fontSize: 13 }}>
+        <div className="kicker" style={{ marginBottom: 4 }}>Coming to this page</div>
+        Complexity fast-track threshold · stuck-deal window (14d) · stage probability anchors.
+      </div>
     </AppShell>
   );
 }

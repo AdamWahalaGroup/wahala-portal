@@ -1,18 +1,21 @@
 "use client";
 
 /**
- * Lead workspace panels: the editable record + notes, the unorganized dump
- * (files/photos/anything), and the AI scout (web recon + opinion + 1–10 score).
+ * Lead workspace panels (frame 23 — the scout's dossier): the dump + the scout
+ * report are the stars in the main column; the record fields live compact in the
+ * right rail. Scout report renders with styled sections (Red flags amber, Score
+ * rationale as a green callout).
  */
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
+import { ScoreChip } from "@/components/SalesChips";
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid #d7d9df",
   borderRadius: 8,
   padding: "8px 10px",
-  fontSize: 13.5,
+  fontSize: 13,
   background: "var(--white)",
   width: "100%",
   boxSizing: "border-box",
@@ -37,7 +40,7 @@ function fmtBytes(n: number | null): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ---------------------------------------------------------------- record editor
+// ---------------------------------------------------------------- record editor (rail)
 
 export function LeadRecordEditor({
   leadId,
@@ -82,8 +85,9 @@ export function LeadRecordEditor({
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
-    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+    <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
+      <div className="kicker" style={{ marginBottom: 10 }}>Record</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {(
           [
             ["name", "Name *"],
@@ -95,28 +99,28 @@ export function LeadRecordEditor({
           ] as const
         ).map(([k, label]) => (
           <div key={k}>
-            <div className="kicker" style={{ fontSize: 9, marginBottom: 4 }}>{label}</div>
+            <div className="kicker" style={{ fontSize: 8.5, marginBottom: 3 }}>{label}</div>
             <input style={inputStyle} value={form[k]} onChange={set(k)} readOnly={!editable} />
           </div>
         ))}
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <div className="kicker" style={{ fontSize: 9, marginBottom: 4 }}>Notes — anything at all</div>
-        <textarea
-          style={{ ...inputStyle, minHeight: 100, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
-          placeholder="Met at the airport bar. Wants a scheduling site. Mentioned his cousin runs the parts supplier…"
-          value={form.notes}
-          onChange={set("notes")}
-          readOnly={!editable}
-        />
+        <div>
+          <div className="kicker" style={{ fontSize: 8.5, marginBottom: 3 }}>Notes</div>
+          <textarea
+            style={{ ...inputStyle, minHeight: 90, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+            placeholder="Met at the airport bar. Wants a scheduling site…"
+            value={form.notes}
+            onChange={set("notes")}
+            readOnly={!editable}
+          />
+        </div>
       </div>
       {editable && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
           <button onClick={save} disabled={busy || !form.name.trim()} style={btn("plain", busy || !form.name.trim())}>
             {busy ? "Saving…" : "Save record"}
           </button>
-          {saved && <span style={{ color: "#15803d", fontSize: 13, fontWeight: 600 }}>Saved ✓</span>}
-          {error && <span style={{ color: "#b00020", fontSize: 13 }}>{error}</span>}
+          {saved && <span style={{ color: "#15803d", fontSize: 12.5, fontWeight: 600 }}>Saved ✓</span>}
+          {error && <span style={{ color: "#b00020", fontSize: 12.5 }}>{error}</span>}
         </div>
       )}
     </div>
@@ -177,25 +181,48 @@ export function LeadFilesPanel({
     }
   }
 
+  const typeChip = (mime: string | null) => {
+    const t = mime?.startsWith("image/") ? "IMG" : mime === "application/pdf" ? "PDF" : mime?.startsWith("text/") ? "TXT" : "FILE";
+    return (
+      <span className="kicker" style={{ fontSize: 8.5, padding: "3px 6px", borderRadius: 5, background: "var(--surface)", color: "var(--ink-soft)", flex: "none" }}>
+        {t}
+      </span>
+    );
+  };
+
   return (
-    <section style={{ marginTop: 22 }}>
+    <section>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
         <span className="kicker">The dump ({files.length})</span>
         <button onClick={() => inputRef.current?.click()} disabled={busy} style={btn("ink", busy)}>
-          {busy ? "Uploading…" : "+ Drop files"}
+          {busy ? "Uploading…" : "⤓ Drop files"}
         </button>
         <input ref={inputRef} type="file" multiple style={{ display: "none" }} onChange={(e) => upload(e.target.files)} />
-        <span style={{ fontSize: 12, color: "var(--muted)" }}>
-          Photos, PDFs, screenshots, napkin scans — anything about this lead. The scout reads all of it.
-        </span>
+        <span style={{ fontSize: 12, color: "var(--muted)" }}>Always internal — the scout reads all of it.</span>
       </div>
       {files.length === 0 ? (
-        <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>Nothing dumped yet.</p>
+        <button
+          onClick={() => inputRef.current?.click()}
+          style={{
+            display: "block",
+            width: "100%",
+            border: "2px dashed var(--muted-line)",
+            borderRadius: 14,
+            padding: "34px 20px",
+            textAlign: "center",
+            color: "var(--muted)",
+            fontSize: 14,
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          ⤓ Drop anything you have on this lead — photos, PDFs, screenshots, napkin scans
+        </button>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
           {files.map((f) => (
             <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--white)", border: "1px solid #ededf1", borderRadius: 9, padding: "8px 12px" }}>
-              <span style={{ fontSize: 15 }}>{f.mimeType?.startsWith("image/") ? "🖼" : f.mimeType === "application/pdf" ? "📄" : "📎"}</span>
+              {typeChip(f.mimeType)}
               <a href={`/api/leads/${leadId}/files/${f.id}`} style={{ fontWeight: 600, fontSize: 13.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {f.fileName}
               </a>
@@ -217,13 +244,43 @@ export function LeadFilesPanel({
   );
 }
 
-// ---------------------------------------------------------------- the scout
+// ---------------------------------------------------------------- the scout report
 
-const VERDICT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pursue: { bg: "#e8f7ee", color: "#15803d", label: "PURSUE" },
-  probe: { bg: "#fff7ed", color: "#b45309", label: "PROBE" },
-  pass: { bg: "#fdeeee", color: "#b91c1c", label: "PASS" },
-};
+/** Split the fixed-section report and style each: Red flags amber, rationale green. */
+function ScoutReportBody({ md }: { md: string }) {
+  const sections = md.split(/\n(?=## )/g);
+  return (
+    <div style={{ maxHeight: 640, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+      {sections.map((sec, i) => {
+        const heading = /^## (.+)/.exec(sec)?.[1]?.trim() ?? "";
+        const body = sec.replace(/^## .+\n?/, "");
+        const isRedFlags = /red flags/i.test(heading);
+        const isRationale = /score rationale/i.test(heading);
+        return (
+          <div
+            key={i}
+            style={
+              isRationale
+                ? { background: "#DCF5E3", border: "1px solid #BFE8CF", borderRadius: 10, padding: "10px 14px" }
+                : { padding: "2px 2px" }
+            }
+          >
+            {heading && (
+              <div
+                className="kicker"
+                style={{ fontSize: 10, marginBottom: 4, color: isRedFlags ? "#B45309" : isRationale ? "#15803D" : "var(--muted)" }}
+              >
+                {isRedFlags ? "⚠ " : ""}
+                {heading}
+              </div>
+            )}
+            <SimpleMarkdown md={body} size={13.5} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function LeadScoutPanel({
   leadId,
@@ -276,17 +333,11 @@ export function LeadScoutPanel({
     }
   }
 
-  const v = verdict ? VERDICT_STYLE[verdict] : null;
-
   return (
     <section style={{ marginTop: 26 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
         <span className="kicker">Scout report</span>
-        {score !== null && v && (
-          <span className="kicker" style={{ fontSize: 11, padding: "4px 10px", borderRadius: 999, background: v.bg, color: v.color }}>
-            {score}/10 · {v.label}
-          </span>
-        )}
+        {score !== null && <ScoreChip score={score} verdict={verdict} size="lg" />}
         {canRun && (
           <button onClick={run} disabled={busy} style={btn("green", busy)}>
             {busy ? "Scouting (web recon + read, ~40s)…" : analysisMd ? "◆ Re-run the scout" : "◆ Analyze this lead"}
@@ -302,13 +353,16 @@ export function LeadScoutPanel({
       {error && <p style={{ color: "#b00020", fontSize: 13, margin: "0 0 8px" }}>{error}</p>}
       {analysisMd ? (
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px" }}>
-          <SimpleMarkdown md={analysisMd} size={13.5} />
+          <ScoutReportBody md={analysisMd} />
         </div>
       ) : (
-        <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>
-          No scout report yet. Drop what you have into the dump, then run the scout — it reads everything,
-          checks the web, and scores whether this lead is worth the effort.
-        </p>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: "34px 20px", textAlign: "center", background: "var(--white)" }}>
+          <div style={{ fontSize: 22, marginBottom: 6 }}>◆</div>
+          <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>
+            No scout report yet — it reads the record, the dump, and the web, then scores whether this
+            lead is worth the effort (~40s).
+          </p>
+        </div>
       )}
     </section>
   );
