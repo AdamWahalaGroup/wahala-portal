@@ -37,28 +37,6 @@ const taskgenJsonSchema = {
   },
 } as const;
 
-const SYSTEM_PROMPT = `You are the engineering lead at Wahala Group breaking a signed statement of work
-into the internal task list a delivery engineer (who was NOT in the sales calls)
-will execute. The engineer has the project context but none of the tribal knowledge —
-each task must stand alone.
-
-You get ONE phase: its scope, and a numbered list of deliverables (grouped by focus
-area). Return JSON: tasks, each with:
-- deliverableIndex: the 0-based number of the deliverable it implements, or -1 for
-  phase-general work (project setup, environments, CI, deploy) that serves them all.
-- title: terse, verb-first, ≤ 9 words ("Build magic-link auth endpoint").
-- description: 1–3 sentences of WHAT and any constraint the sources state. Write for
-  the engineer; do not restate the title.
-- subtasks: 2–6 concrete steps, each ≤ 12 words, in execution order.
-
-Rules:
-- EVERY deliverable gets at least one task; split a deliverable into multiple tasks
-  when it clearly contains distinct engineering pieces.
-- Include phase-general tasks (index -1) only when genuinely needed, and at most 3.
-- Ground everything in the provided material — never invent features, integrations,
-  or tech choices the sources don't support. Mark unavoidable inferences (inferred).
-- NO time estimates, NO prices, NO story points.
-- Terse and concrete. No filler.`;
 
 export async function generateTaskBreakdown(input: {
   phaseName: string;
@@ -86,7 +64,7 @@ export async function generateTaskBreakdown(input: {
   const provider = await getDraftProvider();
   const cfg = await resolveAgentConfig("taskgen");
   const { output, usage } = await provider.completeStructured<{ tasks: GeneratedTask[] }>({
-    system: SYSTEM_PROMPT,
+    system: cfg.systemPrompt,
     parts,
     schemaName: "TaskBreakdown",
     schema: taskgenJsonSchema,

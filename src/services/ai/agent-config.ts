@@ -7,6 +7,9 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { aiDraftModel, aiSearchModel } from "@/auth/server-env";
+import { DEFAULT_AGENT_PROMPTS } from "./prompts";
+
+export const PROMPT_MAX_CHARS = 20000;
 
 export const REASONING_EFFORTS = ["minimal", "low", "medium", "high"] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
@@ -69,11 +72,21 @@ export const AGENT_DEFS: AgentDef[] = [
 export type AgentConfig = {
   model: string;
   reasoningEffort: ReasoningEffort | null;
+  /** Effective system prompt: admin override when saved, else the code default. */
+  systemPrompt: string;
   /** True when the model came from a settings row rather than the env default. */
   overridden: boolean;
+  /** True when the system prompt came from a settings row rather than code. */
+  promptOverridden: boolean;
 };
 
-type StoredAgentSetting = { model?: string; reasoningEffort?: string };
+type StoredAgentSetting = { model?: string; reasoningEffort?: string; systemPrompt?: string };
+
+export function defaultAgentPrompt(agentKey: string): string {
+  const p = DEFAULT_AGENT_PROMPTS[agentKey];
+  if (!p) throw new Error(`No default prompt for AI agent: ${agentKey}`);
+  return p;
+}
 
 function defFor(agentKey: string): AgentDef {
   const def = AGENT_DEFS.find((d) => d.key === agentKey);
@@ -91,13 +104,23 @@ export async function resolveAgentConfig(agentKey: string): Promise<AgentConfig>
     def.supportsReasoning && stored.reasoningEffort && (REASONING_EFFORTS as readonly string[]).includes(stored.reasoningEffort)
       ? (stored.reasoningEffort as ReasoningEffort)
       : null;
-  return { model, reasoningEffort: effort, overridden: !!stored.model?.trim() || !!effort };
+  const promptOverride = stored.systemPrompt?.trim() || "";
+  return {
+    model,
+    reasoningEffort: effort,
+    systemPrompt: promptOverride || defaultAgentPrompt(agentKey),
+    overridden: !!stored.model?.trim() || !!effort,
+    promptOverridden: !!promptOverride,
+  };
 }
 
-/** Persist an agent's override. Empty model = back to the env default; effort "" = off. */
+/**
+ * Persist an agent's override. Empty model = back to the env default; effort "" = off;
+ * systemPrompt empty or byte-identical to the code default = no prompt override.
+ */
 export async function saveAgentConfig(
   agentKey: string,
-  input: { model: string; reasoningEffort: string },
+  input: { model: string; reasoningEffort: string; systemPrompt?: string },
   updatedByUserId: string,
 ): Promise<void> {
   const def = defFor(agentKey);
@@ -107,15 +130,27 @@ export async function saveAgentConfig(
     : "";
   const db = getDb();
   const key = `agent:${agentKey}`;
-  if (!model && !effort) {
+  const existingRow = await db.query.appSettings.findFirst({ where: eq(schema.appSettings.key, key) });
+  // systemPrompt omitted = preserve whatever override exists; "" or the default text = clear it.
+  let prompt: string;
+  if (input.systemPrompt === undefined) {
+    prompt = ((existingRow?.value ?? {}) as StoredAgentSetting).systemPrompt?.trim() ?? "";
+  } else {
+    prompt = input.systemPrompt.trim();
+    if (prompt === defaultAgentPrompt(agentKey).trim()) prompt = "";
+    if (prompt.length > PROMPT_MAX_CHARS) {
+      throw new Error(`System prompt too long (${prompt.length} chars; max ${PROMPT_MAX_CHARS}).`);
+    }
+  }
+  if (!model && !effort && !prompt) {
     await db.delete(schema.appSettings).where(eq(schema.appSettings.key, key));
     return;
   }
   const value: StoredAgentSetting = {};
   if (model) value.model = model;
   if (effort) value.reasoningEffort = effort;
-  const existing = await db.query.appSettings.findFirst({ where: eq(schema.appSettings.key, key) });
-  if (existing) {
+  if (prompt) value.systemPrompt = prompt;
+  if (existingRow) {
     await db.update(schema.appSettings).set({ value, updatedByUserId }).where(eq(schema.appSettings.key, key));
   } else {
     await db.insert(schema.appSettings).values({ key, value, updatedByUserId });

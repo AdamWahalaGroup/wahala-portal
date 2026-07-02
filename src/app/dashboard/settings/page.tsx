@@ -5,7 +5,7 @@
  */
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
-import { AGENT_DEFS, resolveAgentConfig } from "@/services/ai/agent-config";
+import { AGENT_DEFS, resolveAgentConfig, defaultAgentPrompt } from "@/services/ai/agent-config";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { AgentSettings } from "@/components/AgentSettings";
@@ -29,6 +29,9 @@ export default async function SettingsPage() {
         model: cfg.model,
         reasoningEffort: cfg.reasoningEffort,
         overridden: cfg.overridden,
+        systemPrompt: cfg.systemPrompt,
+        defaultPrompt: defaultAgentPrompt(d.key),
+        promptOverridden: cfg.promptOverridden,
       };
     }),
   );

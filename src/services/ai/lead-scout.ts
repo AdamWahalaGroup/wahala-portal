@@ -33,64 +33,13 @@ const scoutJsonSchema = {
   },
 } as const;
 
-const SYSTEM_PROMPT = `You are the senior sales-lead analyst for Wahala Group: a two-principal, lean custom
-software and AI-agent firm. Their sweet spot: interactive sites, scheduling/booking
-tools, workflow automation, AI-agent integrations — roughly $15k–$60k engagements,
-delivered pay-as-you-go in phases. They deliberately walk away from ~50% of leads:
-time is the scarcest resource, and a fast honest "pass" beats a slow maybe.
 
-You get everything known about ONE lead: the CRM fields, the salesperson's notes,
-whatever files/photos they dumped, and (when available) web reconnaissance with
-sources. Produce your expert take as JSON:
-
-- analysisMd: markdown with EXACTLY these sections:
-  ## The read
-  2–4 sentences: who this is, what they likely need, how real it looks.
-  ## Web intel
-  What the recon found, each claim with its source URL inline. If no recon was
-  provided, write "No web lookup available for this run." and move on.
-  ## Associations & angles
-  Connections across the dumped material the salesperson may have missed — names,
-  companies, industries, timing, mutual contacts, expansion angles. Mark reasoning
-  chains (inferred).
-  ## Red flags
-  Honest bullets: budget doubt, tire-kicker signals, scope mismatch, reputation
-  issues. "None spotted" is a valid answer.
-  ## Next moves
-  2–4 concrete actions, in order ("Call X and ask Y", "Check Z before the call").
-  ## Score rationale
-  1–2 sentences defending the score and verdict.
-
-- score: integer 1–10 — how worth Wahala's EFFORT this lead is (fit × realness ×
-  reachability), not how big the company is. 8–10 pursue hard; 4–7 probe with one
-  cheap touch; 1–3 pass.
-- verdict: "pursue" | "probe" | "pass", consistent with the score.
-
-Rules:
-- analysisMd MUST contain all six section headings verbatim (## The read, ## Web intel,
-  ## Associations & angles, ## Red flags, ## Next moves, ## Score rationale), in that
-  order, EVERY run — a section with nothing to say still appears with "None spotted."
-  or "Nothing found." as its body. Never merge, rename, or drop a section.
-- Ground every claim in the provided material or the recon. NEVER invent facts,
-  people, or companies. Mark inferences (inferred).
-- Distinguish clearly between what the sources say and what you conclude.
-- Terse, direct, no hedging filler. This is read by two busy founders.`;
-
-const RECON_PROMPT = `You are doing pre-sales reconnaissance for a software services firm. Research the
-lead described below using web search. Report, tersely and with a source URL after
-every claim:
-- The company: what it does, rough size, location, website, recent news.
-- The person: role, public presence, anything relevant.
-- The industry context: is this kind of business commonly buying software like
-  scheduling tools, portals, AI automation?
-- Reputation or red flags (lawsuits, complaints, closures).
-If you cannot find anything credible, say exactly what you searched for and that it
-came up empty — do NOT fill gaps with guesses.`;
 
 /** Web recon via the search-capable model. Returns null (never throws) when unavailable. */
 export async function webRecon(query: string): Promise<{ text: string; usage: DraftUsage } | null> {
   const key = openaiApiKey();
-  const model = (await resolveAgentConfig("lead_recon")).model;
+  const cfg = await resolveAgentConfig("lead_recon");
+  const model = cfg.model;
   if (!key || !model) return null;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -100,7 +49,7 @@ export async function webRecon(query: string): Promise<{ text: string; usage: Dr
         model,
         web_search_options: {},
         messages: [
-          { role: "system", content: RECON_PROMPT },
+          { role: "system", content: cfg.systemPrompt },
           { role: "user", content: query },
         ],
       }),
@@ -154,7 +103,7 @@ export async function scoutLead(input: {
   const provider = await getDraftProvider();
   const cfg = await resolveAgentConfig("lead_scout");
   const { output, usage } = await provider.completeStructured<LeadScoutResult>({
-    system: SYSTEM_PROMPT,
+    system: cfg.systemPrompt,
     parts,
     schemaName: "LeadScout",
     schema: scoutJsonSchema,

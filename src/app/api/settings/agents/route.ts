@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
-import { AGENT_DEFS, resolveAgentConfig, saveAgentConfig } from "@/services/ai/agent-config";
+import { AGENT_DEFS, resolveAgentConfig, saveAgentConfig, defaultAgentPrompt } from "@/services/ai/agent-config";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,9 @@ export async function GET() {
           model: cfg.model,
           reasoningEffort: cfg.reasoningEffort,
           overridden: cfg.overridden,
+          systemPrompt: cfg.systemPrompt,
+          defaultPrompt: defaultAgentPrompt(d.key),
+          promptOverridden: cfg.promptOverridden,
         };
       }),
     );
@@ -42,11 +45,18 @@ export async function PUT(req: Request) {
   try {
     const ctx = await requireAuth();
     assertAdmin(ctx);
-    const body = await readJson<{ agentKey?: string; model?: string; reasoningEffort?: string }>(req);
+    const body = await readJson<{ agentKey?: string; model?: string; reasoningEffort?: string; systemPrompt?: string }>(req);
     if (!body.agentKey || !AGENT_DEFS.some((d) => d.key === body.agentKey)) {
       throw new ApiError(400, "validation", "Unknown agentKey.");
     }
-    await saveAgentConfig(body.agentKey, { model: body.model ?? "", reasoningEffort: body.reasoningEffort ?? "" }, ctx.user.id);
+    if (body.systemPrompt !== undefined && typeof body.systemPrompt !== "string") {
+      throw new ApiError(400, "validation", "systemPrompt must be a string.");
+    }
+    await saveAgentConfig(
+      body.agentKey,
+      { model: body.model ?? "", reasoningEffort: body.reasoningEffort ?? "", systemPrompt: body.systemPrompt },
+      ctx.user.id,
+    );
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleApiError(e);
