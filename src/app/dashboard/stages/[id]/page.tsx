@@ -23,6 +23,7 @@ import { TasksClient } from "@/components/TasksClient";
 import { ChangeOrders } from "@/components/ChangeOrders";
 import { DeliverablesClient } from "@/components/DeliverablesClient";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { GenerateTasksButton } from "@/components/GenerateTasksButton";
 import { waitingParty } from "@/lib/stage-ui";
 
 export const dynamic = "force-dynamic";
@@ -163,8 +164,9 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
 
           {/* Tasks */}
           <section style={{ marginTop: 28 }}>
-            <div className="kicker" style={{ marginBottom: 12 }}>
-              Tasks ({tasks.length})
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+              <span className="kicker">Tasks ({tasks.length})</span>
+              {canManageTasks && <GenerateTasksButton stageId={stage.id} />}
             </div>
             <TasksClient
               tasks={tasks}

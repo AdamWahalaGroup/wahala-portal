@@ -7,6 +7,7 @@ import { getAuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
 import { getProjectDetail } from "@/services/projects";
 import { listFilesForProject } from "@/services/files";
+import { listWahalaStaff } from "@/services/clients";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -15,6 +16,7 @@ import { Money } from "@/components/Money";
 import { PeopleCard, Avatar } from "@/components/People";
 import { NewStageButton } from "@/components/NewStageButton";
 import { FilesClient } from "@/components/FilesClient";
+import { HandoffPanel } from "@/components/HandoffPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const { project } = detail;
   const activeStageId = stages.find((s) => s.status !== "accepted" && s.status !== "rejected")?.id;
   const canCreateStage = ctx.isStaff && (ctx.isAdmin || ctx.user.role === "account_owner");
+  const canHandoff = canCreateStage;
+  const staff = canHandoff ? await listWahalaStaff(ctx) : [];
 
   return (
     <AppShell
@@ -87,6 +91,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           </div>
+        )}
+        {canHandoff && (
+          <HandoffPanel
+            projectId={project.id}
+            staff={staff}
+            currentLeadId={project.leadEngineerUserId}
+            currentEngineerIds={detail.roster.filter((m) => m.role === "engineer").map((m) => m.id)}
+          />
         )}
       </div>
 
