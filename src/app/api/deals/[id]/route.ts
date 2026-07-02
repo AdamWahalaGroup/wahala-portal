@@ -12,13 +12,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const ctx = await requireAuth();
     const { id } = await params;
-    const body = await readJson<{ stage?: string; name?: string; valueCents?: number; notes?: string; discoveryMd?: string }>(req);
+    const body = await readJson<{ stage?: string; reason?: string; name?: string; valueCents?: number; notes?: string; discoveryMd?: string }>(req);
 
     if (body.name !== undefined || body.valueCents !== undefined || body.notes !== undefined || body.discoveryMd !== undefined) {
       await updateDeal(ctx, id, { name: body.name, valueCents: body.valueCents, notes: body.notes, discoveryMd: body.discoveryMd });
     }
     if (body.stage !== undefined) {
-      await setDealStage(ctx, id, body.stage);
+      await setDealStage(ctx, id, body.stage, body.reason);
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

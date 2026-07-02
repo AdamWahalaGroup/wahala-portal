@@ -106,7 +106,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       accountOwner={null}
     >
       <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-        <Link href="/dashboard/sales">Sales</Link> / {deal.name}
+        <Link href="/dashboard/sales">Sales</Link> / <Link href="/dashboard/sales">Board</Link> /{" "}
+        <span style={{ color: "var(--ink)" }}>{deal.name}</span>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" }}>

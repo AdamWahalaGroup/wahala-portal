@@ -119,12 +119,12 @@ export const stageSelectStyle: React.CSSProperties = {
 
 /** Stage identity colors — section headers, spine nodes. */
 export const STAGE_COLORS: Record<DealStage, string> = {
-  discovery: "#8B5CF6",
-  business_requirements: "#2B3EE6",
-  solution_design: "#0891B2",
-  proposal: "#D97706",
-  negotiation: "#DB2777",
-  contract: "#0E7490",
+  discovery: "#2563EB",
+  business_requirements: "#0D9488",
+  solution_design: "#7C3AED",
+  proposal: "#0891B2",
+  negotiation: "#D97706",
+  contract: "#4B5159",
   won: "#16A34A",
   lost: "#B91C1C",
 };

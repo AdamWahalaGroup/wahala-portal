@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * Sales home / pipeline board (frame 21) — the Monday-meeting view. Stat cards,
- * the new-leads-to-qualify strip, six stacked stage sections with sums + probability
- * anchors (amber when they hold stuck deals), and the green Won strip. Stages are
- * dispositions: the dropdown moves a deal anywhere, every move is logged.
+ * Sales Board (frame 21) — a true kanban: unsorted leads enter on the left
+ * (Triage IS the lead inbox; dragging a lead into Discovery is the qualify
+ * action), money exits on the right (Won/Lost drop zones). Stages stay
+ * dispositions: drag any card anywhere, every move logged, never enforced.
+ * The old stacked layout survives as the ☰ List view.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
-import type { SalesOverview, DealItem, LeadItem } from "@/services/sales";
+import type { SalesOverview, DealItem, LeadItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
 type StaffOption = { id: string; name: string };
@@ -51,6 +52,12 @@ async function patch(url: string, body: unknown): Promise<string | null> {
   } catch {
     return "Network error — please try again.";
   }
+}
+
+/** $7,200,000 cents → "$72k"; sub-$1k stays exact. */
+function fmtK(cents: number): string {
+  const d = Math.round(cents / 100);
+  return d >= 1000 ? `$${Math.round(d / 1000)}k` : `$${d}`;
 }
 
 // ---------------------------------------------------------------- lead capture (lives on the Leads page)
@@ -269,7 +276,7 @@ export function LeadRow({
   );
 }
 
-// ---------------------------------------------------------------- deal row
+// ---------------------------------------------------------------- deal row (List view)
 
 function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
   const router = useRouter();
@@ -324,20 +331,351 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------- board
+// ---------------------------------------------------------------- kanban view
 
-export function SalesBoard({
-  overview,
-  orgs,
-  staff,
-  canManage,
-}: {
-  overview: SalesOverview;
-  orgs: { id: string; name: string }[];
-  staff: StaffOption[];
-  canManage: boolean;
-}) {
+const CARD_CAP = 6;
+
+function dragPayload(e: React.DragEvent): { kind: "lead" | "deal"; id: string } | null {
+  const raw = e.dataTransfer.getData("text/plain");
+  const idx = raw.indexOf(":");
+  if (idx < 1) return null;
+  const kind = raw.slice(0, idx);
+  if (kind !== "lead" && kind !== "deal") return null;
+  return { kind, id: raw.slice(idx + 1) };
+}
+
+function KanbanView({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+  const router = useRouter();
   const newLeads = overview.leads.filter((l) => l.status === "new");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  async function run(url: string, body: unknown) {
+    setBusy(true);
+    setError(null);
+    const err = await patch(url, body);
+    if (err) setError(err);
+    else router.refresh();
+    setBusy(false);
+  }
+
+  function allowDrop(e: React.DragEvent, key: string) {
+    if (!canManage || busy) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setOver(key);
+  }
+
+  async function handleDrop(e: React.DragEvent, target: DealStage) {
+    e.preventDefault();
+    setOver(null);
+    const p = dragPayload(e);
+    if (!p || !canManage || busy) return;
+    if (p.kind === "lead") {
+      // Dragging a lead into Discovery IS the qualify action.
+      if (target !== "discovery") {
+        setError("To qualify a lead, drag it into Discovery. (Deals can move anywhere.)");
+        return;
+      }
+      await run(`/api/leads/${p.id}`, { action: "qualify" });
+      return;
+    }
+    if (target === "lost") {
+      const reason = window.prompt("Why did we lose it? (goes in the log)");
+      if (reason === null) return;
+      await run(`/api/deals/${p.id}`, { stage: "lost", reason });
+      return;
+    }
+    await run(`/api/deals/${p.id}`, { stage: target });
+  }
+
+  async function passLead(lead: LeadItem) {
+    if (!window.confirm(`Pass on ${lead.name}?`)) return;
+    await run(`/api/leads/${lead.id}`, { action: "disqualify" });
+  }
+
+  const dealCard = (d: DealItem) => (
+    <div
+      key={d.id}
+      draggable={canManage}
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", `deal:${d.id}`);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      style={{
+        background: "var(--white)",
+        border: "1px solid #EDEDF1",
+        borderRadius: 10,
+        padding: "11px 12px",
+        boxShadow: "0 1px 2px rgba(0,0,0,.04)",
+        cursor: canManage ? "grab" : "default",
+      }}
+    >
+      <Link
+        href={`/dashboard/sales/deals/${d.id}`}
+        style={{ fontSize: 12.5, fontWeight: 700, color: "var(--cobalt)", textDecoration: "none", lineHeight: 1.3, display: "block" }}
+      >
+        {d.name}
+      </Link>
+      <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {d.organizationName}
+        {d.ownerName ? ` · ${d.ownerName}` : ""}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 9 }}>
+        <span className="tabular" style={{ fontSize: 12, fontWeight: 600 }}>{d.valueCents > 0 ? fmtK(d.valueCents) : ""}</span>
+        <DaysTag days={d.daysInStage} stuck={d.stuck} />
+      </div>
+    </div>
+  );
+
+  const column = (col: FunnelColumn) => {
+    const sum = col.deals.reduce((n, d) => n + d.valueCents, 0);
+    const stuckHere = col.deals.filter((d) => d.stuck).length;
+    const amber = stuckHere > 0;
+    const isOpen = !!expanded[col.stage];
+    const shown = isOpen ? col.deals : col.deals.slice(0, CARD_CAP);
+    const hidden = col.deals.slice(shown.length);
+    return (
+      <div
+        key={col.stage}
+        onDragOver={(e) => allowDrop(e, col.stage)}
+        onDragLeave={() => setOver((v) => (v === col.stage ? null : v))}
+        onDrop={(e) => handleDrop(e, col.stage)}
+        style={{
+          background: amber ? "#FFFAF2" : "var(--white)",
+          border: over === col.stage ? "1.5px solid var(--cobalt)" : `1px solid ${amber ? "#FADCB4" : "#E7E8EC"}`,
+          borderRadius: 12,
+          padding: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          minHeight: 120,
+          transition: "border-color 120ms ease, background 120ms ease",
+        }}
+      >
+        <div style={{ padding: "4px 4px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: STAGE_COLORS[col.stage], flex: "none" }} />
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-.01em", minWidth: 0 }}>{col.label}</span>
+            <span
+              className="tabular"
+              style={{
+                fontSize: 10.5,
+                fontWeight: amber ? 700 : 600,
+                color: amber ? "#B45309" : "var(--muted)",
+                background: amber ? "#FCEFDC" : "#F1F2F4",
+                padding: "1px 7px",
+                borderRadius: 999,
+                flex: "none",
+                marginLeft: "auto",
+              }}
+            >
+              {col.deals.length}
+              {amber ? ` · ${stuckHere}⚠` : ""}
+            </span>
+          </div>
+          <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 3 }}>
+            {sum > 0 ? <b style={{ color: "var(--ink-soft)" }}>{fmtK(sum)}</b> : "—"}
+            {col.probabilityPct !== null && (
+              <> · ≈{col.probabilityPct}% {col.toward === "close" ? "close" : "→ proposal"}</>
+            )}
+          </div>
+        </div>
+        {shown.map(dealCard)}
+        {hidden.length > 0 && (
+          <button
+            onClick={() => setExpanded((m) => ({ ...m, [col.stage]: true }))}
+            className="mono"
+            style={{ border: 0, background: "none", fontSize: 10, color: "#B4B9C1", cursor: "pointer", padding: "2px 0" }}
+          >
+            +{hidden.length} more · {fmtK(hidden.reduce((n, d) => n + d.valueCents, 0))}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* Condensed summary strip */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          flexWrap: "wrap",
+          background: "var(--white)",
+          border: "1px solid #E7E8EC",
+          borderRadius: 11,
+          padding: "11px 18px",
+          margin: "18px 0",
+        }}
+      >
+        <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
+          Open <b className="tabular" style={{ color: "var(--ink)" }}>{fmtK(overview.openPipelineCents)}</b>{" "}
+          <span className="tabular" style={{ color: "var(--muted-line)" }}>· wtd {fmtK(overview.openWeightedCents)}</span>
+        </span>
+        <span style={{ width: 1, height: 16, background: "#EDEDF1", flex: "none" }} />
+        <span className="tabular" style={{ fontSize: 12.5, color: "var(--muted)" }}>
+          {overview.columns.reduce((n, c) => n + c.deals.length, 0)} open deals
+        </span>
+        {overview.stuckCount > 0 && (
+          <>
+            <span style={{ width: 1, height: 16, background: "#EDEDF1", flex: "none" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#B45309", background: "#FFF7ED", border: "1px solid #FADCB4", padding: "3px 10px", borderRadius: 999 }}>
+              ⚠ {overview.stuckCount} stuck 14d+
+            </span>
+          </>
+        )}
+        <span className="tabular" style={{ fontSize: 12.5, color: "var(--muted)", marginLeft: "auto", fontWeight: 700 }}>
+          This Q <span style={{ color: "#15803D" }}>{overview.wonThisQCount} won</span>
+          <span style={{ color: "var(--muted-line)" }}> / </span>
+          <span style={{ color: "#B91C1C" }}>{overview.lostThisQCount} lost</span>
+          {overview.winRatePct !== null && <span style={{ color: "var(--muted-line)" }}> · {overview.winRatePct}%</span>}
+        </span>
+      </div>
+
+      {error && (
+        <p style={{ color: "#b00020", fontSize: 13, margin: "0 0 12px" }}>{error}</p>
+      )}
+
+      {/* Columns: Triage + the six funnel stages */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, alignItems: "start" }}>
+        {/* Triage — leads, not deals yet */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1.5px dashed #D7D9DF",
+            borderRadius: 12,
+            padding: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            minHeight: 120,
+          }}
+        >
+          <div style={{ padding: "4px 4px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 2, background: "var(--cobalt)", flex: "none" }} />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Triage</span>
+              <span className="tabular" style={{ fontSize: 10.5, fontWeight: 600, color: "var(--cobalt)", background: "#EEF0FE", padding: "1px 7px", borderRadius: 999, marginLeft: "auto" }}>
+                {newLeads.length}
+              </span>
+            </div>
+            <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 3 }}>new leads land here</div>
+          </div>
+          {newLeads.map((l) => (
+            <div
+              key={l.id}
+              draggable={canManage}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", `lead:${l.id}`);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              style={{
+                background: "var(--white)",
+                border: "1px solid #E7E8EC",
+                borderRadius: 10,
+                padding: "11px 12px",
+                cursor: canManage ? "grab" : "default",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <Link
+                  href={`/dashboard/sales/leads/${l.id}`}
+                  style={{ fontSize: 12.5, fontWeight: 700, color: "inherit", textDecoration: "none", lineHeight: 1.3, flex: 1, minWidth: 0 }}
+                >
+                  {l.name}
+                </Link>
+                {canManage && (
+                  <button
+                    onClick={() => passLead(l)}
+                    title="Pass on this lead"
+                    style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, lineHeight: 1, cursor: "pointer", padding: 0, flex: "none" }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {l.source ? `via ${l.source}` : l.company ?? "—"}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <ScoreChip score={l.aiScore} verdict={l.aiVerdict} />
+              </div>
+            </div>
+          ))}
+          <div className="mono" style={{ fontSize: 9.5, color: "#B4B9C1", textAlign: "center", padding: "2px 0" }}>
+            {newLeads.length > 0 ? "drag right to qualify →" : "inbox zero"}
+          </div>
+        </div>
+
+        {overview.columns.map(column)}
+      </div>
+
+      {/* Won / Lost drop zones */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12, marginTop: 14 }}>
+        <div
+          onDragOver={(e) => allowDrop(e, "won")}
+          onDragLeave={() => setOver((v) => (v === "won" ? null : v))}
+          onDrop={(e) => handleDrop(e, "won")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            background: "#DCF5E3",
+            border: over === "won" ? "1.5px solid #16A34A" : "1.5px dashed #9FD9B4",
+            borderRadius: 12,
+            padding: "13px 16px",
+            transition: "border-color 120ms ease",
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: "#16A34A", flex: "none" }} />
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "#15803D" }}>Won</span>
+          <span className="tabular" style={{ fontSize: 11, fontWeight: 700, color: "#15803D", background: "#C6ECD2", padding: "2px 9px", borderRadius: 999 }}>
+            {overview.wonThisQCount} this quarter
+          </span>
+          {overview.wonThisQCents > 0 && (
+            <span className="tabular" style={{ fontSize: 13, fontWeight: 700, color: "#15803D" }}>{fmtK(overview.wonThisQCents)}</span>
+          )}
+          <span className="mono" style={{ fontSize: 10, color: "#6BB383", marginLeft: "auto" }}>
+            drop a deal here → becomes a project
+          </span>
+        </div>
+        <div
+          onDragOver={(e) => allowDrop(e, "lost")}
+          onDragLeave={() => setOver((v) => (v === "lost" ? null : v))}
+          onDrop={(e) => handleDrop(e, "lost")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "#FBE3E3",
+            border: over === "lost" ? "1.5px solid #B91C1C" : "1.5px dashed #ECB6B6",
+            borderRadius: 12,
+            padding: "13px 16px",
+            transition: "border-color 120ms ease",
+          }}
+        >
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: "#B91C1C", flex: "none" }} />
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C" }}>Lost</span>
+          <span className="tabular" style={{ fontSize: 11, fontWeight: 700, color: "#B91C1C", background: "#F4CFCF", padding: "2px 9px", borderRadius: 999 }}>
+            {overview.lostThisQCount}
+          </span>
+          <span className="mono" style={{ fontSize: 10, color: "#C58A8A", marginLeft: "auto" }}>reason logged</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- list view (the old layout, kept as ☰)
+
+function ListView({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+  const newLeads = overview.leads.filter((l) => l.status === "new");
+  const pursueCount = newLeads.filter((l) => l.aiVerdict === "pursue").length;
   const openDealCount = overview.columns.reduce((n, c) => n + c.deals.length, 0);
   const wonCents = overview.wonDeals.reduce((n, d) => n + d.valueCents, 0);
 
@@ -352,8 +690,33 @@ export function SalesBoard({
 
   return (
     <div>
+      {/* Leads nudge bar — the Board's Triage column holds the actual inbox */}
+      {newLeads.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 11,
+            background: "var(--cobalt-wash)",
+            border: "1px solid #DDE1FB",
+            borderRadius: 11,
+            padding: "11px 16px",
+            marginTop: 18,
+          }}
+        >
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
+          <span style={{ fontSize: 13 }}>
+            <b>{newLeads.length} new lead{newLeads.length === 1 ? "" : "s"}</b> waiting to qualify
+            {pursueCount > 0 ? <> — {pursueCount} scored <b>pursue</b></> : null}
+          </span>
+          <Link href="/dashboard/sales/leads" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+            Review leads →
+          </Link>
+        </div>
+      )}
+
       {/* Stat cards */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
         <div style={cardBase}>
           <div className="kicker">Open pipeline</div>
           <Money cents={overview.openPipelineCents} style={{ display: "block", fontSize: 22, fontWeight: 800, letterSpacing: "-.02em", marginTop: 3 }} />
@@ -390,27 +753,6 @@ export function SalesBoard({
         </div>
       </div>
 
-      {/* New leads to qualify */}
-      <section style={{ marginTop: 28 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
-          <span className="kicker">New leads to qualify ({newLeads.length})</span>
-          <Link href="/dashboard/sales/leads" style={{ fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}>
-            All leads →
-          </Link>
-        </div>
-        {newLeads.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>
-            Inbox zero — <Link href="/dashboard/sales/leads">capture a lead</Link> when you have one.
-          </p>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {newLeads.map((l) => (
-              <LeadRow key={l.id} lead={l} orgs={orgs} staff={staff} canManage={canManage} />
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* Pipeline — six stacked stage sections */}
       <section style={{ marginTop: 32 }}>
         <div className="kicker" style={{ marginBottom: 12 }}>
@@ -420,7 +762,7 @@ export function SalesBoard({
           {overview.columns.map((col) => {
             const sum = col.deals.reduce((n, d) => n + d.valueCents, 0);
             const stuckHere = col.deals.filter((d) => d.stuck).length;
-            const color = STAGE_COLORS[col.stage as DealStage];
+            const color = STAGE_COLORS[col.stage];
             return (
               <div key={col.stage}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
@@ -462,7 +804,7 @@ export function SalesBoard({
             alignItems: "center",
             gap: 12,
             background: "#DCF5E3",
-            border: "1px solid #BFE8CF",
+            border: "1px solid #BFE6CC",
             borderRadius: 12,
             padding: "12px 16px",
           }}
@@ -482,6 +824,81 @@ export function SalesBoard({
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- board shell (header + ▦/☰ toggle)
+
+const VIEW_KEY = "wahala.sales-view";
+
+export function SalesBoard({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+  const [view, setView] = useState<"board" | "list">("board");
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(VIEW_KEY) === "list") setView("list");
+    } catch {
+      // private mode etc. — default stands
+    }
+  }, []);
+
+  function pick(v: "board" | "list") {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // non-persistent is fine
+    }
+  }
+
+  const tab = (v: "board" | "list", label: string) => (
+    <button
+      onClick={() => pick(v)}
+      style={{
+        border: 0,
+        borderRadius: 7,
+        padding: "6px 12px",
+        fontSize: 12.5,
+        fontWeight: view === v ? 600 : 500,
+        color: view === v ? "var(--ink)" : "#767B85",
+        background: view === v ? "var(--white)" : "transparent",
+        boxShadow: view === v ? "0 1px 2px rgba(0,0,0,.06)" : "none",
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="kicker">Sales</div>
+          <h1 style={{ margin: "6px 0 0", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Pipeline</h1>
+        </div>
+        <div style={{ display: "flex", background: "#F1F2F4", borderRadius: 9, padding: 3, flex: "none" }}>
+          {tab("board", "▦ Board")}
+          {tab("list", "☰ List")}
+        </div>
+        <Link
+          href="/dashboard/sales/leads"
+          style={{
+            background: "var(--ink)",
+            color: "var(--white)",
+            borderRadius: 9,
+            padding: "9px 15px",
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: "none",
+            flex: "none",
+          }}
+        >
+          + Capture lead
+        </Link>
+      </div>
+      {view === "board" ? <KanbanView overview={overview} canManage={canManage} /> : <ListView overview={overview} canManage={canManage} />}
     </div>
   );
 }

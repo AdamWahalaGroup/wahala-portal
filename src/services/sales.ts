@@ -299,7 +299,7 @@ async function loadDealItems(ctx: AuthContext): Promise<DealItem[]> {
  * in the audit log and resets the days-in-stage clock. Winning flips the org to
  * 'active' (prospect became customer).
  */
-export async function setDealStage(ctx: AuthContext, dealId: string, stage: string): Promise<void> {
+export async function setDealStage(ctx: AuthContext, dealId: string, stage: string, reason?: string): Promise<void> {
   assertSalesManager(ctx, "set_deal_stage");
   if (!isDealStage(stage)) throw new StageError("VALIDATION", "Unknown sales stage.");
   const db = getDb();
@@ -315,7 +315,7 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
       action: "deal.stage_changed",
       entityType: "deal",
       entityId: dealId,
-      metadata: { from: deal.stage, to: stage },
+      metadata: reason?.trim() ? { from: deal.stage, to: stage, reason: reason.trim() } : { from: deal.stage, to: stage },
     }),
   );
   if (stage === "won") {
@@ -367,6 +367,7 @@ export type DealHistoryItem = {
   actorName: string;
   from?: string;
   to?: string;
+  note?: string;
   createdAt: Date;
 };
 
@@ -427,13 +428,14 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
   }
 
   const history: DealHistoryItem[] = auditRows.map((a) => {
-    const meta = (a.metadata ?? {}) as { from?: string; to?: string };
+    const meta = (a.metadata ?? {}) as { from?: string; to?: string; reason?: string };
     if (a.action === "deal.stage_changed") {
       return {
         action: "moved_this_deal",
         actorName: a.actorUserId ? actorName.get(a.actorUserId) ?? "Someone" : "System",
         from: isDealStage(meta.from ?? "") ? STAGE_META[meta.from as DealStage].label : meta.from,
         to: isDealStage(meta.to ?? "") ? STAGE_META[meta.to as DealStage].label : meta.to,
+        note: meta.reason,
         createdAt: a.createdAt,
       };
     }

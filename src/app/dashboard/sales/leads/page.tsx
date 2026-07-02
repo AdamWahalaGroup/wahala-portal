@@ -107,7 +107,12 @@ export default async function LeadsPage() {
       </div>
 
       <section style={{ marginTop: 20 }}>
-        <div className="kicker" style={{ marginBottom: 8 }}>To qualify ({toQualify.length})</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+          <span className="kicker">To qualify ({toQualify.length})</span>
+          <span className="mono" style={{ fontSize: 10.5, color: "var(--muted-line)", fontStyle: "italic" }}>
+            same items as the Board&apos;s Triage column — Qualify ≡ drag right into Discovery
+          </span>
+        </div>
         {toQualify.length === 0 ? (
           <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>Inbox zero.</p>
         ) : (
