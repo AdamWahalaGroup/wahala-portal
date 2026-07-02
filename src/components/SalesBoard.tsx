@@ -509,6 +509,48 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
     );
   };
 
+  // Won / Lost containers — terminal drop targets that also HOLD the deals dropped in.
+  const dropZone = (kind: "won" | "lost") => {
+    const won = kind === "won";
+    const deals = won ? overview.wonDeals : overview.lostDeals;
+    const sum = deals.reduce((n, d) => n + d.valueCents, 0);
+    const c = won
+      ? { bg: "#DCF5E3", dash: "#9FD9B4", solid: "#16A34A", text: "#15803D", pill: "#C6ECD2", hint: "drop a deal here → becomes a project" }
+      : { bg: "#FBE3E3", dash: "#ECB6B6", solid: "#B91C1C", text: "#B91C1C", pill: "#F4CFCF", hint: "drop a deal here → closed lost (reason logged)" };
+    return (
+      <div
+        onDragOver={(e) => allowDrop(e, kind)}
+        onDragLeave={() => setOver((v) => (v === kind ? null : v))}
+        onDrop={(e) => handleDrop(e, kind)}
+        style={{
+          background: c.bg,
+          border: over === kind ? `1.5px solid ${c.solid}` : `1.5px dashed ${c.dash}`,
+          borderRadius: 12,
+          padding: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          minHeight: 96,
+          transition: "border-color 120ms ease",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 4px 0" }}>
+          <span style={{ width: 9, height: 9, borderRadius: 999, background: c.solid, flex: "none" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{won ? "Won" : "Lost"}</span>
+          <span className="tabular" style={{ fontSize: 10.5, fontWeight: 700, color: c.text, background: c.pill, padding: "1px 8px", borderRadius: 999 }}>
+            {deals.length}
+          </span>
+          {sum > 0 && <span className="tabular" style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{fmtK(sum)}</span>}
+        </div>
+        {deals.length === 0 ? (
+          <div className="mono" style={{ fontSize: 9.5, color: c.solid, opacity: 0.7, textAlign: "center", padding: "10px 0" }}>{c.hint}</div>
+        ) : (
+          <div style={{ display: "grid", gap: 8, maxHeight: 320, overflowY: "auto" }}>{deals.map(dealCard)}</div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       {/* Condensed summary strip */}
@@ -633,57 +675,10 @@ function KanbanView({ overview, canManage }: { overview: SalesOverview; canManag
         {overview.columns.map(column)}
       </div>
 
-      {/* Won / Lost drop zones */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12, marginTop: 14 }}>
-        <div
-          onDragOver={(e) => allowDrop(e, "won")}
-          onDragLeave={() => setOver((v) => (v === "won" ? null : v))}
-          onDrop={(e) => handleDrop(e, "won")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            background: "#DCF5E3",
-            border: over === "won" ? "1.5px solid #16A34A" : "1.5px dashed #9FD9B4",
-            borderRadius: 12,
-            padding: "13px 16px",
-            transition: "border-color 120ms ease",
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: 999, background: "#16A34A", flex: "none" }} />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: "#15803D" }}>Won</span>
-          <span className="tabular" style={{ fontSize: 11, fontWeight: 700, color: "#15803D", background: "#C6ECD2", padding: "2px 9px", borderRadius: 999 }}>
-            {overview.wonThisQCount} this quarter
-          </span>
-          {overview.wonThisQCents > 0 && (
-            <span className="tabular" style={{ fontSize: 13, fontWeight: 700, color: "#15803D" }}>{fmtK(overview.wonThisQCents)}</span>
-          )}
-          <span className="mono" style={{ fontSize: 10, color: "#6BB383", marginLeft: "auto" }}>
-            drop a deal here → becomes a project
-          </span>
-        </div>
-        <div
-          onDragOver={(e) => allowDrop(e, "lost")}
-          onDragLeave={() => setOver((v) => (v === "lost" ? null : v))}
-          onDrop={(e) => handleDrop(e, "lost")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "#FBE3E3",
-            border: over === "lost" ? "1.5px solid #B91C1C" : "1.5px dashed #ECB6B6",
-            borderRadius: 12,
-            padding: "13px 16px",
-            transition: "border-color 120ms ease",
-          }}
-        >
-          <span style={{ width: 10, height: 10, borderRadius: 999, background: "#B91C1C", flex: "none" }} />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C" }}>Lost</span>
-          <span className="tabular" style={{ fontSize: 11, fontWeight: 700, color: "#B91C1C", background: "#F4CFCF", padding: "2px 9px", borderRadius: 999 }}>
-            {overview.lostThisQCount}
-          </span>
-          <span className="mono" style={{ fontSize: 10, color: "#C58A8A", marginLeft: "auto" }}>reason logged</span>
-        </div>
+      {/* Won / Lost drop zones — containers that hold the deals dropped into them */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14, alignItems: "start" }}>
+        {dropZone("won")}
+        {dropZone("lost")}
       </div>
 
       {peek && (

@@ -526,6 +526,7 @@ export type SalesOverview = {
   leads: LeadItem[];
   columns: FunnelColumn[];
   wonDeals: DealItem[];
+  lostDeals: DealItem[];
   lostCount: number;
   openPipelineCents: number;
   /** Anchor-weighted pipeline (close-race stages without an anchor weigh 50%). Rough by design. */
@@ -561,15 +562,17 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   const now = new Date();
   const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   const wonDeals = deals.filter((d) => d.stage === "won");
+  const lostDeals = deals.filter((d) => d.stage === "lost");
   const wonThisQ = wonDeals.filter((d) => d.stageEnteredAt >= qStart);
-  const lostThisQCount = deals.filter((d) => d.stage === "lost" && d.stageEnteredAt >= qStart).length;
+  const lostThisQCount = lostDeals.filter((d) => d.stageEnteredAt >= qStart).length;
   const closedThisQ = wonThisQ.length + lostThisQCount;
 
   return {
     leads,
     columns,
     wonDeals,
-    lostCount: deals.filter((d) => d.stage === "lost").length,
+    lostDeals,
+    lostCount: lostDeals.length,
     openPipelineCents: open.reduce((n, d) => n + d.valueCents, 0),
     openWeightedCents: Math.round(
       open.reduce((n, d) => n + d.valueCents * ((anchorFor(d.stage) ?? 50) / 100), 0),
