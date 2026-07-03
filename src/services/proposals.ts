@@ -411,10 +411,10 @@ export async function sendProposal(ctx: AuthContext, proposalId: string): Promis
       db.update(schema.proposals).set({ status: "superseded" }).where(inArray(schema.proposals.id, otherIds)),
     );
   }
-  // Disposition nudge: a sent proposal means the deal IS at the proposal stage.
-  if (deal && ["discovery", "business_requirements", "solution_design"].includes(deal.stage)) {
+  // Disposition nudge: a sent proposal means the deal IS at Proposal out.
+  if (deal && deal.stage === "discovery") {
     statements.push(
-      db.update(schema.deals).set({ stage: "proposal", stageEnteredAt: now }).where(eq(schema.deals.id, deal.id)),
+      db.update(schema.deals).set({ stage: "proposal_out", stageEnteredAt: now, subStatus: null }).where(eq(schema.deals.id, deal.id)),
       db.insert(schema.auditLog).values(
         buildAudit({
           organizationId: p.organizationId,
@@ -422,7 +422,7 @@ export async function sendProposal(ctx: AuthContext, proposalId: string): Promis
           action: "deal.stage_changed",
           entityType: "deal",
           entityId: deal.id,
-          metadata: { from: deal.stage, to: "proposal", via: "proposal.sent" },
+          metadata: { from: deal.stage, to: "proposal_out", via: "proposal.sent" },
         }),
       ),
     );
@@ -479,12 +479,13 @@ async function applyResponse(
     ),
   ];
 
-  // "You don't move to contract until the proposal's signed." Approval moves the deal.
+  // Approval = the client committed. The deal moves to Committed, where the
+  // agreement package + deposit gate the project handoff.
   if (input.outcome === "approved") {
     const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) });
-    if (deal && !["contract", "won", "lost"].includes(deal.stage)) {
+    if (deal && !["committed", "won", "lost"].includes(deal.stage)) {
       statements.push(
-        db.update(schema.deals).set({ stage: "contract", stageEnteredAt: now }).where(eq(schema.deals.id, deal.id)),
+        db.update(schema.deals).set({ stage: "committed", stageEnteredAt: now, subStatus: null }).where(eq(schema.deals.id, deal.id)),
         db.insert(schema.auditLog).values(
           buildAudit({
             organizationId: p.organizationId,
@@ -492,7 +493,7 @@ async function applyResponse(
             action: "deal.stage_changed",
             entityType: "deal",
             entityId: deal.id,
-            metadata: { from: deal.stage, to: "contract", via: "proposal.approved" },
+            metadata: { from: deal.stage, to: "committed", via: "proposal.approved" },
           }),
         ),
       );

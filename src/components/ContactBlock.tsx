@@ -82,7 +82,7 @@ export function ContactBlock({
     <section>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
         <span className="kicker">Contact</span>
-        <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>edits apply everywhere — lead, deal &amp; client</span>
+        <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>edits apply everywhere — board, deals &amp; projects</span>
       </div>
 
       <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>

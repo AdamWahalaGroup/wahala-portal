@@ -50,21 +50,48 @@ export const STAGE_STATUSES = [
 export const VISIBILITY = ["client_visible", "internal"] as const;
 export const BILLING_MODES = ["upfront", "on_delivery"] as const;
 export const LEAD_STATUSES = ["new", "qualified", "disqualified"] as const;
+// CRM restructure (docs/design_handoff_wahala_portal/CRM-RESTRUCTURE.md): a person is
+// one Contact record forever — "lead" is the to_qualify STATE, not a thing. Passed
+// contacts are kept and searchable, never deleted.
+export const CONTACT_STATES = ["to_qualify", "qualified", "passed"] as const;
 // Sales STAGES are dispositions, not a state machine: free to skip, free to move,
 // never enforced (see docs/brain_storming/synthesis.md — "enforce gates, report on
 // stages"). won/lost are terminal dispositions kept out of the funnel columns.
+// 5-column board: Triage renders contacts (not deals), so deals have 4 open stages.
 export const DEAL_STAGES = [
   "discovery",
-  "business_requirements",
-  "solution_design",
-  "proposal",
-  "negotiation",
-  "contract",
+  "proposal_out",
+  "negotiating",
+  "committed",
   "won",
   "lost",
 ] as const;
+// How a deal came to exist — provenance for the sales⇄delivery loop.
+export const DEAL_ORIGINS = [
+  "captured",
+  "qualified_from_triage",
+  "bypass",
+  "spawned_from_project",
+] as const;
 export const PROPOSAL_STATUSES = ["draft", "sent", "approved", "declined", "superseded"] as const;
 export const CONTRACT_ITEM_KINDS = ["msa", "nda", "insurance", "other"] as const;
+// Agreements replace contract_items: MSA/NDA live at the ACCOUNT level (deal_id kept
+// only for provenance) so later deals skip legal and go proposal → SOW.
+export const AGREEMENT_KINDS = [
+  "msa",
+  "nda",
+  "commercial_agreement",
+  "ip_schedule",
+  "professional_services",
+  "dpa",
+  "security_addendum",
+  "support_agreement",
+  "licensing",
+  "insurance",
+  "other",
+] as const;
+export const AGREEMENT_STATUSES = ["needed", "sent", "signed", "n_a"] as const;
+export const PROJECT_KINDS = ["standard", "paid_discovery"] as const;
 
 // ---- App settings (admin-tunable key/value; JSON values) ----
 // Runtime configuration that shouldn't need a redeploy — e.g. per-AI-agent model +
@@ -165,16 +192,54 @@ export const leadAssets = sqliteTable(
 );
 
 // ---- Contacts (a person, distinct from portal users; may never log in) ----
-export const contacts = sqliteTable("contacts", {
-  id: pk(),
-  name: text("name").notNull(),
-  email: text("email"),
-  phone: text("phone"),
-  title: text("title"),
-  notes: text("notes"),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-});
+// ONE record from first hello — never converted, never frozen. "Lead" is the
+// to_qualify state; qualification flips state and creates a deal referencing the SAME
+// row, so an email edit anywhere updates everywhere. Absorbs the old `leads` table
+// (now dormant): source/AI-scout fields live here.
+export const contacts = sqliteTable(
+  "contacts",
+  {
+    id: pk(),
+    // Current account. Nullable: a triage contact may be an unknown ("Reddit DM").
+    organizationId: text("organization_id").references(() => organizations.id),
+    name: text("name").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    title: text("title"),
+    notes: text("notes"),
+    state: text("state", { enum: CONTACT_STATES }).notNull().default("qualified"),
+    source: text("source"), // website form, referral, airport bar, Reddit…
+    companyNote: text("company_note"), // free-text company until an account exists
+    estValueCents: integer("est_value_cents").notNull().default(0), // gut call at capture
+    assignedToUserId: text("assigned_to_user_id").references(() => users.id), // null = unowned
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    // The AI scout's take (expert opinion + web recon), 1–10 score, verdict.
+    aiAnalysisMd: text("ai_analysis_md"),
+    aiScore: integer("ai_score"),
+    aiVerdict: text("ai_verdict", { enum: ["pursue", "probe", "pass"] }),
+    aiAnalyzedAt: integer("ai_analyzed_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("contacts_state_idx").on(t.state), index("contacts_org_idx").on(t.organizationId)],
+);
+
+// ---- Contact assets (files/photos about a contact — the triage dump) ----
+// Successor to lead_assets (contacts absorbed leads). Bytes in R2, metadata here.
+export const contactAssets = sqliteTable(
+  "contact_assets",
+  {
+    id: pk(),
+    contactId: text("contact_id").notNull().references(() => contacts.id),
+    fileName: text("file_name").notNull(),
+    r2Key: text("r2_key").notNull(),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    uploadedByUserId: text("uploaded_by_user_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("contact_assets_contact_idx").on(t.contactId)],
+);
 
 // ---- Contact ↔ company (many-to-many: "same Adam, now with company B") ----
 export const contactCompanies = sqliteTable(
@@ -209,7 +274,17 @@ export const deals = sqliteTable(
       .$defaultFn(() => new Date()),
     ownerUserId: text("owner_user_id").references(() => users.id), // the salesperson
     primaryContactId: text("primary_contact_id").references(() => contacts.id),
-    sourceLeadId: text("source_lead_id").references(() => leads.id),
+    sourceLeadId: text("source_lead_id").references(() => leads.id), // legacy (leads dormant)
+    // Provenance for the loop; 'spawned_from_project' deals get the fast-lane chip.
+    origin: text("origin", { enum: DEAL_ORIGINS }).notNull().default("qualified_from_triage"),
+    // Free substatus chip shown on negotiating cards ("redlines with counsel",
+    // "verbal yes · terms open"). Cleared on stage moves by the service layer.
+    subStatus: text("sub_status"),
+    // Committed-stage deposit (manual, no PSP): amount + sent/paid marks. Create
+    // project is gated on depositPaidAt (admins may force).
+    depositCents: integer("deposit_cents").notNull().default(0),
+    depositSentAt: integer("deposit_sent_at", { mode: "timestamp" }),
+    depositPaidAt: integer("deposit_paid_at", { mode: "timestamp" }),
     // Rough deal value for pipeline totals — a gut number, NOT a quote. Quoting
     // stays on stages/phases where the price authority rules live.
     valueCents: integer("value_cents").notNull().default(0),
@@ -250,6 +325,27 @@ export const contractItems = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("contract_items_deal_idx").on(t.dealId)],
+);
+
+// ---- Agreements (the agreement package: account-level legal + per-deal docs) ----
+// Successor to contract_items. MSA/NDA are account-level (deal_id is provenance only);
+// commercial agreement / PS terms / IP schedule etc. are per-deal. Once the account's
+// MSA is signed, later deals' packages are SOW-only (the fast lane).
+export const agreements = sqliteTable(
+  "agreements",
+  {
+    id: pk(),
+    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    dealId: text("deal_id").references(() => deals.id), // null = account-level doc
+    kind: text("kind", { enum: AGREEMENT_KINDS }).notNull(),
+    label: text("label").notNull(),
+    status: text("status", { enum: AGREEMENT_STATUSES }).notNull().default("needed"),
+    signedAt: integer("signed_at", { mode: "timestamp" }),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("agreements_org_idx").on(t.organizationId), index("agreements_deal_idx").on(t.dealId)],
 );
 
 // ---- Proposals (R3: the commercial offering — always Option A / Option B) ----
@@ -314,6 +410,8 @@ export const projects = sqliteTable(
     name: text("name").notNull(),
     description: text("description"),
     workType: text("work_type"), // free category; not assumed to be software
+    // Paid discovery runs as a small project whose deliverable spawns the big deal.
+    kind: text("kind", { enum: PROJECT_KINDS }).notNull().default("standard"),
     // AI draft's memory artifact for this project (## Read / ## Inferred / ## Assumptions
     // / ## Open questions). Lets later lightweight AI calls skip re-reading the source docs.
     aiContextMd: text("ai_context_md"),
@@ -574,7 +672,7 @@ export const notifications = sqliteTable(
     id: pk(),
     userId: text("user_id").notNull().references(() => users.id), // recipient (staff)
     kind: text("kind", { enum: NOTIFICATION_KINDS }).notNull(),
-    entityType: text("entity_type", { enum: ["deal", "proposal", "lead"] }).notNull(),
+    entityType: text("entity_type", { enum: ["deal", "proposal", "lead", "contact"] }).notNull(),
     entityId: text("entity_id").notNull(),
     href: text("href").notNull(), // deep link into the app
     title: text("title").notNull(),

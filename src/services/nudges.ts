@@ -27,7 +27,7 @@ const LAST_DIGEST_KEY = "nudge:lastDigestDate";
 /** One actionable item. userId null = no staff recipient (still counted in the digest). */
 export type Nudge = {
   kind: Kind;
-  entityType: "deal" | "proposal" | "lead";
+  entityType: "deal" | "proposal" | "lead" | "contact";
   entityId: string;
   userId: string | null;
   href: string;
@@ -41,7 +41,7 @@ export type Nudge = {
 
 type DealRow = { id: string; name: string; stage: DealStage; stageEnteredAt: Date; ownerUserId: string | null };
 type ProposalRow = { id: string; version: number; dealId: string; status: string; sentAt: Date | null; respondedAt: Date | null };
-type LeadRow = { id: string; name: string; status: string; createdAt: Date; assignedToUserId: string | null };
+type TriageContactRow = { id: string; name: string; state: string; createdAt: Date; assignedToUserId: string | null };
 
 export function selectStuckDeals(deals: DealRow[], sla: SlaSettings, now: Date): Nudge[] {
   return deals
@@ -83,18 +83,20 @@ export function selectFollowupProposals(
     });
 }
 
-export function selectOverdueLeads(leads: LeadRow[], sla: SlaSettings, now: Date): Nudge[] {
-  return leads
-    .filter((l) => l.status === "new" && isLeadOverdue(l.createdAt, now, sla))
-    .map((l) => {
-      const days = daysInStage(l.createdAt, now);
+/** "Lead" is the to_qualify STATE on a contact; the notification kind keeps its
+ * stored name (lead_overdue) for continuity with existing rows. */
+export function selectOverdueLeads(contacts: TriageContactRow[], sla: SlaSettings, now: Date): Nudge[] {
+  return contacts
+    .filter((c) => c.state === "to_qualify" && isLeadOverdue(c.createdAt, now, sla))
+    .map((c) => {
+      const days = daysInStage(c.createdAt, now);
       return {
         kind: "lead_overdue" as const,
-        entityType: "lead" as const,
-        entityId: l.id,
-        userId: l.assignedToUserId,
-        href: `${APP_BASE}/dashboard/sales/leads/${l.id}`,
-        title: `Lead awaiting triage: ${l.name}`,
+        entityType: "contact" as const,
+        entityId: c.id,
+        userId: c.assignedToUserId,
+        href: `${APP_BASE}/dashboard/sales/contacts/${c.id}`,
+        title: `Contact awaiting triage: ${c.name}`,
         body: `Captured ${days} days ago (window ${sla.leadTriageDays}d) and still unqualified.`,
         overdueDays: days - sla.leadTriageDays,
       };
@@ -120,10 +122,10 @@ export async function runNudges(db: Db, env: EmailEnv, now: Date): Promise<{ nud
   const sla = resolveSla((await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, "sla")).get())?.value ?? null);
 
   // Load the source rows.
-  const [deals, sentProposals, leads] = await Promise.all([
+  const [deals, sentProposals, triageContacts] = await Promise.all([
     db.select().from(schema.deals).all(),
     db.select().from(schema.proposals).where(eq(schema.proposals.status, "sent")).all(),
-    db.select().from(schema.leads).where(eq(schema.leads.status, "new")).all(),
+    db.select().from(schema.contacts).where(eq(schema.contacts.state, "to_qualify")).all(),
   ]);
 
   // Join proposals → their deal (name + owner).
@@ -142,7 +144,7 @@ export async function runNudges(db: Db, env: EmailEnv, now: Date): Promise<{ nud
   const nudges: Nudge[] = [
     ...selectStuckDeals(deals as DealRow[], sla, now),
     ...selectFollowupProposals(propInputs, sla, now),
-    ...selectOverdueLeads(leads as LeadRow[], sla, now),
+    ...selectOverdueLeads(triageContacts as TriageContactRow[], sla, now),
   ];
 
   let notified = 0;
@@ -259,7 +261,7 @@ export function buildDigest(nudges: Nudge[]): { subject: string; text: string; h
 
   const section = (emoji: string, label: string, items: Nudge[]) =>
     items.length === 0 ? "" : `\n${emoji} ${label} (${items.length})\n${items.map((n) => `  • ${n.title.replace(/^[^:]+: /, "")} — ${n.body}`).join("\n")}\n`;
-  const text = `Items over their SLA window:\n${section("⚠", "Stuck deals", stuck)}${section("⏳", "Proposal follow-up", props)}${section("◆", "Leads to triage", leads)}\nOpen the board: ${APP_BASE}/dashboard/sales`;
+  const text = `Items over their SLA window:\n${section("⚠", "Stuck deals", stuck)}${section("⏳", "Proposal follow-up", props)}${section("◆", "Contacts to triage", leads)}\nOpen the board: ${APP_BASE}/dashboard/sales`;
 
   const htmlSection = (label: string, items: Nudge[], color: string) =>
     items.length === 0
@@ -271,7 +273,7 @@ export function buildDigest(nudges: Nudge[]): { subject: string; text: string; h
     "⚠ Stuck deals",
     stuck,
     "#b45309",
-  )}${htmlSection("⏳ Proposal follow-up", props, "#2b3ee6")}${htmlSection("◆ Leads to triage", leads, "#15803d")}<p style="margin-top:16px"><a href="${APP_BASE}/dashboard/sales">Open the board →</a></p></div>`;
+  )}${htmlSection("⏳ Proposal follow-up", props, "#2b3ee6")}${htmlSection("◆ Contacts to triage", leads, "#15803d")}<p style="margin-top:16px"><a href="${APP_BASE}/dashboard/sales">Open the board →</a></p></div>`;
 
   return { subject, text, html };
 }

@@ -17,18 +17,17 @@ describe("sales stage metadata", () => {
     for (const s of DEAL_STAGES) expect(STAGE_META[s]).toBeDefined();
   });
 
-  it("anchors pre-proposal probabilities toward proposal, then resets", () => {
-    expect(STAGE_META.discovery).toMatchObject({ probabilityPct: 10, toward: "proposal" });
-    expect(STAGE_META.business_requirements).toMatchObject({ probabilityPct: 20, toward: "proposal" });
-    expect(STAGE_META.solution_design).toMatchObject({ probabilityPct: 90, toward: "proposal" });
-    // The percentage resets at proposal — a new race toward close.
-    expect(STAGE_META.proposal.probabilityPct).toBeNull();
-    expect(STAGE_META.proposal.toward).toBe("close");
+  it("anchors close probabilities per CRM-RESTRUCTURE (25/55/75/90)", () => {
+    expect(STAGE_META.discovery).toMatchObject({ probabilityPct: 25, toward: "close" });
+    expect(STAGE_META.proposal_out).toMatchObject({ probabilityPct: 55, toward: "close" });
+    expect(STAGE_META.negotiating).toMatchObject({ probabilityPct: 75, toward: "close" });
+    expect(STAGE_META.committed).toMatchObject({ probabilityPct: 90, toward: "close" });
   });
 
   it("validates stage strings", () => {
-    expect(isDealStage("solution_design")).toBe(true);
+    expect(isDealStage("proposal_out")).toBe(true);
     expect(isDealStage("won")).toBe(true);
+    expect(isDealStage("solution_design")).toBe(false); // retired 7-stage name
     expect(isDealStage("paid")).toBe(false); // phase status, not a sales stage
     expect(isDealStage("")).toBe(false);
   });

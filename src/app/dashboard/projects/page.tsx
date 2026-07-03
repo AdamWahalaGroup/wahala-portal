@@ -135,7 +135,7 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
                   borderBottom: "2px solid var(--ink)",
                 }}
               >
-                <Link href={`/dashboard/clients/${org.id}`} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit", minWidth: 0 }}>
+                <Link href={`/dashboard/accounts/${org.id}`} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit", minWidth: 0 }}>
                   <Avatar name={org.name} size={30} />
                   <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-.015em" }}>{org.name}</span>
                   <span className="kicker" style={{ color: "var(--muted)" }}>

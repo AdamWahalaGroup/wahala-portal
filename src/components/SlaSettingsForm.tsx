@@ -195,10 +195,10 @@ export function SlaSettingsForm({ settings, defaults }: { settings: SlaSettings;
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>
-                Lead triage
+                Contact triage
                 <span className="kicker" style={{ fontSize: 8.5, padding: "1px 6px", borderRadius: 5, background: "#E8F7EE", color: "#15803D", marginLeft: 8 }}>live on the board</span>
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--muted)" }}>New lead must be scored/qualified before its Triage card flags ⚠.</div>
+              <div style={{ fontSize: 11.5, color: "var(--muted)" }}>New contact must be scored/qualified before its Triage card flags ⚠.</div>
             </div>
             <Days value={s.leadTriageDays} onChange={(v) => patch({ leadTriageDays: num(v, defaults.leadTriageDays) })} />
           </div>

@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Lead workspace panels (frame 23 — the scout's dossier): the dump + the scout
- * report are the stars in the main column; the record fields live compact in the
- * right rail. Scout report renders with styled sections (Red flags amber, Score
- * rationale as a green callout).
+ * Contact workspace panels (the scout's dossier, successor to the lead workspace):
+ * the dump + the scout report are the stars; the record fields live compact below.
+ * Scout report renders with styled sections (Red flags amber, Score rationale as a
+ * green callout).
  */
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -40,15 +40,15 @@ function fmtBytes(n: number | null): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ---------------------------------------------------------------- record editor (rail)
+// ---------------------------------------------------------------- record editor
 
-export function LeadRecordEditor({
-  leadId,
+export function ContactRecordEditor({
+  contactId,
   initial,
   editable,
 }: {
-  leadId: string;
-  initial: { name: string; company: string; email: string; phone: string; source: string; industry: string; notes: string };
+  contactId: string;
+  initial: { name: string; companyNote: string; email: string; phone: string; source: string; notes: string };
   editable: boolean;
 }) {
   const router = useRouter();
@@ -62,7 +62,7 @@ export function LeadRecordEditor({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/contacts/${contactId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "update", ...form }),
@@ -91,11 +91,10 @@ export function LeadRecordEditor({
         {(
           [
             ["name", "Name *"],
-            ["company", "Company"],
+            ["companyNote", "Company"],
             ["email", "Email"],
             ["phone", "Phone"],
             ["source", "Source"],
-            ["industry", "Industry"],
           ] as const
         ).map(([k, label]) => (
           <div key={k}>
@@ -129,12 +128,12 @@ export function LeadRecordEditor({
 
 // ---------------------------------------------------------------- the dump
 
-export function LeadFilesPanel({
-  leadId,
+export function ContactFilesPanel({
+  contactId,
   files,
   canDelete,
 }: {
-  leadId: string;
+  contactId: string;
   files: { id: string; fileName: string; mimeType: string | null; sizeBytes: number | null; uploaderName: string | null }[];
   canDelete: boolean;
 }) {
@@ -150,7 +149,7 @@ export function LeadFilesPanel({
     try {
       const form = new FormData();
       for (const f of Array.from(list)) form.append("files", f);
-      const res = await fetch(`/api/leads/${leadId}/files`, { method: "POST", body: form });
+      const res = await fetch(`/api/contacts/${contactId}/files`, { method: "POST", body: form });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
         setError(data.message ?? `Upload failed (${res.status}).`);
@@ -169,7 +168,7 @@ export function LeadFilesPanel({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/leads/${leadId}/files/${fileId}`, { method: "DELETE" });
+      const res = await fetch(`/api/contacts/${contactId}/files/${fileId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
         setError(data.message ?? `Delete failed (${res.status}).`);
@@ -216,14 +215,14 @@ export function LeadFilesPanel({
             cursor: "pointer",
           }}
         >
-          ⤓ Drop anything you have on this lead — photos, PDFs, screenshots, napkin scans
+          ⤓ Drop anything you have on this contact — photos, PDFs, screenshots, napkin scans
         </button>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
           {files.map((f) => (
             <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--white)", border: "1px solid #ededf1", borderRadius: 9, padding: "8px 12px" }}>
               {typeChip(f.mimeType)}
-              <a href={`/api/leads/${leadId}/files/${f.id}`} style={{ fontWeight: 600, fontSize: 13.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <a href={`/api/contacts/${contactId}/files/${f.id}`} style={{ fontWeight: 600, fontSize: 13.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {f.fileName}
               </a>
               <span className="mono" style={{ fontSize: 11, color: "var(--muted)", flex: "none" }}>
@@ -282,15 +281,15 @@ function ScoutReportBody({ md }: { md: string }) {
   );
 }
 
-export function LeadScoutPanel({
-  leadId,
+export function ContactScoutPanel({
+  contactId,
   analysisMd,
   score,
   verdict,
   analyzedAt,
   canRun,
 }: {
-  leadId: string;
+  contactId: string;
   analysisMd: string | null;
   score: number | null;
   verdict: string | null;
@@ -307,7 +306,7 @@ export function LeadScoutPanel({
     setError(null);
     setStatus(null);
     try {
-      const res = await fetch(`/api/leads/${leadId}/analyze`, {
+      const res = await fetch(`/api/contacts/${contactId}/analyze`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{}",
@@ -340,7 +339,7 @@ export function LeadScoutPanel({
         {score !== null && <ScoreChip score={score} verdict={verdict} size="lg" />}
         {canRun && (
           <button onClick={run} disabled={busy} style={btn("green", busy)}>
-            {busy ? "Scouting (web recon + read, ~40s)…" : analysisMd ? "◆ Re-run the scout" : "◆ Analyze this lead"}
+            {busy ? "Scouting (web recon + read, ~40s)…" : analysisMd ? "◆ Re-run the scout" : "◆ Analyze this contact"}
           </button>
         )}
         {analyzedAt && (
@@ -360,7 +359,7 @@ export function LeadScoutPanel({
           <div style={{ fontSize: 22, marginBottom: 6 }}>◆</div>
           <p style={{ color: "var(--muted)", fontSize: 13.5, margin: 0 }}>
             No scout report yet — it reads the record, the dump, and the web, then scores whether this
-            lead is worth the effort (~40s).
+            contact is worth the effort (~40s).
           </p>
         </div>
       )}

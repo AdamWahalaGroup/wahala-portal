@@ -1,11 +1,12 @@
 /**
- * Lead workspace — the per-lead dump zone + AI scout.
+ * Contact workspace — the per-contact dump zone + AI scout (successor to the lead
+ * workspace: contacts absorbed leads; "lead" is just the to_qualify state).
  *
- * Any staff can drop files/photos/content onto a lead (bytes in R2 under
- * leads/<leadId>/…, metadata in lead_assets — always internal, clients never see
- * leads at all). The scout run (admin/account owner, it costs money) feeds the CRM
- * record, the notes, the dump, and live web recon to the AI sales-lead expert and
- * stores the opinion + 1–10 score + pursue/probe/pass verdict on the lead.
+ * Any staff can drop files/photos/content onto a contact (bytes in R2 under
+ * contacts/<contactId>/…, metadata in contact_assets — always internal, clients never
+ * see triage). The scout run (admin/account owner, it costs money) feeds the CRM
+ * record, the notes, the dump, and live web recon to the AI sales expert and stores
+ * the opinion + 1–10 score + pursue/probe/pass verdict on the contact.
  */
 import { desc, eq, inArray } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
@@ -33,16 +34,16 @@ function assertStaff(ctx: AuthContext, action: string): void {
   }
 }
 
-async function loadLead(ctx: AuthContext, leadId: string, action: string) {
+async function loadContact(ctx: AuthContext, contactId: string, action: string) {
   assertStaff(ctx, action);
-  const lead = await getDb().query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
-  if (!lead) throw new StageError("NOT_FOUND", "Lead not found.");
-  return lead;
+  const contact = await getDb().query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+  if (!contact) throw new StageError("NOT_FOUND", "Contact not found.");
+  return contact;
 }
 
 // ---------------------------------------------------------------- files
 
-export type LeadFileView = {
+export type ContactFileView = {
   id: string;
   fileName: string;
   mimeType: string | null;
@@ -51,10 +52,10 @@ export type LeadFileView = {
   createdAt: Date;
 };
 
-export async function listLeadFiles(ctx: AuthContext, leadId: string): Promise<LeadFileView[]> {
-  await loadLead(ctx, leadId, "list_lead_files");
+export async function listContactFiles(ctx: AuthContext, contactId: string): Promise<ContactFileView[]> {
+  await loadContact(ctx, contactId, "list_contact_files");
   const db = getDb();
-  const rows = await db.select().from(schema.leadAssets).where(eq(schema.leadAssets.leadId, leadId)).orderBy(desc(schema.leadAssets.createdAt));
+  const rows = await db.select().from(schema.contactAssets).where(eq(schema.contactAssets.contactId, contactId)).orderBy(desc(schema.contactAssets.createdAt));
   const uploaderIds = [...new Set(rows.map((r) => r.uploadedByUserId).filter((v): v is string => !!v))];
   const users = uploaderIds.length
     ? await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, uploaderIds))
@@ -70,24 +71,24 @@ export async function listLeadFiles(ctx: AuthContext, leadId: string): Promise<L
   }));
 }
 
-/** Any staff can dump a file onto a lead. */
-export async function uploadLeadFile(
+/** Any staff can dump a file onto a contact. */
+export async function uploadContactFile(
   ctx: AuthContext,
-  leadId: string,
+  contactId: string,
   file: { fileName: string; mimeType: string | null; bytes: ArrayBuffer },
 ): Promise<{ id: string }> {
-  await loadLead(ctx, leadId, "upload_lead_file");
+  await loadContact(ctx, contactId, "upload_contact_file");
   const fileName = file.fileName?.trim();
   if (!fileName) throw new StageError("VALIDATION", "File name is required.");
   if (file.bytes.byteLength === 0) throw new StageError("VALIDATION", `"${fileName}" is empty.`);
   if (file.bytes.byteLength > MAX_BYTES) throw new StageError("VALIDATION", `"${fileName}" is over the 25 MB limit.`);
 
   const id = crypto.randomUUID();
-  const r2Key = `leads/${leadId}/${id}-${fileName.replace(/[^\w.\-]+/g, "_")}`;
+  const r2Key = `contacts/${contactId}/${id}-${fileName.replace(/[^\w.\-]+/g, "_")}`;
   await r2().put(r2Key, file.bytes, { httpMetadata: file.mimeType ? { contentType: file.mimeType } : undefined });
-  await getDb().insert(schema.leadAssets).values({
+  await getDb().insert(schema.contactAssets).values({
     id,
-    leadId,
+    contactId,
     fileName,
     r2Key,
     mimeType: file.mimeType,
@@ -97,104 +98,110 @@ export async function uploadLeadFile(
   return { id };
 }
 
-export async function getLeadFileBody(
+export async function getContactFileBody(
   ctx: AuthContext,
-  leadId: string,
+  contactId: string,
   fileId: string,
 ): Promise<{ body: ReadableStream; fileName: string; mimeType: string | null }> {
-  await loadLead(ctx, leadId, "download_lead_file");
+  await loadContact(ctx, contactId, "download_contact_file");
   const db = getDb();
-  const row = await db.query.leadAssets.findFirst({ where: eq(schema.leadAssets.id, fileId) });
-  if (!row || row.leadId !== leadId) throw new StageError("NOT_FOUND", "File not found.");
+  const row = await db.query.contactAssets.findFirst({ where: eq(schema.contactAssets.id, fileId) });
+  if (!row || row.contactId !== contactId) throw new StageError("NOT_FOUND", "File not found.");
   const obj = await r2().get(row.r2Key);
   if (!obj) throw new StageError("NOT_FOUND", "File body missing from storage.");
   return { body: obj.body, fileName: row.fileName, mimeType: row.mimeType };
 }
 
 /** Delete a dumped file (admin / account owner). */
-export async function deleteLeadFile(ctx: AuthContext, leadId: string, fileId: string): Promise<void> {
-  assertSalesManager(ctx, "delete_lead_file");
-  await loadLead(ctx, leadId, "delete_lead_file");
+export async function deleteContactFile(ctx: AuthContext, contactId: string, fileId: string): Promise<void> {
+  assertSalesManager(ctx, "delete_contact_file");
+  await loadContact(ctx, contactId, "delete_contact_file");
   const db = getDb();
-  const row = await db.query.leadAssets.findFirst({ where: eq(schema.leadAssets.id, fileId) });
-  if (!row || row.leadId !== leadId) throw new StageError("NOT_FOUND", "File not found.");
+  const row = await db.query.contactAssets.findFirst({ where: eq(schema.contactAssets.id, fileId) });
+  if (!row || row.contactId !== contactId) throw new StageError("NOT_FOUND", "File not found.");
   await r2().delete(row.r2Key);
-  await db.delete(schema.leadAssets).where(eq(schema.leadAssets.id, fileId));
+  await db.delete(schema.contactAssets).where(eq(schema.contactAssets.id, fileId));
 }
 
 // ---------------------------------------------------------------- detail + edit
 
-export type LeadDetail = {
+export type ContactDetail = {
   id: string;
   name: string;
-  company: string | null;
+  companyNote: string | null;
+  organizationId: string | null;
+  organizationName: string | null;
   email: string | null;
   phone: string | null;
   source: string | null;
-  industry: string | null;
   notes: string | null;
-  status: "new" | "qualified" | "disqualified";
+  state: "to_qualify" | "qualified" | "passed";
+  estValueCents: number;
   assignedToUserId: string | null;
   assignedToName: string | null;
-  convertedDealId: string | null;
   aiAnalysisMd: string | null;
   aiScore: number | null;
   aiVerdict: "pursue" | "probe" | "pass" | null;
   aiAnalyzedAt: Date | null;
   createdAt: Date;
-  files: LeadFileView[];
+  files: ContactFileView[];
+  /** Latest deal referencing this contact (the "View the deal →" link). */
+  linkedDealId: string | null;
 };
 
-export async function getLeadDetail(ctx: AuthContext, leadId: string): Promise<LeadDetail> {
-  const lead = await loadLead(ctx, leadId, "get_lead_detail");
+export async function getContactDetail(ctx: AuthContext, contactId: string): Promise<ContactDetail> {
+  const contact = await loadContact(ctx, contactId, "get_contact_detail");
   const db = getDb();
-  const [files, assignee] = await Promise.all([
-    listLeadFiles(ctx, leadId),
-    lead.assignedToUserId ? db.query.users.findFirst({ where: eq(schema.users.id, lead.assignedToUserId) }) : null,
+  const [files, assignee, org, linkedDeal] = await Promise.all([
+    listContactFiles(ctx, contactId),
+    contact.assignedToUserId ? db.query.users.findFirst({ where: eq(schema.users.id, contact.assignedToUserId) }) : null,
+    contact.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, contact.organizationId) }) : null,
+    db.query.deals.findFirst({ where: eq(schema.deals.primaryContactId, contactId), orderBy: desc(schema.deals.createdAt) }),
   ]);
   return {
-    id: lead.id,
-    name: lead.name,
-    company: lead.company,
-    email: lead.email,
-    phone: lead.phone,
-    source: lead.source,
-    industry: lead.industry,
-    notes: lead.notes,
-    status: lead.status,
-    assignedToUserId: lead.assignedToUserId,
+    id: contact.id,
+    name: contact.name,
+    companyNote: contact.companyNote,
+    organizationId: contact.organizationId,
+    organizationName: org?.name ?? null,
+    email: contact.email,
+    phone: contact.phone,
+    source: contact.source,
+    notes: contact.notes,
+    state: contact.state,
+    estValueCents: contact.estValueCents,
+    assignedToUserId: contact.assignedToUserId,
     assignedToName: assignee?.name ?? null,
-    convertedDealId: lead.convertedDealId,
-    aiAnalysisMd: lead.aiAnalysisMd,
-    aiScore: lead.aiScore,
-    aiVerdict: lead.aiVerdict,
-    aiAnalyzedAt: lead.aiAnalyzedAt,
-    createdAt: lead.createdAt,
+    aiAnalysisMd: contact.aiAnalysisMd,
+    aiScore: contact.aiScore,
+    aiVerdict: contact.aiVerdict,
+    aiAnalyzedAt: contact.aiAnalyzedAt,
+    createdAt: contact.createdAt,
     files,
+    linkedDealId: linkedDeal?.id ?? null,
   };
 }
 
 /** Any staff can enrich the record — same tier as capturing it. */
-export async function updateLeadFields(
+export async function updateContactFields(
   ctx: AuthContext,
-  leadId: string,
-  input: { name?: string; company?: string; email?: string; phone?: string; source?: string; industry?: string; notes?: string },
+  contactId: string,
+  input: { name?: string; companyNote?: string; email?: string; phone?: string; source?: string; notes?: string },
 ): Promise<void> {
-  await loadLead(ctx, leadId, "update_lead");
-  const patch: Partial<typeof schema.leads.$inferInsert> = {};
+  await loadContact(ctx, contactId, "update_contact_fields");
+  const patch: Partial<typeof schema.contacts.$inferInsert> = {};
   if (input.name !== undefined) {
     const n = input.name.trim();
-    if (!n) throw new StageError("VALIDATION", "A lead needs at least a name.");
+    if (!n) throw new StageError("VALIDATION", "A contact needs at least a name.");
     patch.name = n;
   }
-  if (input.company !== undefined) patch.company = input.company.trim() || null;
+  if (input.companyNote !== undefined) patch.companyNote = input.companyNote.trim() || null;
   if (input.email !== undefined) patch.email = input.email.trim().toLowerCase() || null;
   if (input.phone !== undefined) patch.phone = input.phone.trim() || null;
   if (input.source !== undefined) patch.source = input.source.trim() || null;
-  if (input.industry !== undefined) patch.industry = input.industry.trim() || null;
   if (input.notes !== undefined) patch.notes = input.notes.trim() || null;
   if (Object.keys(patch).length === 0) return;
-  await getDb().update(schema.leads).set(patch).where(eq(schema.leads.id, leadId));
+  await getDb().update(schema.contacts).set(patch).where(eq(schema.contacts.id, contactId));
 }
 
 // ---------------------------------------------------------------- the scout run
@@ -209,15 +216,18 @@ function bytesToBase64(buf: ArrayBuffer): string {
 
 const TEXTUAL = /^(text\/|application\/(json|xml|csv))/;
 
-/** Run the AI lead scout: web recon + synthesis over the whole dump. Admin / account owner. */
-export async function analyzeLead(
+/** Run the AI scout: web recon + synthesis over the whole dump. Admin / account owner. */
+export async function analyzeContact(
   ctx: AuthContext,
-  leadId: string,
+  contactId: string,
 ): Promise<{ analysisMd: string; score: number; verdict: string; usage: DraftUsage; webUsed: boolean }> {
-  assertSalesManager(ctx, "analyze_lead");
-  const lead = await loadLead(ctx, leadId, "analyze_lead");
+  assertSalesManager(ctx, "analyze_contact");
+  const contact = await loadContact(ctx, contactId, "analyze_contact");
   const db = getDb();
-  const assets = await db.select().from(schema.leadAssets).where(eq(schema.leadAssets.leadId, leadId));
+  const [assets, org] = await Promise.all([
+    db.select().from(schema.contactAssets).where(eq(schema.contactAssets.contactId, contactId)),
+    contact.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, contact.organizationId) }) : null,
+  ]);
 
   // Convert the dump into model parts — images/PDFs as-is, text as text; cap sizes.
   const fileParts: DraftPart[] = [];
@@ -244,20 +254,21 @@ export async function analyzeLead(
     else fileParts.push({ kind: "text", text: `FILE ${a.fileName}:\n${new TextDecoder().decode(bytes)}` });
   }
 
+  const company = org?.name ?? contact.companyNote;
   const summaryLines = [
-    `Name: ${lead.name}`,
-    lead.company && `Company: ${lead.company}`,
-    lead.industry && `Industry: ${lead.industry}`,
-    lead.source && `Source: ${lead.source}`,
-    lead.email && `Email: ${lead.email}`,
-    lead.phone && `Phone: ${lead.phone}`,
-    `Captured: ${lead.createdAt.toISOString().slice(0, 10)}`,
-    lead.notes && `Salesperson notes:\n${lead.notes}`,
+    `Name: ${contact.name}`,
+    company && `Company: ${company}`,
+    contact.source && `Source: ${contact.source}`,
+    contact.email && `Email: ${contact.email}`,
+    contact.phone && `Phone: ${contact.phone}`,
+    contact.estValueCents > 0 && `Estimated value (gut call): $${Math.round(contact.estValueCents / 100).toLocaleString("en-US")}`,
+    `Captured: ${contact.createdAt.toISOString().slice(0, 10)}`,
+    contact.notes && `Salesperson notes:\n${contact.notes}`,
   ].filter(Boolean) as string[];
 
   // Recon only when there's something concrete to search for.
-  const query = [lead.name, lead.company, lead.industry].filter(Boolean).join(" — ");
-  const recon = lead.company || lead.industry ? await webRecon(query) : null;
+  const query = [contact.name, company].filter(Boolean).join(" — ");
+  const recon = company ? await webRecon(query) : null;
 
   const { result, usage } = await scoutLead({
     leadSummary: summaryLines.join("\n"),
@@ -273,14 +284,14 @@ export async function analyzeLead(
     costCents: usage.costCents + (recon?.usage.costCents ?? 0),
   };
 
-  await db.update(schema.leads).set({
+  await db.update(schema.contacts).set({
     aiAnalysisMd: result.analysisMd,
     aiScore: result.score,
     aiVerdict: result.verdict,
     aiAnalyzedAt: new Date(),
-  }).where(eq(schema.leads.id, leadId));
-  // No audit row: audit_log requires an organization id and leads are pre-org.
-  // aiAnalyzedAt + the stored markdown are the record of the run.
+  }).where(eq(schema.contacts.id, contactId));
+  // No audit row: audit_log requires an organization id and triage contacts may be
+  // pre-account. aiAnalyzedAt + the stored markdown are the record of the run.
 
   return { analysisMd: result.analysisMd, score: result.score, verdict: result.verdict, usage: totalUsage, webUsed: !!recon };
 }

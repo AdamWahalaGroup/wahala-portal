@@ -127,6 +127,13 @@
       "when": 1783013403647,
       "tag": "0017_stale_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1783095072791,
+      "tag": "0018_woozy_moonstone",
+      "breakpoints": true
     }
   ]
 }

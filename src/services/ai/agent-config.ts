@@ -55,7 +55,7 @@ export const AGENT_DEFS: AgentDef[] = [
   },
   {
     key: "lead_scout",
-    label: "Lead scout (analysis)",
+    label: "Contact scout (analysis)",
     description: "The sales-lead expert: reads the lead's dump + recon, scores 1–10, pursue/probe/pass.",
     defaultModel: aiDraftModel,
     supportsReasoning: true,

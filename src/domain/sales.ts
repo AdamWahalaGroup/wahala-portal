@@ -15,34 +15,32 @@ import { DEAL_STAGES } from "../db/schema";
 
 export type DealStage = (typeof DEAL_STAGES)[number];
 
-/** Funnel stages in display order — the open pipeline (won/lost are terminal). */
+/** Funnel stages in display order — the open pipeline (won/lost are terminal).
+ * 4 deal stages (CRM-RESTRUCTURE.md): Triage is a board COLUMN of contacts, not a
+ * deal stage. Business requirements folded into Discovery; solution design deleted
+ * (it was the work of writing the proposal, not a client-facing state). */
 export const FUNNEL_STAGES = [
   "discovery",
-  "business_requirements",
-  "solution_design",
-  "proposal",
-  "negotiation",
-  "contract",
+  "proposal_out",
+  "negotiating",
+  "committed",
 ] as const satisfies readonly DealStage[];
 
 export const TERMINAL_STAGES = ["won", "lost"] as const satisfies readonly DealStage[];
 
 export type StageMeta = {
   label: string;
-  /** Win-probability anchor (percent), or null where the funnel resets / has no anchor yet. */
+  /** Close-probability anchor (percent) — drives the weighted pipeline + column meta. */
   probabilityPct: number | null;
-  /** What the probability is toward — reaching proposal, or closing the deal. */
+  /** What the probability is toward (kept for settings copy; all anchors are to close now). */
   toward: "proposal" | "close" | null;
 };
 
 export const STAGE_META: Record<DealStage, StageMeta> = {
-  discovery: { label: "Discovery", probabilityPct: 10, toward: "proposal" },
-  business_requirements: { label: "Business requirements", probabilityPct: 20, toward: "proposal" },
-  solution_design: { label: "Solution design", probabilityPct: 90, toward: "proposal" },
-  // Probability resets at proposal — no anchor agreed yet for the close race.
-  proposal: { label: "Proposal", probabilityPct: null, toward: "close" },
-  negotiation: { label: "Negotiation", probabilityPct: null, toward: "close" },
-  contract: { label: "Contract", probabilityPct: null, toward: "close" },
+  discovery: { label: "Discovery", probabilityPct: 25, toward: "close" },
+  proposal_out: { label: "Proposal out", probabilityPct: 55, toward: "close" },
+  negotiating: { label: "Negotiating", probabilityPct: 75, toward: "close" },
+  committed: { label: "Committed", probabilityPct: 90, toward: "close" },
   won: { label: "Won", probabilityPct: 100, toward: null },
   lost: { label: "Lost", probabilityPct: 0, toward: null },
 };
@@ -81,17 +79,13 @@ export function needsEngineeringReview(score: number | null): boolean {
 export function nextStepFor(stage: DealStage): string {
   switch (stage) {
     case "discovery":
-      return "Capture the discovery call, then distill the package.";
-    case "business_requirements":
-      return "Confirm requirements and who signs off.";
-    case "solution_design":
-      return "Shape the approach, then draft the proposal.";
-    case "proposal":
-      return "Price both options and send the share link.";
-    case "negotiation":
-      return "Close the open questions and get a decision.";
-    case "contract":
-      return "Commercials, invite the client, execute.";
+      return "Capture the discovery call — requirements included — then draft the proposal.";
+    case "proposal_out":
+      return "Follow up — silence past the SLA is at-risk time.";
+    case "negotiating":
+      return "Close the open terms and get to a verbal yes.";
+    case "committed":
+      return "Complete the agreement package and collect the deposit.";
     case "won":
       return "Handed off — deal room is now a project.";
     case "lost":

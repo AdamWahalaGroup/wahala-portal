@@ -21,7 +21,7 @@ function greeting(hour: number): string {
 export async function StaffHome({ ctx }: { ctx: AuthContext }) {
   const [ov, sales] = await Promise.all([staffRevenueOverview(ctx), salesOverview(ctx)]);
   const openDealCount = sales.columns.reduce((n, c) => n + c.deals.length, 0);
-  const newLeadCount = sales.leads.filter((l) => l.status === "new").length;
+  const triageCount = sales.triage.length;
   const now = new Date();
   const firstName = (ctx.user.name.split(/\s+/)[0] || ctx.user.name).replace(/[^A-Za-z].*$/, "");
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -91,7 +91,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         </span>
         <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
           {openDealCount} open deal{openDealCount === 1 ? "" : "s"}
-          {newLeadCount > 0 ? ` · ${newLeadCount} lead${newLeadCount === 1 ? "" : "s"} to qualify` : ""}
+          {triageCount > 0 ? ` · ${triageCount} contact${triageCount === 1 ? "" : "s"} to qualify` : ""}
         </span>
         {sales.stuckCount > 0 && (
           <span className="kicker" style={{ fontSize: 10, background: "#fff7ed", color: "#b45309", padding: "3px 8px", borderRadius: 6 }}>
@@ -101,15 +101,15 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         <span style={{ marginLeft: "auto", color: "var(--muted-line)" }}>›</span>
       </Link>
 
-      {/* Clients table */}
+      {/* Accounts table */}
       <section style={{ marginTop: 30 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
-          <div className="kicker">Clients</div>
-          <div className="kicker" style={{ color: "var(--muted)" }}>{ov.activeClientCount} active</div>
+          <div className="kicker">Accounts</div>
+          <div className="kicker" style={{ color: "var(--muted)" }}>{ov.activeClientCount} clients</div>
         </div>
 
         {ov.clients.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>No clients yet.</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>No accounts yet.</p>
         ) : (
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             {/* Column labels */}
@@ -124,7 +124,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
               }}
               className="kicker"
             >
-              <span>Client</span>
+              <span>Account</span>
               <span style={{ textAlign: "right" }}>Paid to date</span>
               <span style={{ textAlign: "right" }}>Promised</span>
               <span />
@@ -132,7 +132,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
             {ov.clients.map((c, i) => (
               <Link
                 key={c.orgId}
-                href={`/dashboard/clients/${c.orgId}`}
+                href={`/dashboard/accounts/${c.orgId}`}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 150px 150px 16px",

@@ -43,15 +43,17 @@ describe("selectFollowupProposals", () => {
 });
 
 describe("selectOverdueLeads", () => {
-  it("flags new leads older than triage days, carrying the assignee", () => {
-    const leads = [
-      { id: "l1", name: "Dale", status: "new", createdAt: daysAgo(5), assignedToUserId: "u2" },
-      { id: "l2", name: "Fresh", status: "new", createdAt: daysAgo(1), assignedToUserId: null },
-      { id: "l3", name: "Qualified", status: "qualified", createdAt: daysAgo(9), assignedToUserId: "u2" },
+  it("flags to_qualify contacts older than triage days, carrying the assignee", () => {
+    const contacts = [
+      { id: "c1", name: "Dale", state: "to_qualify", createdAt: daysAgo(5), assignedToUserId: "u2" },
+      { id: "c2", name: "Fresh", state: "to_qualify", createdAt: daysAgo(1), assignedToUserId: null },
+      { id: "c3", name: "Qualified", state: "qualified", createdAt: daysAgo(9), assignedToUserId: "u2" },
     ];
-    const out = selectOverdueLeads(leads, sla, NOW);
-    expect(out.map((n) => n.entityId)).toEqual(["l1"]);
+    const out = selectOverdueLeads(contacts, sla, NOW);
+    expect(out.map((n) => n.entityId)).toEqual(["c1"]);
     expect(out[0].userId).toBe("u2");
+    expect(out[0].entityType).toBe("contact");
+    expect(out[0].href).toContain("/dashboard/sales/contacts/c1");
   });
 });
 
@@ -74,12 +76,12 @@ describe("buildDigest", () => {
   it("counts items and includes only non-empty sections", () => {
     const nudges: Nudge[] = [
       { kind: "deal_stuck", entityType: "deal", entityId: "d1", userId: "u1", href: "h", title: "Deal stuck: A", body: "b", overdueDays: 1 },
-      { kind: "lead_overdue", entityType: "lead", entityId: "l1", userId: "u1", href: "h", title: "Lead: B", body: "b", overdueDays: 1 },
+      { kind: "lead_overdue", entityType: "contact", entityId: "c1", userId: "u1", href: "h", title: "Contact: B", body: "b", overdueDays: 1 },
     ];
     const { subject, text, html } = buildDigest(nudges);
     expect(subject).toContain("2 need");
     expect(text).toContain("Stuck deals (1)");
-    expect(text).toContain("Leads to triage (1)");
+    expect(text).toContain("Contacts to triage (1)");
     expect(text).not.toContain("Proposal follow-up"); // empty section omitted
     expect(html).toContain("Stuck deals (1)");
   });

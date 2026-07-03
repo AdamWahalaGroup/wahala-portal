@@ -30,9 +30,15 @@ describe("resolveSla", () => {
   });
 
   it("keeps valid per-stage overrides and anchors", () => {
+    const s = resolveSla({ stuckPerStage: { proposal_out: 7 }, probabilityAnchors: { negotiating: 60 } });
+    expect(s.stuckPerStage.proposal_out).toBe(7);
+    expect(s.probabilityAnchors.negotiating).toBe(60);
+  });
+
+  it("silently drops stored keys from the retired 7-stage set", () => {
     const s = resolveSla({ stuckPerStage: { solution_design: 7 }, probabilityAnchors: { proposal: 60 } });
-    expect(s.stuckPerStage.solution_design).toBe(7);
-    expect(s.probabilityAnchors.proposal).toBe(60);
+    expect(s.stuckPerStage).toEqual({});
+    expect(s.probabilityAnchors).toEqual(DEFAULT_SLA_SETTINGS.probabilityAnchors);
   });
 });
 
@@ -40,7 +46,7 @@ describe("stuckDaysForStage", () => {
   it("uses the per-stage override when present, else the global window", () => {
     const s = resolveSla({ stuckWindowDays: 14, stuckPerStage: { discovery: 5 } });
     expect(stuckDaysForStage("discovery", s)).toBe(5);
-    expect(stuckDaysForStage("negotiation", s)).toBe(14);
+    expect(stuckDaysForStage("negotiating", s)).toBe(14);
   });
 });
 
@@ -49,7 +55,7 @@ describe("isStuckWith", () => {
     const s = resolveSla({ stuckWindowDays: 14, stuckPerStage: { discovery: 5 } });
     expect(isStuckWith("discovery", daysAgo(6), NOW, s)).toBe(true);
     expect(isStuckWith("discovery", daysAgo(4), NOW, s)).toBe(false);
-    expect(isStuckWith("negotiation", daysAgo(6), NOW, s)).toBe(false);
+    expect(isStuckWith("negotiating", daysAgo(6), NOW, s)).toBe(false);
   });
 
   it("never flags terminal stages", () => {

@@ -11,6 +11,7 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { assertSalesManager, setDealStage } from "@/services/sales";
+import { listForDeal, type AgreementRow } from "@/services/agreements";
 import { draftProject } from "@/services/ai/draft-project";
 import { createDraftedProject } from "@/services/projects";
 import { buildAudit } from "@/services/audit";
@@ -19,24 +20,20 @@ import { sendInviteEmail } from "@/auth/email";
 import { isDevAuth } from "@/auth/server-env";
 import type { DraftUsage } from "@/services/ai/provider";
 
-const DEFAULT_ITEMS: { kind: (typeof schema.CONTRACT_ITEM_KINDS)[number]; label: string }[] = [
-  { kind: "msa", label: "Master Service Agreement" },
-  { kind: "nda", label: "NDA" },
-  { kind: "insurance", label: "Insurance certificate" },
-];
-
-export type ContractItem = {
-  kind: string;
-  label: string;
-  status: "pending" | "signed";
-  signedAt: Date | null;
-  note: string | null;
-};
-
 export type ContractRoom = {
-  available: boolean; // an approved proposal exists (or the deal already reached contract/won)
-  items: ContractItem[];
-  approvedProposal: { id: string; title: string; optionLabel: string | null; optionName: string | null; priceCents: number | null } | null;
+  available: boolean; // an approved proposal exists (or the deal already reached committed/won)
+  /** The agreement package: account-level MSA/NDA + this deal's docs. */
+  agreements: AgreementRow[];
+  msaOnFile: boolean;
+  deposit: { cents: number; sentAt: Date | null; paidAt: Date | null };
+  approvedProposal: {
+    id: string;
+    title: string;
+    optionLabel: string | null;
+    optionName: string | null;
+    priceCents: number | null;
+    timelineNote: string | null;
+  } | null;
   clientInvited: boolean; // the org already has at least one client user
   contactEmail: string | null;
   contactName: string | null;
@@ -67,10 +64,10 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
   const db = getDb();
   const deal = await loadDealScoped(ctx, dealId);
   const approved = await approvedProposalFor(dealId);
-  const available = !!approved || ["contract", "won"].includes(deal.stage);
+  const available = !!approved || ["committed", "won"].includes(deal.stage);
 
-  const [itemRows, clientUsers, contact, project, selectedOption] = await Promise.all([
-    db.select().from(schema.contractItems).where(eq(schema.contractItems.dealId, dealId)),
+  const [pkg, clientUsers, contact, project, selectedOption] = await Promise.all([
+    listForDeal(ctx, deal.organizationId, dealId),
     db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -82,17 +79,11 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
       : null,
   ]);
 
-  const byKind = new Map(itemRows.map((i) => [i.kind, i]));
-  const items: ContractItem[] = DEFAULT_ITEMS.map((d) => {
-    const row = byKind.get(d.kind);
-    return row
-      ? { kind: row.kind, label: row.label, status: row.status, signedAt: row.signedAt, note: row.note }
-      : { kind: d.kind, label: d.label, status: "pending", signedAt: null, note: null };
-  });
-
   return {
     available,
-    items,
+    agreements: pkg.rows,
+    msaOnFile: pkg.msaOnFile,
+    deposit: { cents: deal.depositCents, sentAt: deal.depositSentAt, paidAt: deal.depositPaidAt },
     approvedProposal: approved
       ? {
           id: approved.id,
@@ -100,6 +91,7 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
           optionLabel: selectedOption?.label ?? null,
           optionName: selectedOption?.name ?? null,
           priceCents: selectedOption?.priceCents ?? null,
+          timelineNote: selectedOption?.timelineNote ?? null,
         }
       : null,
     clientInvited: clientUsers.length > 0,
@@ -107,49 +99,6 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
     contactName: contact?.name ?? null,
     project: project ? { id: project.id, name: project.name } : null,
   };
-}
-
-/** Toggle a commercials checklist item (upsert by kind). Admin / account owner. */
-export async function setContractItem(
-  ctx: AuthContext,
-  dealId: string,
-  input: { kind: string; status: "pending" | "signed"; note?: string },
-): Promise<void> {
-  assertSalesManager(ctx, "set_contract_item");
-  const deal = await loadDealScoped(ctx, dealId);
-  const kind = input.kind as (typeof schema.CONTRACT_ITEM_KINDS)[number];
-  if (!(schema.CONTRACT_ITEM_KINDS as readonly string[]).includes(kind)) {
-    throw new StageError("VALIDATION", "Unknown contract item.");
-  }
-  const db = getDb();
-  const existing = await db.query.contractItems.findFirst({
-    where: and(eq(schema.contractItems.dealId, dealId), eq(schema.contractItems.kind, kind)),
-  });
-  const signedAt = input.status === "signed" ? new Date() : null;
-  const note = input.note?.trim() || null;
-  const label = DEFAULT_ITEMS.find((d) => d.kind === kind)?.label ?? kind.toUpperCase();
-
-  const audit = db.insert(schema.auditLog).values(
-    buildAudit({
-      organizationId: deal.organizationId,
-      actorUserId: ctx.user.id,
-      action: `contract.${kind}_${input.status}`,
-      entityType: "deal",
-      entityId: dealId,
-      metadata: { note },
-    }),
-  );
-  if (existing) {
-    await db.batch([
-      db.update(schema.contractItems).set({ status: input.status, signedAt, note }).where(eq(schema.contractItems.id, existing.id)),
-      audit,
-    ]);
-  } else {
-    await db.batch([
-      db.insert(schema.contractItems).values({ organizationId: deal.organizationId, dealId, kind, label, status: input.status, signedAt, note }),
-      audit,
-    ]);
-  }
 }
 
 /**
@@ -226,12 +175,18 @@ export async function inviteContactToOrg(
 export async function executeContract(
   ctx: AuthContext,
   dealId: string,
+  opts: { force?: boolean } = {},
 ): Promise<{ projectId: string; usage: DraftUsage }> {
   assertSalesManager(ctx, "execute_contract");
   const deal = await loadDealScoped(ctx, dealId);
-  if (deal.projectId) throw new StageError("INVALID_STATE", "This contract already created its project.");
+  if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
   const approved = await approvedProposalFor(dealId);
-  if (!approved) throw new StageError("INVALID_STATE", "Execute needs an approved proposal first.");
+  if (!approved) throw new StageError("INVALID_STATE", "Create project needs an approved proposal first.");
+  // "Deposit clears → project": the one money-gate on the sales side. Admins may
+  // force (logged via the normal audit trail); everyone else waits for the deposit.
+  if (!deal.depositPaidAt && !(opts.force && ctx.isAdmin)) {
+    throw new StageError("PAY_GATE", "The deposit hasn't cleared — mark it paid first (admins can force).");
+  }
 
   const db = getDb();
   const [option, options] = await Promise.all([

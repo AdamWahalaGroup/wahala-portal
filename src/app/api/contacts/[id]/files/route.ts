@@ -1,10 +1,10 @@
 /**
- * GET  /api/leads/[id]/files — the lead's dump (staff)
- * POST /api/leads/[id]/files — multipart upload, field "files" (any staff, ≤25 MB each)
+ * GET  /api/contacts/[id]/files — the contact's dump (staff)
+ * POST /api/contacts/[id]/files — multipart upload, field "files" (any staff, ≤25 MB each)
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, ApiError } from "@/lib/api";
-import { listLeadFiles, uploadLeadFile } from "@/services/lead-workspace";
+import { listContactFiles, uploadContactFile } from "@/services/contact-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const ctx = await requireAuth();
     const { id } = await params;
-    const files = await listLeadFiles(ctx, id);
+    const files = await listContactFiles(ctx, id);
     return NextResponse.json({ files });
   } catch (e) {
     return handleApiError(e);
@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const uploaded: string[] = [];
     for (const f of entries) {
-      const { id: fileId } = await uploadLeadFile(ctx, id, {
+      const { id: fileId } = await uploadContactFile(ctx, id, {
         fileName: f.name,
         mimeType: f.type || null,
         bytes: await f.arrayBuffer(),

@@ -36,166 +36,142 @@ export function assertSalesManager(ctx: AuthContext, action: string): void {
   }
 }
 
-// ---------------------------------------------------------------- leads
+// ---------------------------------------------------------------- triage contacts
+// "Lead" is a STATE on a contact (to_qualify), not a thing. The Triage column
+// renders these rows; qualifying flips state and creates a deal referencing the
+// SAME contact — nothing is converted, so an email edit anywhere lands everywhere.
 
-export type LeadItem = {
+export type ContactItem = {
   id: string;
   name: string;
-  company: string | null;
+  /** Free-text company until an account exists; the account name once linked. */
+  companyNote: string | null;
+  organizationId: string | null;
+  organizationName: string | null;
   email: string | null;
   phone: string | null;
   source: string | null;
-  industry: string | null;
   notes: string | null;
-  status: "new" | "qualified" | "disqualified";
+  state: "to_qualify" | "qualified" | "passed";
+  estValueCents: number;
   assignedToUserId: string | null;
   assignedToName: string | null;
   aiScore: number | null;
   aiVerdict: "pursue" | "probe" | "pass" | null;
-  /** The scout's full opinion (markdown), shown in the board card peek. */
+  /** The scout's full opinion (markdown), shown in the triage card drawer. */
   aiAnalysisMd: string | null;
-  /** Still-new past the triage SLA — flags ⚠ on its Triage card. */
+  /** Still to_qualify past the triage SLA — flags ⚠ on its Triage card. */
   overdue: boolean;
   createdAt: Date;
 };
 
-export async function listLeads(ctx: AuthContext): Promise<LeadItem[]> {
-  assertStaff(ctx, "list_leads");
+export async function listTriageContacts(ctx: AuthContext): Promise<ContactItem[]> {
+  assertStaff(ctx, "list_triage_contacts");
   const db = getDb();
   const [rows, sla] = await Promise.all([
-    db.select().from(schema.leads).orderBy(desc(schema.leads.createdAt)),
+    db.select().from(schema.contacts).where(eq(schema.contacts.state, "to_qualify")).orderBy(desc(schema.contacts.createdAt)),
     getSlaSettings(),
   ]);
   const now = new Date();
-  const userIds = [...new Set(rows.map((l) => l.assignedToUserId).filter((v): v is string => !!v))];
-  const names = new Map<string, string>();
-  if (userIds.length > 0) {
-    const staff = await db
-      .select({ id: schema.users.id, name: schema.users.name })
-      .from(schema.users)
-      .where(inArray(schema.users.id, userIds));
-    for (const s of staff) names.set(s.id, s.name);
-  }
-  return rows.map((l) => ({
-    id: l.id,
-    name: l.name,
-    company: l.company,
-    email: l.email,
-    phone: l.phone,
-    source: l.source,
-    industry: l.industry,
-    notes: l.notes,
-    status: l.status,
-    assignedToUserId: l.assignedToUserId,
-    assignedToName: l.assignedToUserId ? names.get(l.assignedToUserId) ?? null : null,
-    aiScore: l.aiScore,
-    aiVerdict: l.aiVerdict,
-    aiAnalysisMd: l.aiAnalysisMd,
-    overdue: l.status === "new" && isLeadOverdue(l.createdAt, now, sla),
-    createdAt: l.createdAt,
+  const userIds = [...new Set(rows.map((c) => c.assignedToUserId).filter((v): v is string => !!v))];
+  const orgIds = [...new Set(rows.map((c) => c.organizationId).filter((v): v is string => !!v))];
+  const [staff, orgs] = await Promise.all([
+    userIds.length > 0
+      ? db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
+      : Promise.resolve([]),
+    orgIds.length > 0
+      ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
+      : Promise.resolve([]),
+  ]);
+  const names = new Map(staff.map((s) => [s.id, s.name]));
+  const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
+  return rows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    companyNote: c.companyNote,
+    organizationId: c.organizationId,
+    organizationName: c.organizationId ? orgNames.get(c.organizationId) ?? null : null,
+    email: c.email,
+    phone: c.phone,
+    source: c.source,
+    notes: c.notes,
+    state: c.state,
+    estValueCents: c.estValueCents,
+    assignedToUserId: c.assignedToUserId,
+    assignedToName: c.assignedToUserId ? names.get(c.assignedToUserId) ?? null : null,
+    aiScore: c.aiScore,
+    aiVerdict: c.aiVerdict,
+    aiAnalysisMd: c.aiAnalysisMd,
+    overdue: isLeadOverdue(c.createdAt, now, sla),
+    createdAt: c.createdAt,
   }));
 }
 
 /**
- * Hand a lead to a salesperson (or back to the unowned pool with null). Any staff
- * member can assign — claiming a lead is a soft act, not a gate.
+ * Hand a triage contact to a salesperson (or back to the unowned pool with null).
+ * Any staff member can assign — claiming is a soft act, not a gate.
  */
-export async function assignLead(ctx: AuthContext, leadId: string, userId: string | null): Promise<void> {
-  assertStaff(ctx, "assign_lead");
+export async function assignContact(ctx: AuthContext, contactId: string, userId: string | null): Promise<void> {
+  assertStaff(ctx, "assign_contact");
   const db = getDb();
   if (userId) {
     const [target] = await db
       .select({ id: schema.users.id })
       .from(schema.users)
       .where(and(eq(schema.users.id, userId), eq(schema.users.userType, "wahala"), ne(schema.users.status, "disabled")));
-    if (!target) throw new StageError("VALIDATION", "Leads can only be assigned to active Wahala staff.");
+    if (!target) throw new StageError("VALIDATION", "Contacts can only be assigned to active Wahala staff.");
   }
   const [row] = await db
-    .update(schema.leads)
+    .update(schema.contacts)
     .set({ assignedToUserId: userId })
-    .where(eq(schema.leads.id, leadId))
-    .returning({ id: schema.leads.id });
-  if (!row) throw new StageError("NOT_FOUND", "Lead not found.");
-}
-
-export async function createLead(
-  ctx: AuthContext,
-  input: {
-    name: string;
-    company?: string;
-    email?: string;
-    phone?: string;
-    source?: string;
-    industry?: string;
-    notes?: string;
-  },
-): Promise<{ id: string }> {
-  assertStaff(ctx, "create_lead");
-  const name = input.name?.trim();
-  if (!name) throw new StageError("VALIDATION", "A lead needs at least a name.");
-  const db = getDb();
-  const id = crypto.randomUUID();
-  await db.insert(schema.leads).values({
-    id,
-    name,
-    company: input.company?.trim() || null,
-    email: input.email?.trim().toLowerCase() || null,
-    phone: input.phone?.trim() || null,
-    source: input.source?.trim() || null,
-    industry: input.industry?.trim() || null,
-    notes: input.notes?.trim() || null,
-    createdByUserId: ctx.user.id,
-  });
-  return { id };
-}
-
-export async function disqualifyLead(ctx: AuthContext, leadId: string): Promise<void> {
-  assertSalesManager(ctx, "disqualify_lead");
-  const db = getDb();
-  const [row] = await db
-    .update(schema.leads)
-    .set({ status: "disqualified" })
-    .where(eq(schema.leads.id, leadId))
-    .returning({ id: schema.leads.id });
-  if (!row) throw new StageError("NOT_FOUND", "Lead not found.");
+    .where(eq(schema.contacts.id, contactId))
+    .returning({ id: schema.contacts.id });
+  if (!row) throw new StageError("NOT_FOUND", "Contact not found.");
 }
 
 /**
- * Qualify a lead → organization (prospect) + contact (+ company link) + deal.
- * Either attaches to an existing organization or creates a new prospect org (no
- * portal users yet — client invites stay a separate, later act: onboardClient).
+ * Capture a contact (frame 32). Any staff can save to Triage. With qualifyNow
+ * (the "Start deal → Discovery" bypass, ≥2 quick-check chips in the UI) it also
+ * creates the deal — that needs the sales-manager tier, same as qualifying.
+ * The account is optional for triage saves; the bypass requires one (existing id
+ * or a new name created inline as a prospect).
  */
-export async function qualifyLead(
+export async function captureContact(
   ctx: AuthContext,
-  leadId: string,
-  input: { organizationId?: string; dealName?: string; valueCents?: number },
-): Promise<{ dealId: string; organizationId: string; contactId: string }> {
-  assertSalesManager(ctx, "qualify_lead");
+  input: {
+    name: string;
+    email?: string;
+    phone?: string;
+    organizationId?: string;
+    newAccountName?: string;
+    source?: string;
+    estValueCents?: number;
+    notes?: string;
+    qualifyNow?: boolean;
+    /** Which quick-check chips were on — logged with the bypass, never a gate here. */
+    checks?: string[];
+    /** Account-page adds: a known person on an existing account — not a lead, no deal. */
+    skipTriage?: boolean;
+  },
+): Promise<{ contactId: string; dealId?: string; organizationId?: string }> {
+  assertStaff(ctx, "capture_contact");
+  const name = input.name?.trim();
+  if (!name) throw new StageError("VALIDATION", "A contact needs at least a name.");
   const db = getDb();
-  const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
-  if (!lead) throw new StageError("NOT_FOUND", "Lead not found.");
-  if (lead.status !== "new") throw new StageError("INVALID_STATE", `Lead is already ${lead.status}.`);
+  const now = new Date();
+  const contactId = crypto.randomUUID();
+  const statements = [];
 
   let organizationId = input.organizationId?.trim() || null;
-  const now = new Date();
-  const dealId = crypto.randomUUID();
-  const contactId = crypto.randomUUID();
-  const dealName = input.dealName?.trim() || `${lead.company || lead.name} — opportunity`;
-  const valueCents = Math.max(0, Math.round(input.valueCents ?? 0));
-
-  const statements = [];
   if (organizationId) {
     const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
-    if (!org) throw new StageError("VALIDATION", "That organization does not exist.");
-  } else {
-    if (!lead.company?.trim()) {
-      throw new StageError("VALIDATION", "Add a company name to the lead (or pick an existing client) before qualifying.");
-    }
+    if (!org) throw new StageError("VALIDATION", "That account does not exist.");
+  } else if (input.newAccountName?.trim()) {
     organizationId = crypto.randomUUID();
     statements.push(
       db.insert(schema.organizations).values({
         id: organizationId,
-        name: lead.company.trim(),
+        name: input.newAccountName.trim(),
         status: "prospect",
         accountOwnerUserId: ctx.user.id,
         ownerAssignedAt: now,
@@ -203,19 +179,129 @@ export async function qualifyLead(
     );
   }
 
+  const qualifyNow = !!input.qualifyNow;
+  if (qualifyNow) {
+    assertSalesManager(ctx, "capture_contact_bypass");
+    if (!organizationId) throw new StageError("VALIDATION", "Starting a deal needs an account — pick one or create it inline.");
+  }
+
   statements.push(
     db.insert(schema.contacts).values({
       id: contactId,
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone,
-      notes: lead.notes,
-    }),
-    db.insert(schema.contactCompanies).values({
-      contactId,
       organizationId,
-      isPrimary: true,
+      name,
+      email: input.email?.trim().toLowerCase() || null,
+      phone: input.phone?.trim() || null,
+      source: input.source?.trim() || null,
+      notes: input.notes?.trim() || null,
+      companyNote: input.newAccountName?.trim() || null,
+      estValueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
+      state: qualifyNow || (input.skipTriage && organizationId) ? "qualified" : "to_qualify",
+      createdByUserId: ctx.user.id,
+      assignedToUserId: qualifyNow ? ctx.user.id : null,
     }),
+  );
+  if (organizationId) {
+    statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
+  }
+
+  let dealId: string | undefined;
+  if (qualifyNow && organizationId) {
+    dealId = crypto.randomUUID();
+    statements.push(
+      db.insert(schema.deals).values({
+        id: dealId,
+        organizationId,
+        name: `${input.newAccountName?.trim() || name} — opportunity`,
+        stage: "discovery",
+        stageEnteredAt: now,
+        ownerUserId: ctx.user.id,
+        primaryContactId: contactId,
+        origin: "bypass",
+        valueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
+        notes: input.notes?.trim() || null,
+      }),
+      db.insert(schema.auditLog).values(
+        buildAudit({
+          organizationId,
+          actorUserId: ctx.user.id,
+          action: "contact.bypassed_triage",
+          entityType: "deal",
+          entityId: dealId,
+          metadata: { contactId, contactName: name, checks: input.checks ?? [] },
+        }),
+      ),
+    );
+  }
+
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+  return { contactId, dealId, organizationId: organizationId ?? undefined };
+}
+
+/** Pass on a triage contact — kept and searchable, never deleted. */
+export async function passContact(ctx: AuthContext, contactId: string): Promise<void> {
+  assertSalesManager(ctx, "pass_contact");
+  const db = getDb();
+  const [row] = await db
+    .update(schema.contacts)
+    .set({ state: "passed" })
+    .where(and(eq(schema.contacts.id, contactId), eq(schema.contacts.state, "to_qualify")))
+    .returning({ id: schema.contacts.id });
+  if (!row) throw new StageError("NOT_FOUND", "Triage contact not found.");
+}
+
+/**
+ * Qualify a triage contact → deal at Discovery on an account (existing, the
+ * contact's own, or a new prospect created from a name). The contact row is the
+ * SAME record — state flips to qualified, nothing is copied or frozen.
+ */
+export async function qualifyContact(
+  ctx: AuthContext,
+  contactId: string,
+  input: { organizationId?: string; newAccountName?: string; dealName?: string; valueCents?: number },
+): Promise<{ dealId: string; organizationId: string; contactId: string }> {
+  assertSalesManager(ctx, "qualify_contact");
+  const db = getDb();
+  const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+  if (!contact) throw new StageError("NOT_FOUND", "Contact not found.");
+  if (contact.state !== "to_qualify") throw new StageError("INVALID_STATE", `Contact is already ${contact.state}.`);
+
+  let organizationId = input.organizationId?.trim() || contact.organizationId || null;
+  const now = new Date();
+  const dealId = crypto.randomUUID();
+  const newAccountName = input.newAccountName?.trim() || contact.companyNote?.trim() || null;
+  const dealName = input.dealName?.trim() || `${newAccountName || contact.name} — opportunity`;
+  const valueCents = Math.max(0, Math.round(input.valueCents ?? contact.estValueCents ?? 0));
+
+  const statements = [];
+  if (organizationId) {
+    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
+    if (!org) throw new StageError("VALIDATION", "That account does not exist.");
+  } else {
+    if (!newAccountName) {
+      throw new StageError("VALIDATION", "Add an account (pick one or give a company name) before qualifying.");
+    }
+    organizationId = crypto.randomUUID();
+    statements.push(
+      db.insert(schema.organizations).values({
+        id: organizationId,
+        name: newAccountName,
+        status: "prospect",
+        accountOwnerUserId: ctx.user.id,
+        ownerAssignedAt: now,
+      }),
+    );
+  }
+
+  const existingLink = await db.query.contactCompanies.findFirst({
+    where: and(eq(schema.contactCompanies.contactId, contactId), eq(schema.contactCompanies.organizationId, organizationId)),
+  });
+
+  statements.push(
+    db
+      .update(schema.contacts)
+      .set({ state: "qualified", organizationId, assignedToUserId: contact.assignedToUserId ?? ctx.user.id })
+      .where(eq(schema.contacts.id, contactId)),
     db.insert(schema.deals).values({
       id: dealId,
       organizationId,
@@ -224,24 +310,23 @@ export async function qualifyLead(
       stageEnteredAt: now,
       ownerUserId: ctx.user.id,
       primaryContactId: contactId,
-      sourceLeadId: lead.id,
+      origin: "qualified_from_triage",
       valueCents,
     }),
-    db
-      .update(schema.leads)
-      .set({ status: "qualified", assignedToUserId: lead.assignedToUserId ?? ctx.user.id, convertedDealId: dealId })
-      .where(eq(schema.leads.id, lead.id)),
     db.insert(schema.auditLog).values(
       buildAudit({
         organizationId,
         actorUserId: ctx.user.id,
-        action: "lead.qualified",
+        action: "contact.qualified",
         entityType: "deal",
         entityId: dealId,
-        metadata: { leadId: lead.id, leadName: lead.name, dealName },
+        metadata: { contactId, contactName: contact.name, dealName },
       }),
     ),
   );
+  if (!existingLink) {
+    statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
+  }
 
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
   return { dealId, organizationId, contactId };
@@ -265,10 +350,25 @@ export type DealItem = {
   notes: string | null;
   /** One-line next step for this stage (board card peek). */
   nextStep: string;
-  /** Scout opinion carried from the source lead, so it's readable from the deal too. */
+  /** Scout opinion carried on the (shared) contact record. */
   scoutMd: string | null;
   scoutScore: number | null;
   scoutVerdict: "pursue" | "probe" | "pass" | null;
+  origin: "captured" | "qualified_from_triage" | "bypass" | "spawned_from_project";
+  /** Negotiating substatus chip ("redlines with counsel", "verbal yes · terms open"). */
+  subStatus: string | null;
+  /** Days since the latest SENT proposal (proposal_out clock), or null. */
+  sentDaysAgo: number | null;
+  /** Proposal-out card past the follow-up SLA — the at-risk clock. */
+  proposalSilent: boolean;
+  /** Committed package progress (deposit counts as a doc when set). */
+  docsDone: number | null;
+  docsTotal: number | null;
+  depositDue: boolean;
+  /** The account has a signed MSA — this deal is on the SOW-only fast lane. */
+  msaOnFile: boolean;
+  /** Chip: born from / running as paid discovery. */
+  paidDiscovery: boolean;
 };
 
 async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealItem[]> {
@@ -282,49 +382,90 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const orgIds = [...new Set(rows.map((d) => d.organizationId))];
   const userIds = [...new Set(rows.map((d) => d.ownerUserId).filter((v): v is string => !!v))];
   const contactIds = [...new Set(rows.map((d) => d.primaryContactId).filter((v): v is string => !!v))];
-  const leadIds = [...new Set(rows.map((d) => d.sourceLeadId).filter((v): v is string => !!v))];
+  const dealIds = rows.map((d) => d.id);
+  const projectIds = [...new Set(rows.map((d) => d.projectId).filter((v): v is string => !!v))];
 
-  const [orgs, owners, people, sourceLeads] = await Promise.all([
+  const [orgs, owners, people, sentProposals, agRows, projects] = await Promise.all([
     db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds)),
     userIds.length > 0
       ? db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
       : Promise.resolve([]),
     contactIds.length > 0
-      ? db.select({ id: schema.contacts.id, name: schema.contacts.name }).from(schema.contacts).where(inArray(schema.contacts.id, contactIds))
-      : Promise.resolve([]),
-    leadIds.length > 0
       ? db
-          .select({ id: schema.leads.id, aiAnalysisMd: schema.leads.aiAnalysisMd, aiScore: schema.leads.aiScore, aiVerdict: schema.leads.aiVerdict })
-          .from(schema.leads)
-          .where(inArray(schema.leads.id, leadIds))
+          .select({ id: schema.contacts.id, name: schema.contacts.name, aiAnalysisMd: schema.contacts.aiAnalysisMd, aiScore: schema.contacts.aiScore, aiVerdict: schema.contacts.aiVerdict })
+          .from(schema.contacts)
+          .where(inArray(schema.contacts.id, contactIds))
+      : Promise.resolve([]),
+    db
+      .select({ dealId: schema.proposals.dealId, sentAt: schema.proposals.sentAt })
+      .from(schema.proposals)
+      .where(and(inArray(schema.proposals.dealId, dealIds), eq(schema.proposals.status, "sent"))),
+    db
+      .select({ organizationId: schema.agreements.organizationId, dealId: schema.agreements.dealId, kind: schema.agreements.kind, status: schema.agreements.status })
+      .from(schema.agreements)
+      .where(inArray(schema.agreements.organizationId, orgIds)),
+    projectIds.length > 0
+      ? db.select({ id: schema.projects.id, kind: schema.projects.kind }).from(schema.projects).where(inArray(schema.projects.id, projectIds))
       : Promise.resolve([]),
   ]);
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const ownerName = new Map(owners.map((u) => [u.id, u.name]));
-  const contactName = new Map(people.map((c) => [c.id, c.name]));
-  const leadScout = new Map(sourceLeads.map((l) => [l.id, l]));
+  const contactById = new Map(people.map((c) => [c.id, c]));
+  const projectKind = new Map(projects.map((p) => [p.id, p.kind]));
+  const latestSent = new Map<string, Date>();
+  for (const p of sentProposals) {
+    if (!p.sentAt) continue;
+    const cur = latestSent.get(p.dealId);
+    if (!cur || p.sentAt > cur) latestSent.set(p.dealId, p.sentAt);
+  }
+  // MSA on file per org (account-level fast lane) + per-deal package progress.
+  const msaOrgs = new Set(agRows.filter((a) => a.kind === "msa" && a.status === "signed").map((a) => a.organizationId));
+  const pkgByDeal = new Map<string, { done: number; total: number }>();
+  for (const a of agRows) {
+    if (!a.dealId || a.status === "n_a") continue;
+    const p = pkgByDeal.get(a.dealId) ?? { done: 0, total: 0 };
+    p.total += 1;
+    if (a.status === "signed") p.done += 1;
+    pkgByDeal.set(a.dealId, p);
+  }
 
   const now = new Date();
   return rows.map((d) => {
-    const scout = d.sourceLeadId ? leadScout.get(d.sourceLeadId) : undefined;
+    const contact = d.primaryContactId ? contactById.get(d.primaryContactId) : undefined;
+    const sentAt = latestSent.get(d.id) ?? null;
+    const sentDaysAgo = sentAt ? daysInStage(sentAt, now) : null;
+    // Deposit is part of the committed package: one more doc, done when paid.
+    const pkg = pkgByDeal.get(d.id);
+    const withDeposit = d.depositCents > 0 || d.stage === "committed";
+    const docsTotal = d.stage === "committed" ? (pkg?.total ?? 0) + (withDeposit ? 1 : 0) : null;
+    const docsDone = d.stage === "committed" ? (pkg?.done ?? 0) + (withDeposit && d.depositPaidAt ? 1 : 0) : null;
     return {
-    id: d.id,
-    name: d.name,
-    stage: d.stage,
-    organizationId: d.organizationId,
-    organizationName: orgName.get(d.organizationId) ?? "Unknown",
-    ownerUserId: d.ownerUserId,
-    ownerName: d.ownerUserId ? ownerName.get(d.ownerUserId) ?? null : null,
-    contactName: d.primaryContactId ? contactName.get(d.primaryContactId) ?? null : null,
-    valueCents: d.valueCents,
-    daysInStage: daysInStage(d.stageEnteredAt, now),
-    stuck: isStuckWith(d.stage, d.stageEnteredAt, now, sla),
-    stageEnteredAt: d.stageEnteredAt,
-    notes: d.notes,
-    nextStep: nextStepFor(d.stage),
-    scoutMd: scout?.aiAnalysisMd ?? null,
-    scoutScore: scout?.aiScore ?? null,
-    scoutVerdict: scout?.aiVerdict ?? null,
+      id: d.id,
+      name: d.name,
+      stage: d.stage,
+      organizationId: d.organizationId,
+      organizationName: orgName.get(d.organizationId) ?? "Unknown",
+      ownerUserId: d.ownerUserId,
+      ownerName: d.ownerUserId ? ownerName.get(d.ownerUserId) ?? null : null,
+      contactName: contact?.name ?? null,
+      valueCents: d.valueCents,
+      daysInStage: daysInStage(d.stageEnteredAt, now),
+      stuck: isStuckWith(d.stage, d.stageEnteredAt, now, sla),
+      stageEnteredAt: d.stageEnteredAt,
+      notes: d.notes,
+      nextStep: nextStepFor(d.stage),
+      scoutMd: contact?.aiAnalysisMd ?? null,
+      scoutScore: contact?.aiScore ?? null,
+      scoutVerdict: contact?.aiVerdict ?? null,
+      origin: d.origin,
+      subStatus: d.subStatus,
+      sentDaysAgo,
+      proposalSilent: d.stage === "proposal_out" && (sentDaysAgo ?? daysInStage(d.stageEnteredAt, now)) >= sla.proposalFollowupDays,
+      docsDone,
+      docsTotal,
+      depositDue: d.stage === "committed" && !d.depositPaidAt,
+      msaOnFile: msaOrgs.has(d.organizationId),
+      paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
     };
   });
 }
@@ -342,7 +483,8 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   if (deal.stage === stage) return;
 
-  const moveDeal = db.update(schema.deals).set({ stage, stageEnteredAt: new Date() }).where(eq(schema.deals.id, dealId));
+  // Stage moves clear the substatus chip — it describes the stage the deal was in.
+  const moveDeal = db.update(schema.deals).set({ stage, stageEnteredAt: new Date(), subStatus: null }).where(eq(schema.deals.id, dealId));
   const audit = db.insert(schema.auditLog).values(
     buildAudit({
       organizationId: deal.organizationId,
@@ -371,12 +513,18 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
   } else {
     await db.batch([moveDeal, audit]);
   }
+  if (stage === "committed") {
+    // Entering Committed seeds the agreement package (idempotent) so the drawer's
+    // checklist and the card's docs-N/M chip have rows to read.
+    const { seedDealPackage } = await import("@/services/agreements");
+    await seedDealPackage(deal.organizationId, dealId);
+  }
 }
 
 export async function updateDeal(
   ctx: AuthContext,
   dealId: string,
-  input: { name?: string; valueCents?: number; notes?: string; discoveryMd?: string },
+  input: { name?: string; valueCents?: number; notes?: string; discoveryMd?: string; subStatus?: string | null },
 ): Promise<void> {
   assertSalesManager(ctx, "update_deal");
   const db = getDb();
@@ -391,8 +539,46 @@ export async function updateDeal(
   if (input.valueCents !== undefined) patch.valueCents = Math.max(0, Math.round(input.valueCents));
   if (input.notes !== undefined) patch.notes = input.notes.trim() || null;
   if (input.discoveryMd !== undefined) patch.discoveryMd = input.discoveryMd.trim() || null;
+  if (input.subStatus !== undefined) patch.subStatus = input.subStatus?.trim() || null;
   if (Object.keys(patch).length === 0) return;
   await db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId));
+}
+
+/**
+ * The Committed deposit — manual bookkeeping (no PSP): set the amount, mark the
+ * invoice sent, mark it paid. Paid unlocks Create project (admins may force).
+ */
+export async function setDeposit(
+  ctx: AuthContext,
+  dealId: string,
+  input: { amountCents?: number; markSent?: boolean; markPaid?: boolean },
+): Promise<void> {
+  assertSalesManager(ctx, "set_deposit");
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const patch: Partial<typeof schema.deals.$inferInsert> = {};
+  if (input.amountCents !== undefined) patch.depositCents = Math.max(0, Math.round(input.amountCents));
+  const now = new Date();
+  if (input.markSent) patch.depositSentAt = deal.depositSentAt ?? now;
+  if (input.markPaid) {
+    patch.depositPaidAt = deal.depositPaidAt ?? now;
+    patch.depositSentAt = deal.depositSentAt ?? now;
+  }
+  if (Object.keys(patch).length === 0) return;
+  await db.batch([
+    db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId: ctx.user.id,
+        action: input.markPaid ? "deal.deposit_paid" : input.markSent ? "deal.deposit_sent" : "deal.deposit_updated",
+        entityType: "deal",
+        entityId: dealId,
+        metadata: { amountCents: patch.depositCents ?? deal.depositCents },
+      }),
+    ),
+  ]);
 }
 
 // ---------------------------------------------------------------- deal detail
@@ -417,11 +603,17 @@ export type DealDetail = {
     createdAt: Date;
     daysInStage: number;
     stuck: boolean;
+    origin: "captured" | "qualified_from_triage" | "bypass" | "spawned_from_project";
+    subStatus: string | null;
+    depositCents: number;
+    depositSentAt: Date | null;
+    depositPaidAt: Date | null;
   };
   org: { id: string; name: string; status: string };
   owner: { id: string; name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
-  sourceLead: { source: string | null; notes: string | null; createdAt: Date; scoutMd: string | null; scoutScore: number | null; scoutVerdict: "pursue" | "probe" | "pass" | null } | null;
+  /** Where this came from — capture data + scout opinion on the (shared) contact. */
+  provenance: { source: string | null; notes: string | null; origin: string; createdAt: Date; scoutMd: string | null; scoutScore: number | null; scoutVerdict: "pursue" | "probe" | "pass" | null } | null;
   history: DealHistoryItem[];
   /** Stages this deal actually passed through (for the spine's skipped-vs-visited render). */
   visitedStages: DealStage[];
@@ -439,11 +631,10 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
 
-  const [org, owner, contact, lead, auditRows] = await Promise.all([
+  const [org, owner, contact, auditRows] = await Promise.all([
     db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }),
     deal.ownerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, deal.ownerUserId) }) : null,
     deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
-    deal.sourceLeadId ? db.query.leads.findFirst({ where: eq(schema.leads.id, deal.sourceLeadId) }) : null,
     db
       .select()
       .from(schema.auditLog)
@@ -474,8 +665,14 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
         createdAt: a.createdAt,
       };
     }
+    const FRIENDLY: Record<string, string> = {
+      "lead.qualified": "qualified_the_contact",
+      "contact.qualified": "qualified_the_contact",
+      "contact.bypassed_triage": "started_the_deal_(triage_bypass)",
+      "stage.migrated_5col": "migrated_to_the_5-stage_board",
+    };
     return {
-      action: a.action === "lead.qualified" ? "qualified_the_lead" : a.action.replace(/\./g, "_"),
+      action: FRIENDLY[a.action] ?? a.action.replace(/\./g, "_"),
       actorName: a.actorUserId ? actorName.get(a.actorUserId) ?? "Someone" : "System",
       createdAt: a.createdAt,
     };
@@ -504,12 +701,17 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       createdAt: deal.createdAt,
       daysInStage: daysInStage(deal.stageEnteredAt, now),
       stuck: isStuckWith(deal.stage, deal.stageEnteredAt, now, sla),
+      origin: deal.origin,
+      subStatus: deal.subStatus,
+      depositCents: deal.depositCents,
+      depositSentAt: deal.depositSentAt,
+      depositPaidAt: deal.depositPaidAt,
     },
     org: { id: org.id, name: org.name, status: org.status },
     owner: owner ? { id: owner.id, name: owner.name } : null,
     contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null,
-    sourceLead: lead
-      ? { source: lead.source, notes: lead.notes, createdAt: lead.createdAt, scoutMd: lead.aiAnalysisMd, scoutScore: lead.aiScore, scoutVerdict: lead.aiVerdict }
+    provenance: contact
+      ? { source: contact.source, notes: contact.notes, origin: deal.origin, createdAt: contact.createdAt, scoutMd: contact.aiAnalysisMd, scoutScore: contact.aiScore, scoutVerdict: contact.aiVerdict }
       : null,
     history,
     visitedStages: [...visited],
@@ -527,7 +729,8 @@ export type FunnelColumn = {
 };
 
 export type SalesOverview = {
-  leads: LeadItem[];
+  /** Contacts still to qualify — the Triage column. */
+  triage: ContactItem[];
   columns: FunnelColumn[];
   wonDeals: DealItem[];
   lostDeals: DealItem[];
@@ -536,6 +739,8 @@ export type SalesOverview = {
   /** Anchor-weighted pipeline (close-race stages without an anchor weigh 50%). Rough by design. */
   openWeightedCents: number;
   stuckCount: number;
+  /** Σ value of proposal-out deals past the follow-up SLA — the at-risk clock. */
+  atRiskCents: number;
   wonThisQCount: number;
   wonThisQCents: number;
   lostThisQCount: number;
@@ -543,11 +748,11 @@ export type SalesOverview = {
   winRatePct: number | null;
 };
 
-/** Everything the Sales page needs: lead inbox + stage-grouped open pipeline. */
+/** Everything the Sales page needs: triage contacts + stage-grouped open pipeline. */
 export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   assertStaff(ctx, "sales_overview");
   const sla = await getSlaSettings();
-  const [leads, deals] = await Promise.all([listLeads(ctx), loadDealItems(ctx, sla)]);
+  const [triage, deals] = await Promise.all([listTriageContacts(ctx), loadDealItems(ctx, sla)]);
 
   // Effective anchors come from SLA settings (admin-tunable); STAGE_META supplies the label/toward.
   const anchorFor = (stage: DealStage): number | null =>
@@ -572,7 +777,7 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   const closedThisQ = wonThisQ.length + lostThisQCount;
 
   return {
-    leads,
+    triage,
     columns,
     wonDeals,
     lostDeals,
@@ -582,6 +787,7 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
       open.reduce((n, d) => n + d.valueCents * ((anchorFor(d.stage) ?? 50) / 100), 0),
     ),
     stuckCount: open.filter((d) => d.stuck).length,
+    atRiskCents: open.filter((d) => d.proposalSilent).reduce((n, d) => n + d.valueCents, 0),
     wonThisQCount: wonThisQ.length,
     wonThisQCents: wonThisQ.reduce((n, d) => n + d.valueCents, 0),
     lostThisQCount,

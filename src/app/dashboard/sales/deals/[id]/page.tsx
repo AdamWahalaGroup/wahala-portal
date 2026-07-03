@@ -1,8 +1,9 @@
 /**
- * Deal drawer (frame 29) — the deal room rendered as a drawer over the persistent
- * board layout. The heavy sections (discovery, proposals, contract, history, fields)
- * are built here as server nodes and handed to the client DealDrawer, which arranges
- * them into the Overview · Proposal · Contract · History tabs. Staff only.
+ * Deal drawer (frames 29 + 34) — the deal room rendered as a drawer over the
+ * persistent board layout. The heavy sections (discovery, proposals, agreements,
+ * history, fields) are built here as server nodes and handed to the client
+ * DealDrawer, which arranges them into Overview · Proposal · Agreements · History.
+ * Staff only.
  */
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
@@ -31,8 +32,8 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     if (e instanceof StageError && e.code === "NOT_FOUND") notFound();
     throw e;
   });
-  const { deal, org, owner, contact, sourceLead, history } = detail;
-  const [proposals, contractRoom] = await Promise.all([
+  const { deal, org, owner, contact, provenance, history } = detail;
+  const [proposals, room] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
     getContractRoom(ctx, deal.id),
   ]);
@@ -57,7 +58,9 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
       />
     </div>
   );
-  const contractNode = contractRoom.available ? <ContractRoom dealId={deal.id} room={contractRoom} canManage={canManage} /> : null;
+  const agreementsNode = room.available ? (
+    <ContractRoom dealId={deal.id} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org.name} />
+  ) : null;
   const fieldsNode = canManage ? (
     <DealFieldsForm dealId={deal.id} name={deal.name} valueCents={deal.valueCents} notes={deal.notes} />
   ) : (
@@ -67,14 +70,14 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   return (
     <SalesDrawer routeEcho={`sales / deal / ${deal.name}`}>
       <DealDrawer
-        deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck }}
+        deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck, origin: deal.origin, subStatus: deal.subStatus }}
         org={{ id: org.id, name: org.name, status: org.status }}
         owner={owner ? { name: owner.name } : null}
         contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
-        provenance={sourceLead ? { source: sourceLead.source, notes: sourceLead.notes, createdAt: sourceLead.createdAt.toISOString() } : null}
-        scout={{ md: sourceLead?.scoutMd ?? null, score: sourceLead?.scoutScore ?? null, verdict: sourceLead?.scoutVerdict ?? null }}
+        provenance={provenance ? { source: provenance.source, notes: provenance.notes, createdAt: provenance.createdAt.toISOString() } : null}
+        scout={{ md: provenance?.scoutMd ?? null, score: provenance?.scoutScore ?? null, verdict: provenance?.scoutVerdict ?? null }}
         proposalNode={proposalNode}
-        contractNode={contractNode}
+        agreementsNode={agreementsNode}
         historyNode={<HistoryTimeline items={history} />}
         fieldsNode={fieldsNode}
         canManage={canManage}

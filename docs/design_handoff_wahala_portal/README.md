@@ -48,6 +48,7 @@ relevant `.md` to see exactly what moved.
 **Always-on**
 - [`design-system.md`](design-system.md) — brand tokens, color, type, spacing, and the core components every screen composes.
 - [`patterns.md`](patterns.md) — Server/Island split, stage state machine, state management, vocabulary, non-negotiable constraints, a11y, assets.
+- [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **NEWEST (read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
 
 **Screens**
 - [`design-system.md`](design-system.md) — Design system — tokens & core components
@@ -80,6 +81,7 @@ relevant `.md` to see exactly what moved.
 | 25 Proposal editor · 26 Public proposal | `sales/proposals.md` |
 | 27 Settings (AI agents) | `sales/settings.md` |
 | Sales cross-cutting (IA, chips, markdown pattern) | `sales/00-overview.md` |
+| **30–34 CRM restructure (canonical)** | `CRM-RESTRUCTURE.md` |
 
 ## Files in this folder
 - `Wahala Portal.dc.html` — the full design canvas (all frames). Open in a browser.

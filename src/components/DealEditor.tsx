@@ -9,11 +9,9 @@ import { useState } from "react";
 
 const STAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "discovery", label: "Discovery" },
-  { value: "business_requirements", label: "Business requirements" },
-  { value: "solution_design", label: "Solution design" },
-  { value: "proposal", label: "Proposal" },
-  { value: "negotiation", label: "Negotiation" },
-  { value: "contract", label: "Contract" },
+  { value: "proposal_out", label: "Proposal out" },
+  { value: "negotiating", label: "Negotiating" },
+  { value: "committed", label: "Committed" },
   { value: "won", label: "Won 🎉" },
   { value: "lost", label: "Lost" },
 ];

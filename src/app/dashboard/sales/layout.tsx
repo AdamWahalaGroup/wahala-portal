@@ -22,7 +22,6 @@ export default async function SalesLayout({ children }: { children: React.ReactN
 
   const overview = await salesOverview(ctx);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
-  const newLeadCount = overview.leads.filter((l) => l.status === "new").length;
 
   return (
     <AppShell
@@ -30,10 +29,10 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
       orgName="Wahala Group"
       accountOwner={null}
-      leadCount={newLeadCount}
+      leadCount={overview.triage.length}
     >
       <SalesBoard overview={overview} canManage={canManage} currentUserId={ctx.user.id} />
-      {/* Child segments render the drawer overlay (deal/lead/proposal); null on the bare board. */}
+      {/* Child segments render the drawer overlay (deal/contact/proposal); null on the bare board. */}
       {children}
     </AppShell>
   );

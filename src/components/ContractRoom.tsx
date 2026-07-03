@@ -1,20 +1,32 @@
 "use client";
 
 /**
- * Contract room (R4) on the deal page — appears once a proposal is approved (or the
- * deal reached the contract stage). Commercials checklist, client portal invite,
- * and the Execute button: AI writes the SOW as a real project and the deal is won.
+ * Agreement package + deal→project handoff (frame 34) — the Committed-stage body.
+ * One row per agreement (account-level MSA/NDA + this deal's docs) plus the deposit
+ * invoice as the blocking row. "When the deposit clears" card carries the explicit
+ * Create project → action (disabled until the deposit is paid; admins may force).
+ * Statuses nudge, never gate — an incomplete package warns, it doesn't block.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Item = { kind: string; label: string; status: "pending" | "signed"; signedAt: string | Date | null; note: string | null };
+type AgreementRow = {
+  id: string;
+  kind: string;
+  label: string;
+  status: "needed" | "sent" | "signed" | "n_a";
+  signedAt: string | Date | null;
+  note: string | null;
+  accountLevel: boolean;
+};
 
-type Room = {
+export type Room = {
   available: boolean;
-  items: Item[];
-  approvedProposal: { id: string; title: string; optionLabel: string | null; optionName: string | null; priceCents: number | null } | null;
+  agreements: AgreementRow[];
+  msaOnFile: boolean;
+  deposit: { cents: number; sentAt: string | Date | null; paidAt: string | Date | null };
+  approvedProposal: { id: string; title: string; optionLabel: string | null; optionName: string | null; priceCents: number | null; timelineNote: string | null } | null;
   clientInvited: boolean;
   contactEmail: string | null;
   contactName: string | null;
@@ -33,13 +45,29 @@ const btn = (tone: "ink" | "green" | "plain", disabled: boolean): React.CSSPrope
   opacity: disabled ? 0.55 : 1,
 });
 
-export function ContractRoom({ dealId, room, canManage }: { dealId: string; room: Room; canManage: boolean }) {
+const fmt$ = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+
+export function ContractRoom({
+  dealId,
+  room,
+  canManage,
+  isAdmin,
+  orgName,
+}: {
+  dealId: string;
+  room: Room;
+  canManage: boolean;
+  isAdmin: boolean;
+  orgName: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [confirmExecute, setConfirmExecute] = useState(false);
+  const [confirm, setConfirm] = useState<"execute" | "force" | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
 
   if (!room.available) return null;
 
@@ -63,9 +91,13 @@ export function ContractRoom({ dealId, room, canManage }: { dealId: string; room
     }
   }
 
-  async function toggleItem(item: Item) {
-    const next = item.status === "signed" ? "pending" : "signed";
-    const data = await call(`/api/deals/${dealId}/contract`, { item: { kind: item.kind, status: next } }, `item-${item.kind}`, "PATCH");
+  async function setAgreement(a: AgreementRow, next: AgreementRow["status"]) {
+    const data = await call(`/api/agreements/${a.id}`, { status: next }, `ag-${a.id}`, "PATCH");
+    if (data) router.refresh();
+  }
+
+  async function deposit(body: Record<string, unknown>, key: string) {
+    const data = await call(`/api/deals/${dealId}/deposit`, body, key);
     if (data) router.refresh();
   }
 
@@ -78,47 +110,185 @@ export function ContractRoom({ dealId, room, canManage }: { dealId: string; room
     }
   }
 
-  async function execute() {
-    setConfirmExecute(false);
-    const data = await call(`/api/deals/${dealId}/contract/execute`, {}, "execute");
+  async function execute(force: boolean) {
+    setConfirm(null);
+    const data = await call(`/api/deals/${dealId}/contract/execute`, { force }, "execute");
     if (data && typeof data.projectId === "string") {
       router.push(`/dashboard/projects/${data.projectId}`);
     }
   }
 
-  const allSigned = room.items.every((i) => i.status === "signed");
+  const rows = room.agreements.filter((a) => a.status !== "n_a");
+  const depositSet = room.deposit.cents > 0;
+  const depositPaid = !!room.deposit.paidAt;
+  const total = rows.length + 1; // + the deposit row
+  const done = rows.filter((a) => a.status === "signed").length + (depositPaid ? 1 : 0);
+  const complete = done === total;
+
+  const doneRow = (title: string, sub: string, key: string, undo?: () => void) => (
+    <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBFBFC", border: "1px solid #EEF0F2", borderRadius: 10, padding: "10px 12px" }}>
+      <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
+        <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>{sub}</div>
+      </div>
+      {canManage && undo && (
+        <button onClick={undo} disabled={busy !== null} className="mono" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
+          undo
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 14, padding: 18 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-        <div className="kicker">Contract room</div>
-        {room.approvedProposal && (
-          <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)" }}>
-            {room.approvedProposal.title}
-            {room.approvedProposal.optionLabel ? ` · Option ${room.approvedProposal.optionLabel} — ${room.approvedProposal.optionName}` : ""}
-            {room.approvedProposal.priceCents ? ` · $${(room.approvedProposal.priceCents / 100).toLocaleString()}` : ""}
-          </span>
+    <section>
+      {/* Agreement package */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+        <span className="kicker">Agreement package</span>
+        {room.msaOnFile && <span className="mono" style={{ fontSize: 9.5, color: "#15803D" }}>MSA on file · SOW only</span>}
+        <span className="mono" style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: complete ? "#15803D" : "var(--muted)" }}>
+          {done} / {total}
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gap: 7, marginTop: 10 }}>
+        {rows.map((a) =>
+          a.status === "signed" ? (
+            doneRow(
+              a.label,
+              [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed"),
+              a.id,
+              () => setAgreement(a, "needed"),
+            )
+          ) : (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px" }}>
+              <span style={{ width: 20, height: 20, borderRadius: 999, border: "1.5px solid #D7D9DF", flex: "none" }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{a.label}</div>
+                <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
+                  {a.status === "sent" ? "sent · waiting on signature" : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
+                </div>
+              </div>
+              {canManage && (
+                <div style={{ display: "flex", gap: 8, flex: "none", alignItems: "center" }}>
+                  {a.status === "needed" && (
+                    <button onClick={() => setAgreement(a, "sent")} disabled={busy !== null} style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Mark sent →
+                    </button>
+                  )}
+                  <button onClick={() => setAgreement(a, "signed")} disabled={busy !== null} style={{ border: 0, background: "none", color: "#15803D", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    ✓ Signed
+                  </button>
+                  <button onClick={() => setAgreement(a, "n_a")} disabled={busy !== null} className="mono" title="Not applicable to this deal" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
+                    n/a
+                  </button>
+                </div>
+              )}
+            </div>
+          ),
+        )}
+
+        {/* Deposit — the blocking row */}
+        {depositPaid ? (
+          doneRow(`Deposit — ${fmt$(room.deposit.cents)}`, `paid ${fmtDate(room.deposit.paidAt!)}`, "deposit")
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FFF7ED", border: "1px solid #FADCB4", borderRadius: 10, padding: "10px 12px", flexWrap: "wrap" }}>
+            <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FCEFDC", color: "#B45309", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>⚠</span>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#B45309" }}>
+                Deposit invoice{depositSet ? ` — ${fmt$(room.deposit.cents)}` : ""}
+              </div>
+              <div className="mono" style={{ fontSize: 9.5, color: "#B45309" }}>
+                {room.deposit.sentAt ? `sent ${fmtDate(room.deposit.sentAt)} · waiting on client` : depositSet ? "not sent yet" : "set the amount to start the clock"}
+              </div>
+            </div>
+            {canManage && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flex: "none", flexWrap: "wrap" }}>
+                {!depositSet && (
+                  <>
+                    <input
+                      className="mono"
+                      style={{ border: "1px solid #FADCB4", borderRadius: 8, padding: "6px 8px", fontSize: 12, width: 90, background: "var(--white)" }}
+                      placeholder="$65,000"
+                      inputMode="numeric"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                    />
+                    <button
+                      onClick={() => amount && deposit({ amountCents: Math.round(parseFloat(amount) * 100) }, "dep-set")}
+                      disabled={busy !== null || !amount}
+                      style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Set
+                    </button>
+                  </>
+                )}
+                {depositSet && !room.deposit.sentAt && (
+                  <button onClick={() => deposit({ markSent: true }, "dep-sent")} disabled={busy !== null} style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    Mark sent →
+                  </button>
+                )}
+                {depositSet && (
+                  <button onClick={() => deposit({ markPaid: true }, "dep-paid")} disabled={busy !== null} style={{ border: 0, background: "none", color: "#15803D", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    ✓ Paid
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Commercials checklist */}
-      <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
-        {room.items.map((i) => (
-          <div key={i.kind} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface-soft)", borderRadius: 9, padding: "9px 12px" }}>
-            <span style={{ fontSize: 15, width: 20, textAlign: "center" }}>{i.status === "signed" ? "✅" : "☐"}</span>
-            <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{i.label}</span>
-            {i.signedAt && (
-              <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                signed {new Date(i.signedAt).toLocaleDateString()}
-              </span>
-            )}
-            {canManage && (
-              <button onClick={() => toggleItem(i)} disabled={busy !== null} style={btn("plain", busy !== null)}>
-                {busy === `item-${i.kind}` ? "…" : i.status === "signed" ? "Undo" : "Mark signed"}
-              </button>
-            )}
+      {/* When the deposit clears → project */}
+      <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px", marginTop: 14 }}>
+        <div className="kicker" style={{ color: "var(--cobalt-text)", marginBottom: 6 }}>When the deposit clears</div>
+        {room.project ? (
+          <div style={{ fontSize: 13.5 }}>
+            <span style={{ fontWeight: 700, color: "#15803D" }}>✓ Done — </span>
+            <Link href={`/dashboard/projects/${room.project.id}`} style={{ fontWeight: 700 }}>
+              {room.project.name} →
+            </Link>
+            <span style={{ color: "var(--muted)", fontSize: 12.5 }}> Quote phase 1 there; the pay-gates take it from here.</span>
           </div>
-        ))}
+        ) : (
+          <>
+            <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)" }}>
+              This deal becomes a project on the <strong>{orgName}</strong> account.
+            </p>
+            {room.approvedProposal && (
+              <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 8, lineHeight: 1.7 }}>
+                {room.approvedProposal.optionLabel ? `Option ${room.approvedProposal.optionLabel} — ` : ""}
+                {room.approvedProposal.optionName ?? room.approvedProposal.title}
+                {room.approvedProposal.priceCents ? ` · ${fmt$(room.approvedProposal.priceCents)}` : ""}
+                {room.approvedProposal.timelineNote ? ` · ${room.approvedProposal.timelineNote}` : ""}
+              </div>
+            )}
+            <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 6 }}>
+              SOW drafts after signature — the proposal scope carries over, nothing re-typed.
+            </div>
+            {canManage && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setConfirm(depositPaid ? "execute" : "force")}
+                  disabled={busy !== null || !room.approvedProposal || (!depositPaid && !isAdmin)}
+                  title={
+                    !room.approvedProposal
+                      ? "Needs an approved proposal first"
+                      : !depositPaid
+                        ? isAdmin
+                          ? "Deposit not cleared — admin force available"
+                          : "Unlocks when the deposit is marked paid"
+                        : undefined
+                  }
+                  style={btn("ink", busy !== null || !room.approvedProposal || (!depositPaid && !isAdmin))}
+                >
+                  {busy === "execute" ? "Writing SOW & creating project (~30s)…" : "Create project →"}
+                </button>
+                {!depositPaid && <span className="mono" style={{ fontSize: 10, color: "var(--muted-line)" }}>{isAdmin ? "deposit pending — you can force" : "deposit pending"}</span>}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Client invite */}
@@ -133,53 +303,30 @@ export function ContractRoom({ dealId, room, canManage }: { dealId: string; room
             <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)" }}>{room.contactEmail}</span>
           </>
         ) : (
-          <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
-            No contact email on file — add one to invite the client later.
-          </span>
+          <span style={{ fontSize: 12.5, color: "var(--muted)" }}>No contact email on file — add one to invite the client later.</span>
         )}
-        {inviteLink && (
-          <span className="mono" style={{ fontSize: 11, wordBreak: "break-all", color: "var(--muted)" }}>dev invite: {inviteLink}</span>
-        )}
-      </div>
-
-      {/* Execute */}
-      <div style={{ marginTop: 16, borderTop: "1px solid var(--border-soft)", paddingTop: 14 }}>
-        {room.project ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: "#15803d" }}>✓ Contract executed —</span>
-            <Link href={`/dashboard/projects/${room.project.id}`} style={{ fontSize: 13.5, fontWeight: 700 }}>
-              {room.project.name} →
-            </Link>
-            <span style={{ fontSize: 12.5, color: "var(--muted)" }}>Quote phase 1 there; the pay-gates take it from here.</span>
-          </div>
-        ) : canManage ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <button onClick={() => setConfirmExecute(true)} disabled={busy !== null} style={btn("green", busy !== null)}>
-              {busy === "execute" ? "Writing SOW & creating project (~30s)…" : "◆ Execute contract → create project"}
-            </button>
-            <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
-              {allSigned ? "All commercials signed." : "Commercials still pending — you can execute anyway."}
-            </span>
-          </div>
-        ) : null}
+        {inviteLink && <span className="mono" style={{ fontSize: 11, wordBreak: "break-all", color: "var(--muted)" }}>dev invite: {inviteLink}</span>}
       </div>
 
       {status && <p style={{ color: "#15803d", fontSize: 13, fontWeight: 600, margin: "10px 0 0" }}>{status}</p>}
       {error && <p style={{ color: "#b00020", fontSize: 13, margin: "10px 0 0" }}>{error}</p>}
 
-      {confirmExecute && (
-        <div role="dialog" aria-modal="true" onClick={() => setConfirmExecute(false)} style={{ position: "fixed", inset: 0, background: "rgba(16,18,21,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 }}>
+      {confirm && (
+        <div role="dialog" aria-modal="true" onClick={() => setConfirm(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,18,21,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 90 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: 16, padding: 24, maxWidth: 460, width: "100%", boxShadow: "var(--shadow-modal)" }}>
-            <h3 style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800 }}>Execute this contract?</h3>
+            <h3 style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800 }}>Create the project?</h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14 }}>
-              The AI writes the statement of work from the approved option + discovery as a real project —
-              phases, focus areas, deliverables, no prices — and the deal is marked won. You&apos;ll land on the
-              new project to review and quote phase 1.
-              {!allSigned && " Some commercials are still unsigned — that's on you to chase."}
+              The AI writes the statement of work from the approved option + discovery as a real project on the {orgName} account —
+              phases, focus areas, deliverables, no prices — and the deal is marked won. You&apos;ll land on the new project to review
+              and quote phase 1.
+              {confirm === "force" && <strong> The deposit hasn&apos;t cleared — this is an admin override.</strong>}
+              {!complete && confirm === "execute" && " Some agreements are still open — that's on you to chase."}
             </p>
             <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 20 }}>
-              <button onClick={() => setConfirmExecute(false)} style={btn("plain", false)}>Cancel</button>
-              <button onClick={execute} style={btn("green", false)}>Execute →</button>
+              <button onClick={() => setConfirm(null)} style={btn("plain", false)}>Cancel</button>
+              <button onClick={() => execute(confirm === "force")} style={btn("green", false)}>
+                {confirm === "force" ? "Force create →" : "Create project →"}
+              </button>
             </div>
           </div>
         </div>

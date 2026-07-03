@@ -6,7 +6,7 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
-  { key: "clients", label: "Clients", href: "/dashboard/clients" as string | null, staffOnly: true, adminOnly: false },
+  { key: "accounts", label: "Accounts", href: "/dashboard/accounts" as string | null, staffOnly: true, adminOnly: false },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "files", label: "Files", href: null, staffOnly: false, adminOnly: false },
   { key: "messages", label: "Messages", href: "/dashboard/messages" as string | null, staffOnly: false, adminOnly: false },
@@ -36,9 +36,9 @@ export function AppShell({
   user: { name: string; role: string; isStaff: boolean };
   orgName?: string | null;
   accountOwner?: { name: string } | null;
-  /** "To qualify" count for the Leads sub-nav badge (pass from sales pages that know it). */
+  /** "To qualify" triage-contact count for the Sales badge (pass from pages that know it). */
   leadCount?: number | null;
-  /** Wider main column for deep detail pages (lead workspace, proposal editor). */
+  /** Wider main column for deep detail pages (contact workspace, proposal editor). */
   wide?: boolean;
   children: React.ReactNode;
 }) {
