@@ -9,6 +9,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar } from "@/components/People";
+import { PortalInviteModal } from "@/components/PortalInviteModal";
 
 type RailContact = { id: string; name: string; email: string | null; phone: string | null; title: string | null; isPrimary: boolean };
 
@@ -104,9 +105,10 @@ function ContactRow({ contact, canManage }: { contact: RailContact; canManage: b
   );
 }
 
-export function AccountContactsCard({ orgId, contacts, canManage }: { orgId: string; contacts: RailContact[]; canManage: boolean }) {
+export function AccountContactsCard({ orgId, accountName, contacts, canManage }: { orgId: string; accountName: string; contacts: RailContact[]; canManage: boolean }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", title: "" });
@@ -126,14 +128,20 @@ export function AccountContactsCard({ orgId, contacts, canManage }: { orgId: str
 
   return (
     <section style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "16px 18px" }}>
-      <div style={{ display: "flex", alignItems: "baseline" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
         <span className="kicker">Contacts</span>
         {canManage && (
-          <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            {adding ? "cancel" : "+ add"}
-          </button>
+          <>
+            <button onClick={() => setInviting(true)} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              invite
+            </button>
+            <button onClick={() => setAdding((v) => !v)} style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {adding ? "cancel" : "+ add"}
+            </button>
+          </>
         )}
       </div>
+      {inviting && <PortalInviteModal orgId={orgId} accountName={accountName} onClose={() => setInviting(false)} />}
       {adding && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "10px 0 4px" }}>
           <input style={inputStyle} placeholder="Name *" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />

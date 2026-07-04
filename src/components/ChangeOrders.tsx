@@ -129,7 +129,7 @@ export function ChangeOrders({ stageId, projectId, items, tasks }: { stageId: st
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 4 }}>
         <div className="kicker">Changes ({items.length})</div>
         <button
           type="button"
@@ -138,6 +138,9 @@ export function ChangeOrders({ stageId, projectId, items, tasks }: { stageId: st
         >
           {showForm ? "Cancel" : "Request a change"}
         </button>
+      </div>
+      <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginBottom: 12 }}>
+        card payment for changes arrives with milestone billing — until then your Wahala admin marks paid
       </div>
 
       {showForm && (

@@ -197,9 +197,157 @@ export async function setOrgAiContextMd(ctx: AuthContext, orgId: string, body: s
     .where(eq(schema.organizations.id, orgId));
 }
 
+// ---------------------------------------------------------------- portal invites (frame 35)
+
+export type PortalRole = "client_admin" | "client_billing" | "client_readonly";
+const PORTAL_ROLES: readonly PortalRole[] = ["client_admin", "client_billing", "client_readonly"];
+
 /**
- * Delete a client org and EVERYTHING under it (admin only) — for resetting test
- * data. Deletes in FK-dependency order so the cascade never trips a constraint.
+ * Invite CONTACTS onto an account's portal (frame 35 — the invite moment moved out
+ * of the retired Clients screen into the deal→project handoff and the Account page).
+ * Reuses the existing invite machinery: user row (invited) + magic-link email.
+ * Skips contacts whose email already has a user. Admin / account owner.
+ */
+export async function invitePortalContacts(
+  ctx: AuthContext,
+  orgId: string,
+  invites: { contactId: string; role: PortalRole }[],
+  origin: string,
+): Promise<{ invited: number; skipped: string[]; inviteLinks?: Record<string, string> }> {
+  if (!(ctx.isAdmin || ctx.user.role === "account_owner")) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "invite_portal_contacts", reason: "not_admin_or_owner" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or account owner can send portal invites.");
+  }
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, orgId) });
+  if (!org) throw new StageError("NOT_FOUND", "Account not found.");
+  if (invites.length === 0) throw new StageError("VALIDATION", "Pick at least one contact to invite.");
+
+  let invited = 0;
+  const skipped: string[] = [];
+  const inviteLinks: Record<string, string> = {};
+
+  for (const inv of invites) {
+    const role: PortalRole = PORTAL_ROLES.includes(inv.role) ? inv.role : "client_admin";
+    const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, inv.contactId) });
+    if (!contact?.email) {
+      skipped.push(contact?.name ?? inv.contactId);
+      continue;
+    }
+    const email = contact.email.trim().toLowerCase();
+    const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
+    if (existing) {
+      skipped.push(contact.name);
+      continue;
+    }
+    const userId = crypto.randomUUID();
+    await db.batch([
+      db.insert(schema.users).values({
+        id: userId,
+        organizationId: orgId,
+        userType: "client",
+        role,
+        name: contact.name,
+        email,
+        status: "invited",
+      }),
+      db.insert(schema.auditLog).values(
+        buildAudit({
+          organizationId: orgId,
+          actorUserId: ctx.user.id,
+          action: "account.portal_invited",
+          entityType: "contact",
+          entityId: contact.id,
+          metadata: { email, role, contactName: contact.name },
+        }),
+      ),
+    ]);
+    const token = await createMagicToken({ userId, email });
+    const url = new URL(`/api/auth/verify?token=${token}`, origin).toString();
+    if (isDevAuth()) {
+      inviteLinks[contact.id] = url;
+      console.log(`[invite] ${email}: ${url}`);
+    } else {
+      try {
+        await sendInviteEmail(email, url, org.name);
+      } catch (err) {
+        console.error("[invite] email send failed:", err);
+      }
+    }
+    invited++;
+  }
+  return { invited, skipped, inviteLinks: Object.keys(inviteLinks).length ? inviteLinks : undefined };
+}
+
+// ---------------------------------------------------------------- archive (soft — replaces the cascade delete in the UI)
+
+/**
+ * Archive an account (frame 14b redesigned): hide from active lists, revoke portal
+ * access (client users disabled), delete NOTHING. Admin-restorable. Admin only.
+ */
+export async function archiveOrganization(ctx: AuthContext, orgId: string): Promise<void> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "archive_org", resource: `org:${orgId}`, reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can archive an account.");
+  }
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, orgId) });
+  if (!org) throw new StageError("NOT_FOUND", "Account not found.");
+  await db.batch([
+    db.update(schema.organizations).set({ status: "archived" }).where(eq(schema.organizations.id, orgId)),
+    db
+      .update(schema.users)
+      .set({ status: "disabled" })
+      .where(and(eq(schema.users.organizationId, orgId), eq(schema.users.userType, "client"))),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: orgId,
+        actorUserId: ctx.user.id,
+        action: "account.archived",
+        entityType: "organization",
+        entityId: orgId,
+        metadata: { name: org.name },
+      }),
+    ),
+  ]);
+}
+
+/**
+ * Restore an archived account: client on any won deal, else prospect. Portal access
+ * stays revoked (users disabled) until re-invited — deliberate. Admin only.
+ */
+export async function restoreOrganization(ctx: AuthContext, orgId: string): Promise<void> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "restore_org", resource: `org:${orgId}`, reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can restore an account.");
+  }
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, orgId) });
+  if (!org) throw new StageError("NOT_FOUND", "Account not found.");
+  if (org.status !== "archived") return;
+  const won = await db
+    .select({ id: schema.deals.id })
+    .from(schema.deals)
+    .where(and(eq(schema.deals.organizationId, orgId), eq(schema.deals.stage, "won")));
+  await db.batch([
+    db.update(schema.organizations).set({ status: won.length > 0 ? "active" : "prospect" }).where(eq(schema.organizations.id, orgId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: orgId,
+        actorUserId: ctx.user.id,
+        action: "account.restored",
+        entityType: "organization",
+        entityId: orgId,
+        metadata: { name: org.name },
+      }),
+    ),
+  ]);
+}
+
+/**
+ * Delete a client org and EVERYTHING under it — dev-only reset script, OUT of the
+ * product UI since the archive redesign (the API now archives instead). Deletes in
+ * FK-dependency order so the cascade never trips a constraint.
  * Staff users (no org) are never touched; only this org's client users go.
  */
 export async function deleteOrganization(ctx: AuthContext, orgId: string): Promise<void> {

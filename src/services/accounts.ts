@@ -11,8 +11,8 @@ import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { STAGE_META, isDealStage, type DealStage } from "@/domain/sales";
 import { getAccountHub, type AccountHub } from "@/services/account-hub";
-import { listForAccount, type AgreementRow } from "@/services/agreements";
-import { assertSalesManager } from "@/services/sales";
+import { listForAccount, msaOnFileFor, type AgreementRow } from "@/services/agreements";
+import { assertSalesManager, assertStaff } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 
 export type AccountState = "prospect" | "client" | "past_client";
@@ -212,6 +212,125 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
       spawnedFromDealName: spawnedByProject.get(p.id) ?? null,
     })),
   };
+}
+
+// ---------------------------------------------------------------- closeout → next deal (frame 37)
+
+export type CloseoutPrompt = {
+  orgId: string;
+  accountName: string;
+  projectName: string;
+  acceptedAt: Date;
+  collectedCents: number;
+  msaOnFile: boolean;
+  prefillName: string;
+  prefillValueCents: number;
+  contacts: { id: string; name: string }[];
+};
+
+/**
+ * The closeout moment: a project whose FINAL stage is accepted proposes the next
+ * deal on the same account — shown once to staff, dismissible. Returns null when
+ * not applicable (open stages, already dismissed, or a next deal already spawned).
+ */
+export async function closeoutPromptFor(ctx: AuthContext, projectId: string): Promise<CloseoutPrompt | null> {
+  if (!ctx.isStaff) return null;
+  const db = getDb();
+  const project = await db.query.projects.findFirst({ where: eq(schema.projects.id, projectId) });
+  if (!project) return null;
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && !scope.orgIds.includes(project.organizationId)) return null;
+
+  const stages = await db.select().from(schema.stages).where(eq(schema.stages.projectId, projectId));
+  if (stages.length === 0 || !stages.every((s) => s.status === "accepted")) return null;
+
+  const [dismissals, spawnedRows, org, contacts] = await Promise.all([
+    db
+      .select({ id: schema.auditLog.id })
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.action, "project.closeout_dismissed"), eq(schema.auditLog.entityId, projectId))),
+    db
+      .select({ metadata: schema.auditLog.metadata })
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.action, "deal.created"), eq(schema.auditLog.organizationId, project.organizationId))),
+    db.query.organizations.findFirst({ where: eq(schema.organizations.id, project.organizationId) }),
+    db
+      .select({ id: schema.contacts.id, name: schema.contacts.name, state: schema.contacts.state })
+      .from(schema.contacts)
+      .where(eq(schema.contacts.organizationId, project.organizationId)),
+  ]);
+  if (!org) return null;
+  if (dismissals.length > 0) return null;
+  // A deal already spawned from THIS project → the loop is closed, no prompt.
+  const alreadySpawned = spawnedRows.some((r) => {
+    const m = (r.metadata ?? {}) as { originProjectId?: string | null };
+    return m.originProjectId === projectId;
+  });
+  if (alreadySpawned) return null;
+
+  const collectedCents = stages.reduce((n, s) => n + (s.paidAt ? s.totalAmountCents : 0), 0);
+  const acceptedAt = stages.reduce<Date>((max, s) => (s.acceptedAt && s.acceptedAt > max ? s.acceptedAt : max), stages[0].acceptedAt ?? new Date());
+  const msaOnFile = await msaOnFileFor(project.organizationId);
+
+  return {
+    orgId: project.organizationId,
+    accountName: org.name,
+    projectName: project.name,
+    acceptedAt,
+    collectedCents,
+    msaOnFile,
+    // Prefill from the accepted work: paid-discovery closeouts propose the build.
+    prefillName: project.kind === "paid_discovery" ? `${org.name} — build from the roadmap` : `${org.name} — next engagement`,
+    prefillValueCents: stages.reduce((n, s) => n + s.totalAmountCents, 0),
+    contacts: contacts.filter((c) => c.state !== "passed").map((c) => ({ id: c.id, name: c.name })),
+  };
+}
+
+/** "Not now" on the closeout prompt — dismiss once, logged. Staff. */
+export async function dismissCloseoutPrompt(ctx: AuthContext, projectId: string): Promise<void> {
+  assertStaff(ctx, "dismiss_closeout");
+  const db = getDb();
+  const project = await db.query.projects.findFirst({ where: eq(schema.projects.id, projectId) });
+  if (!project) throw new StageError("NOT_FOUND", "Project not found.");
+  await db.insert(schema.auditLog).values(
+    buildAudit({
+      organizationId: project.organizationId,
+      actorUserId: ctx.user.id,
+      action: "project.closeout_dismissed",
+      entityType: "project",
+      entityId: projectId,
+      metadata: { projectName: project.name },
+    }),
+  );
+}
+
+export type InvitableContact = {
+  id: string;
+  name: string;
+  email: string | null;
+  title: string | null;
+  isPrimary: boolean;
+  /** Portal state matched by email: none (invitable) / invited / active / disabled. */
+  portal: "none" | "invited" | "active" | "disabled";
+};
+
+/** The account's contacts with portal status — feeds the invite modal (frame 35). */
+export async function listInvitableContacts(ctx: AuthContext, orgId: string): Promise<InvitableContact[]> {
+  const view = await getAccountView(ctx, orgId); // reuses the scope checks + contact union
+  const db = getDb();
+  const users = await db
+    .select({ email: schema.users.email, status: schema.users.status })
+    .from(schema.users)
+    .where(and(eq(schema.users.organizationId, orgId), eq(schema.users.userType, "client")));
+  const byEmail = new Map(users.map((u) => [u.email.toLowerCase(), u.status]));
+  return view.contacts.map((c) => ({
+    id: c.id,
+    name: c.name,
+    email: c.email,
+    title: c.title,
+    isPrimary: c.isPrimary,
+    portal: c.email ? ((byEmail.get(c.email.toLowerCase()) as InvitableContact["portal"]) ?? "none") : "none",
+  }));
 }
 
 /**

@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PortalInviteModal } from "@/components/PortalInviteModal";
 
 type AgreementRow = {
   id: string;
@@ -50,12 +51,14 @@ const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { 
 
 export function ContractRoom({
   dealId,
+  orgId,
   room,
   canManage,
   isAdmin,
   orgName,
 }: {
   dealId: string;
+  orgId: string;
   room: Room;
   canManage: boolean;
   isAdmin: boolean;
@@ -68,6 +71,8 @@ export function ContractRoom({
   const [confirm, setConfirm] = useState<"execute" | "force" | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+  // Frame 35: the invite moment right after Create project → succeeds.
+  const [invitePrompt, setInvitePrompt] = useState<{ projectId: string; projectName: string; stagesN: number; depositPaid: boolean } | null>(null);
 
   if (!room.available) return null;
 
@@ -114,7 +119,14 @@ export function ContractRoom({
     setConfirm(null);
     const data = await call(`/api/deals/${dealId}/contract/execute`, { force }, "execute");
     if (data && typeof data.projectId === "string") {
-      router.push(`/dashboard/projects/${data.projectId}`);
+      // The invite moment (frame 35) — then on to the project.
+      setInvitePrompt({
+        projectId: data.projectId,
+        projectName: room.approvedProposal?.title ?? "New project",
+        stagesN: typeof data.stagesCreated === "number" ? data.stagesCreated : 0,
+        depositPaid: !!room.deposit.paidAt,
+      });
+      router.refresh();
     }
   }
 
@@ -265,6 +277,8 @@ export function ContractRoom({
             )}
             <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 6 }}>
               SOW drafts after signature — the proposal scope carries over, nothing re-typed.
+              <br />
+              Stage 1 opens <b>paid</b> (the deposit invoice is its payment record); later stages follow the normal pay-gate.
             </div>
             {canManage && (
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
@@ -310,6 +324,15 @@ export function ContractRoom({
 
       {status && <p style={{ color: "#15803d", fontSize: 13, fontWeight: 600, margin: "10px 0 0" }}>{status}</p>}
       {error && <p style={{ color: "#b00020", fontSize: 13, margin: "10px 0 0" }}>{error}</p>}
+
+      {invitePrompt && (
+        <PortalInviteModal
+          orgId={orgId}
+          accountName={orgName}
+          success={{ projectName: invitePrompt.projectName, stagesN: invitePrompt.stagesN, depositPaid: invitePrompt.depositPaid }}
+          onClose={() => router.push(`/dashboard/projects/${invitePrompt.projectId}`)}
+        />
+      )}
 
       {confirm && (
         <div role="dialog" aria-modal="true" onClick={() => setConfirm(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,18,21,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 90 }}>

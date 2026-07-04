@@ -54,6 +54,8 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
     stage.status === "draft" &&
     (ctx.isAdmin || (ctx.user.role === "account_owner" && ctx.user.id === detail.resource.accountOwnerUserId));
   const canAcceptScreen = !ctx.isStaff && stage.status === "delivered";
+  // Frame 36: quoted stages get the dedicated review moment (mirrors accept).
+  const canApproveScreen = !ctx.isStaff && stage.status === "quoted";
 
   // For on_delivery phases, status never enters 'paid' — use paidAt as the truth.
   const paid = !!stage.paidAt || PAID_OR_BEYOND.has(stage.status);
@@ -242,6 +244,23 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
                 }}
               >
                 Review &amp; accept
+              </Link>
+            ) : canApproveScreen ? (
+              <Link
+                href={`/dashboard/stages/${stage.id}/approve`}
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  background: "var(--ink)",
+                  color: "var(--white)",
+                  borderRadius: 9,
+                  padding: "11px 16px",
+                  fontSize: 14.5,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                Review &amp; approve quote
               </Link>
             ) : (
               <StageActions stageId={stage.id} actions={actions} />

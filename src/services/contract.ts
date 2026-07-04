@@ -176,7 +176,7 @@ export async function executeContract(
   ctx: AuthContext,
   dealId: string,
   opts: { force?: boolean } = {},
-): Promise<{ projectId: string; usage: DraftUsage }> {
+): Promise<{ projectId: string; stagesCreated: number; usage: DraftUsage }> {
   assertSalesManager(ctx, "execute_contract");
   const deal = await loadDealScoped(ctx, dealId);
   if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
@@ -225,6 +225,39 @@ export async function executeContract(
     postToThread: true,
   });
 
+  // "Deposit = Stage 1's payment": when the deposit cleared, Stage 1 is born PAID —
+  // the deposit invoice is its payment record. Stages 2+ follow the normal pay-gate.
+  if (deal.depositPaidAt) {
+    const firstStage = await db.query.stages.findFirst({
+      where: eq(schema.stages.projectId, projectId),
+      orderBy: schema.stages.sequence,
+    });
+    if (firstStage) {
+      await db.batch([
+        db
+          .update(schema.stages)
+          .set({
+            status: "paid",
+            totalAmountCents: deal.depositCents,
+            quoteApprovedAt: deal.depositPaidAt,
+            approvedByUserId: ctx.user.id,
+            paidAt: deal.depositPaidAt,
+          })
+          .where(eq(schema.stages.id, firstStage.id)),
+        db.insert(schema.auditLog).values(
+          buildAudit({
+            organizationId: deal.organizationId,
+            actorUserId: ctx.user.id,
+            action: "stage.paid",
+            entityType: "stage",
+            entityId: firstStage.id,
+            metadata: { via: "deal_deposit", dealId, amountCents: deal.depositCents },
+          }),
+        ),
+      ]);
+    }
+  }
+
   await db.batch([
     db.update(schema.deals).set({ projectId }).where(eq(schema.deals.id, dealId)),
     db.insert(schema.auditLog).values(
@@ -243,5 +276,5 @@ export async function executeContract(
   // + discovery→memory graduation and is idempotent-safe on stage.
   if (deal.stage !== "won") await setDealStage(ctx, dealId, "won");
 
-  return { projectId, usage };
+  return { projectId, stagesCreated: draft.stages.length, usage };
 }

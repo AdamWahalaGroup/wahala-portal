@@ -96,12 +96,28 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
           {canManage && <NewDealButton orgId={orgId} contacts={view.contacts.map((c) => ({ id: c.id, name: c.name }))} />}
         </span>
       </div>
+      {/* Money: won vs committed, never a summed "lifetime" that double-counts open deals. */}
       <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 8 }}>
         {meta.join(" · ")}
-        {" · lifetime "}
-        <b style={{ color: "var(--ink-soft)" }}>
-          <Money cents={view.lifetimeWonCents + hub.totals.paidCents} />
-        </b>
+        {view.lifetimeWonCents > 0 && (
+          <>
+            {" · won "}
+            <b style={{ color: "var(--ink-soft)" }}>
+              <Money cents={view.lifetimeWonCents} />
+            </b>
+          </>
+        )}
+        {(() => {
+          const committedCents = view.openDeals.filter((d) => d.stage === "committed").reduce((n, d) => n + d.valueCents, 0);
+          return committedCents > 0 ? (
+            <>
+              {" · committed "}
+              <b style={{ color: "var(--ink-soft)" }}>
+                <Money cents={committedCents} />
+              </b>
+            </>
+          ) : null;
+        })()}
       </div>
 
       {/* Two-column grid: the one thread + the rail */}
@@ -147,7 +163,7 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
 
         {/* Right rail */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <AccountContactsCard orgId={orgId} contacts={view.contacts} canManage={canManage} />
+          <AccountContactsCard orgId={orgId} accountName={hub.org.name} contacts={view.contacts} canManage={canManage} />
 
           {/* Open deals */}
           <section style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "16px 18px" }}>

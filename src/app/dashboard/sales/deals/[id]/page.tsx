@@ -59,7 +59,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     </div>
   );
   const agreementsNode = room.available ? (
-    <ContractRoom dealId={deal.id} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org.name} />
+    <ContractRoom dealId={deal.id} orgId={org.id} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org.name} />
   ) : null;
   const fieldsNode = canManage ? (
     <DealFieldsForm dealId={deal.id} name={deal.name} valueCents={deal.valueCents} notes={deal.notes} />

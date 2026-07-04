@@ -6,7 +6,9 @@ import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { scopedDb } from "@/db/scoped";
 import { getProjectDetail } from "@/services/projects";
+import { closeoutPromptFor } from "@/services/accounts";
 import { listFilesForProject } from "@/services/files";
+import { CloseoutPrompt } from "@/components/CloseoutPrompt";
 import { listWahalaStaff } from "@/services/clients";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
@@ -30,10 +32,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     throw e;
   });
   const sdb = scopedDb(ctx);
-  const [stages, accountOwner, files] = await Promise.all([
+  const [stages, accountOwner, files, closeout] = await Promise.all([
     sdb.listStages(id),
     sdb.accountOwner(),
     listFilesForProject(ctx, id),
+    closeoutPromptFor(ctx, id), // frame 37: null unless the final stage is accepted
   ]);
 
   const { project } = detail;
@@ -70,6 +73,22 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </span>
       </div>
       {project.description && <p style={{ margin: "8px 0 0", color: "var(--ink-soft)", fontSize: 14.5 }}>{project.description}</p>}
+
+      {/* Closeout → next deal (frame 37) — once, dismissible, staff only */}
+      {closeout && (
+        <CloseoutPrompt
+          projectId={project.id}
+          orgId={closeout.orgId}
+          accountName={closeout.accountName}
+          projectName={closeout.projectName}
+          acceptedAt={closeout.acceptedAt.toISOString()}
+          collectedCents={closeout.collectedCents}
+          msaOnFile={closeout.msaOnFile}
+          prefillName={closeout.prefillName}
+          prefillValueCents={closeout.prefillValueCents}
+          contacts={closeout.contacts}
+        />
+      )}
       {project.workType && (
         <div className="kicker" style={{ marginTop: 10 }}>
           Work type · {project.workType}

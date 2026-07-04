@@ -10,7 +10,7 @@ import { listClients, listWahalaStaff } from "@/services/clients";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { OnboardClientForm } from "@/components/OnboardClientForm";
-import { DeleteClientButton } from "@/components/DeleteClientButton";
+import { ArchiveAccountButton, RestoreAccountButton } from "@/components/ArchiveAccountButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Avatar } from "@/components/People";
 
@@ -20,6 +20,7 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "prospects", label: "Prospects" },
   { key: "clients", label: "Clients" },
+  { key: "archived", label: "Archived" },
 ] as const;
 type FilterKey = (typeof FILTERS)[number]["key"];
 
@@ -62,14 +63,22 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const staff = ctx.isAdmin ? await listWahalaStaff(ctx) : [];
 
   const { state } = await searchParams;
-  const filter: FilterKey = state === "prospects" || state === "clients" ? state : "all";
+  const filter: FilterKey = state === "prospects" || state === "clients" || state === "archived" ? state : "all";
   const counts = {
-    all: accounts.length,
+    all: accounts.filter((c) => c.org.status !== "archived").length,
     prospects: accounts.filter((c) => c.org.status === "prospect").length,
     clients: accounts.filter((c) => c.org.status === "active").length,
+    archived: accounts.filter((c) => c.org.status === "archived").length,
   };
+  // Archived accounts hide from active lists (soft archive) — they live in their own filter.
   const filtered = accounts.filter((c) =>
-    filter === "prospects" ? c.org.status === "prospect" : filter === "clients" ? c.org.status === "active" : true,
+    filter === "prospects"
+      ? c.org.status === "prospect"
+      : filter === "clients"
+        ? c.org.status === "active"
+        : filter === "archived"
+          ? c.org.status === "archived"
+          : c.org.status !== "archived",
   );
   const invitedCount = accounts.filter((c) => c.contact?.status === "invited").length;
 
@@ -136,7 +145,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                   key={c.org.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 150px 110px 30px 16px",
+                    gridTemplateColumns: "1fr 150px 110px 60px 16px",
                     gap: 12,
                     alignItems: "center",
                     padding: "13px 16px",
@@ -180,7 +189,12 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                     <StatePill status={c.org.status} />
                   </div>
                   <div style={{ justifySelf: "end" }}>
-                    {ctx.isAdmin && <DeleteClientButton orgId={c.org.id} name={c.org.name} />}
+                    {ctx.isAdmin &&
+                      (c.org.status === "archived" ? (
+                        <RestoreAccountButton orgId={c.org.id} name={c.org.name} />
+                      ) : (
+                        <ArchiveAccountButton orgId={c.org.id} name={c.org.name} />
+                      ))}
                   </div>
                   <Link
                     href={`/dashboard/accounts/${c.org.id}`}

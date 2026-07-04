@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing:antialiased; color:#16181d; }
+</style>
+</helmet>
+<x-import component-from-global-scope="doc-page" from="./doc-page.js" size="letter" margin="0.7in" hint-size="880px,1200px">
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+    <div style="width:26px; height:26px; border-radius:7px; background:#16181d; display:flex; align-items:center; justify-content:center;"><div style="width:9px; height:9px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">wahala portal · internal</span>
+  </div>
+  <h1 style="margin:0; font-size:30px; font-weight:800; letter-spacing:-.025em;">End-to-end demo script</h1>
+  <p style="margin:10px 0 0; font-size:14.5px; line-height:1.6; color:#3a3f47; max-width:600px;">One loop, ~15 minutes: <strong>capture → deal → paid discovery → proposal → committed → project → paid stages → formal acceptance → the next deal.</strong> Frame numbers refer to the design canvas (<em>Wahala Portal.dc.html</em>); routes are the live app.</p>
+  <p style="margin:12px 0 0; font-size:14.5px; line-height:1.6; color:#16181d; max-width:640px; border-left:3px solid #2b3ee6; padding-left:14px;"><strong>The opening line:</strong> "Every dollar maps to an itemized scope, paid before work begins, delivered against a checklist, and formally accepted. And the system that wins the work is the same system that delivers it."</p>
+
+  <div style="display:flex; gap:8px; margin:16px 0 0; flex-wrap:wrap; align-items:center;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#9aa0aa;">Legend</span>
+    <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:2px 9px; border-radius:999px;">LIVE</span>
+    <span style="font-size:11px; font-weight:700; background:#fcefdc; color:#b45309; padding:2px 9px; border-radius:999px;">INTERIM</span>
+    <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:2px 9px; border-radius:999px;">DESIGN-ONLY</span>
+    <span style="font-size:12px; color:#767b85;">— verify LIVE sales screens on staging before presenting; 08 / 35 / 36 / 37 are not built yet.</span>
+  </div>
+
+  <h2 style="margin:26px 0 8px; font-size:15px; font-weight:800; letter-spacing:-.01em;">Cast &amp; dataset — one coherent story</h2>
+  <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.65; color:#3a3f47;">
+    <li><strong>Ada Obi</strong> — Wahala admin &amp; account owner (you, the presenter) · <strong>Joel Eze</strong> — lead engineer.</li>
+    <li><strong>Talden</strong> (legal AI) — the <em>sales</em> thread: Rob Ellison referred 02 May → NDA → $12k paid-discovery sprint won 12 May → MSA signed 20 May → roadmap accepted 12 Jun → $225k Commercialization proposal 24 Jun → <strong>Committed, deposit out, 30 Jun</strong>.</li>
+    <li><strong>Meridian Co.</strong> — the <em>delivery</em> thread, three projects in: <strong>Maya Chen</strong> is the client admin. Demo days: <strong>29 Jun</strong> (her dashboard: pay Stage 2, accept a delivery) and <strong>30 Jun</strong> (Stage 2 paid 11:02, work starts 14:20).</li>
+  </ul>
+
+  <h2 style="margin:28px 0 4px; font-size:13px; font-weight:800;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#2b3ee6;">Act 1 — Winning Talden</span> <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#b4b9c1;">· sales · ~6 min</span></h2>
+
+  <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">1</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Capture the contact <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 32 · board → + Capture contact</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"A referral from an airport bar becomes a record in twenty seconds. Lead is a state, not a thing — this contact record lives forever."</em> Show the 3-chip quick-check: 2 of 3 known → <strong>Start deal → Discovery</strong> (bypass logged). Unknowns go to Triage for scoring instead.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">2</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">The board <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 31 · /dashboard/sales</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Five columns, and the two numbers I run the firm on: weighted pipeline, and at-risk time — proposals nobody has answered."</em> Point at: Triage holds <strong>contacts</strong>, not deals · the ⚠ "9d silent" tag · the stuck-14d+ pill · the Won zone: "drop here → becomes a project <strong>on the same account</strong>."</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">3</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Discovery is a product <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 30 loop · the ◆ paid-discovery chip on Talden's card</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"We don't do free discovery. Talden's $12k assessment sprint was a real project — paid up front, delivered, formally accepted. Its deliverable is the roadmap that wrote the $225k proposal."</em></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">4</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Proposal out <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frames 25–26 · editor + public page</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The proposal is a public page — no login wall between the client and yes."</em> One glance at the mobile public view is enough.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">5</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Committed is a checklist, not a feeling <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 34 · deal drawer, Committed</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Docs 4 of 5, deposit invoice out. The deposit IS Stage 1's payment — when it clears, this button turns the proposal into a project with three stages prefilled. Nothing re-typed."</em> Note the MSA lives at the <strong>account</strong>: Bluepeak's card says "MSA on file · SOW only."</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">6</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Invite them in <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 35 (new) → welcome, frame 15 (live)</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The moment the project exists, Rob gets a magic link — no password — and lands on a welcome page with a named human on it."</em> This replaces the old Clients-list invite (frame 14, retired).</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin:28px 0 4px; font-size:13px; font-weight:800;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#2b3ee6;">Act 2 — Delivering for Meridian</span> <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#b4b9c1;">· delivery · ~7 min</span></h2>
+  <p style="margin:6px 0 0; font-size:13px; color:#767b85; font-style:italic;">Bridge line: "Fast-forward — this is what Talden's project looks like in six weeks. Meridian is three projects in."</p>
+
+  <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">7</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">The client's morning <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 03 · /dashboard as Maya · 29 Jun</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Maya sees exactly two things she owes us — pay Stage 2, accept a delivery. 'Waiting on whom' is the whole product."</em> Show the 7-step stepper per project and the account owner pinned in the sidebar.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">8</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Quote needs a second signature <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 06 · /dashboard/stages/:id/quote</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"$12,400 is over the threshold, so an admin must co-sign before it goes out. Nobody quietly promises $50k of work."</em> One fixed price; deliverables grouped by epic; amounts are illustrative.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">9</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Client approves — deliberately <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 36 (new) — the approve <em>action</em> is live on the stage screen; the mobile review moment is design</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Approval is logged against a name. And approving is not paying —"</em></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">10</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">— payment is a wall <span style="font-size:11px; font-weight:700; background:#fcefdc; color:#b45309; padding:1px 8px; border-radius:999px; margin-left:6px;">INTERIM</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 08 · Stripe pending — today an admin marks paid; the gate itself is enforced</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"There is no 'we'll invoice you later.' Work physically cannot start until the stage is paid."</em> Say out loud that checkout is the target UI; the pay-gate logic is already live.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">11</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">The work, visible <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 05 · /dashboard/stages/:id · 30 Jun, after payment</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The Paid banner is a celebrated threshold. This deliverables list IS the acceptance checklist later — no moving goalposts."</em> Tasks → subtasks → worklog notes are internal; margin and recordings never reach a client — enforced server-side, not hidden with CSS. Change orders run their own mini-gate: Requested → Quoted → Approved → Paid → Applied.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">12</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Deliver → accept on a phone <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 07 · /dashboard/stages/:id/accept</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Acceptance is final, named, and timestamped — that's the accountability we sell."</em> Show the weighty confirm; the revision path requires a note, which lands in the audit log.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin:28px 0 4px; font-size:13px; font-weight:800;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#2b3ee6;">Act 3 — The loop closes</span> <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#b4b9c1;">· ~2 min</span></h2>
+
+  <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">13</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">Closeout proposes the next deal <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 37 (new) · fires when a project's final stage is accepted</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The roadmap we just delivered becomes the next proposal — and because the MSA lives on the account, round two skips legal entirely."</em></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:14px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">14</span>
+      <div style="flex:1;">
+        <div style="font-size:14px; font-weight:700;">The account is the spine <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 33 · /dashboard/accounts/talden — then frame 17, staff home</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"One timeline — sales and delivery interleaved. Won $12k, committed $225k, MSA on file. And the home screen is the business on one page: collected versus promised."</em> End here.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin:28px 0 8px; font-size:15px; font-weight:800; letter-spacing:-.01em;">Questions you will get — answers ready</h2>
+  <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.7; color:#3a3f47;">
+    <li><strong>"Do they pay the deposit AND Stage 1?"</strong> No — the deposit IS Stage 1's payment in full. Stage 1 opens Paid; Stages 2–3 pay-gate as usual. (It's now written on frame 34.)</li>
+    <li><strong>"Is payment live?"</strong> The pay-gate is enforced today; checkout is admin "Mark paid" until Stripe ships. Frame 08 is the target UI.</li>
+    <li><strong>"Can we delete a client?"</strong> No — archive only (frame 14b). Records are forever; that's the audit story we sell.</li>
+    <li><strong>"Why do deals and projects both say 'stage'?"</strong> They don't anymore: deals move through <em>pipeline steps</em>; projects have paid <em>Stages</em>.</li>
+    <li><strong>"What if a client goes silent?"</strong> SLA nudges + the at-risk strip + the stuck pill (frames 28 / 31); proposal follow-up defaults to 7 days.</li>
+    <li><strong>"Change orders bypass Stripe?"</strong> Interim, yes — admin marks paid. Client card-payment for change orders lands with milestone billing.</li>
+  </ul>
+
+  <div style="margin-top:26px; padding-top:12px; border-top:1px solid #ededf1; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b4b9c1; line-height:1.7;">Cast note: the Meridian client admin was renamed Ada Chen → <strong style="color:#767b85;">Maya Chen</strong> across the canvas so there is exactly one Ada in the room. Demo dataset dates: capture 02 May · discovery won 12 May · MSA 20 May · roadmap accepted 12 Jun · proposal 24 Jun · Committed 30 Jun ‖ Maya's dashboard 29 Jun · Stage 2 paid 30 Jun 11:02.</div>
+
+</x-import>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#16181d"/><rect x="38" y="38" width="24" height="24" rx="5" fill="#2b3ee6" transform="rotate(45 50 50)"/></svg>
+</template></x-dc>
+</body>
+</html>
