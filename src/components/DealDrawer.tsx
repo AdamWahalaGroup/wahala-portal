@@ -17,6 +17,8 @@ import { ScoreChip, STAGE_COLORS } from "@/components/SalesChips";
 import { DealStageSelect } from "@/components/DealEditor";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
+import { DealProcessPanel, GoalRail, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 
 type Tab = "overview" | "proposal" | "agreements" | "history";
@@ -30,6 +32,17 @@ const nextStageOf = (s: DealStage): DealStage | null => {
   return null;
 };
 
+export type DrawerProcess = {
+  trainingMode: boolean;
+  readiness: number | null;
+  fields: PackageFields;
+  journey: { key: string; label: string }[];
+  journeyIndex: number;
+  goal: string;
+  nextActions: { n: number; text: string; active: boolean }[];
+  calls: { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number }[];
+};
+
 export function DealDrawer({
   deal,
   org,
@@ -37,6 +50,8 @@ export function DealDrawer({
   contact,
   provenance,
   scout,
+  process,
+  postMortemMd,
   proposalNode,
   agreementsNode,
   historyNode,
@@ -49,6 +64,10 @@ export function DealDrawer({
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   provenance: { source: string | null; notes: string | null; createdAt: string } | null;
   scout: { md: string | null; score: number | null; verdict: "pursue" | "probe" | "pass" | null };
+  /** The process model (frame 38): guidance layer + Discovery Package data. */
+  process: DrawerProcess;
+  /** Auto post-mortem markdown (frame 40) — present once the deal is lost. */
+  postMortemMd: string | null;
   proposalNode: React.ReactNode;
   agreementsNode: React.ReactNode;
   historyNode: React.ReactNode;
@@ -97,6 +116,11 @@ export function DealDrawer({
 
   return (
     <div>
+      {/* Goal rail (frame 38, training mode only) */}
+      {process.trainingMode && !terminal && (
+        <GoalRail goal={process.goal} journey={process.journey} journeyIndex={process.journeyIndex} />
+      )}
+
       {/* Header: name + value, meta, provenance chip, 5-segment stage bar */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, letterSpacing: "-.02em", flex: 1, minWidth: 0 }}>{deal.name}</h1>
@@ -127,7 +151,13 @@ export function DealDrawer({
         {terminal ? meta.label.toLowerCase() : `pipeline step ${stageNo} of ${SEGMENTS} — ${meta.label}`}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8, flexWrap: "wrap" }}>
-        <span className="kicker" style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 5, background: `${STAGE_COLORS[deal.stage]}1A`, color: STAGE_COLORS[deal.stage] }}>{meta.label}</span>
+        <span
+          className="kicker"
+          title={process.trainingMode ? undefined : EXPLAIN.stagesVsGates}
+          style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 5, background: `${STAGE_COLORS[deal.stage]}1A`, color: STAGE_COLORS[deal.stage] }}
+        >
+          {meta.label}
+        </span>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {canManage && deal.stage === "negotiating" && (
             <select
@@ -160,6 +190,21 @@ export function DealDrawer({
       <div style={{ marginTop: 16 }}>
         {tab === "overview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Stages-vs-gates explainer under the step chip (training mode) */}
+            {process.trainingMode && !terminal && <StagesVsGatesCallout />}
+
+            {/* Post-mortem (frame 40) — auto-generated when the deal was lost */}
+            {deal.stage === "lost" && postMortemMd && (
+              <section style={{ background: "var(--white)", border: "1px solid #F4CFCF", borderRadius: 12, padding: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span className="kicker" style={{ color: "#B91C1C" }}>Post-mortem</span>
+                  <span className="mono" style={{ fontSize: 9, fontWeight: 800, background: "#FBE3E3", color: "#B91C1C", borderRadius: 5, padding: "2px 8px" }}>LOST</span>
+                  <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, color: "var(--muted-line)" }}>auto post-mortem</span>
+                </div>
+                <SimpleMarkdown md={postMortemMd} size={12.5} />
+              </section>
+            )}
+
             {/* Committed leads with the agreement package + handoff (frame 34);
                 every other open stage gets the next-step card. */}
             {committed ? (
@@ -180,6 +225,20 @@ export function DealDrawer({
                   )}
                 </div>
               )
+            )}
+
+            {/* Discovery package + next best action + recorded calls (frame 38) */}
+            {!terminal && (
+              <DealProcessPanel
+                dealId={deal.id}
+                canManage={canManage}
+                trainingMode={process.trainingMode}
+                readiness={process.readiness}
+                tone={readinessTone(process.readiness ?? 0)}
+                fields={process.fields}
+                nextActions={process.nextActions}
+                calls={process.calls}
+              />
             )}
 
             {/* Scout report on the (shared) contact */}

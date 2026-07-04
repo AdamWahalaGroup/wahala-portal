@@ -9,6 +9,7 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { salesOverview } from "@/services/sales";
+import { trainingModeFor } from "@/services/process";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { SalesBoard } from "@/components/SalesBoard";
@@ -20,7 +21,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isStaff) redirect("/dashboard");
 
-  const overview = await salesOverview(ctx);
+  const [overview, trainingMode] = await Promise.all([salesOverview(ctx), trainingModeFor(ctx)]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   return (
@@ -30,8 +31,15 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       orgName="Wahala Group"
       accountOwner={null}
       leadCount={overview.triage.length}
+      trainingMode={trainingMode}
     >
-      <SalesBoard overview={overview} canManage={canManage} currentUserId={ctx.user.id} />
+      <SalesBoard
+        overview={overview}
+        canManage={canManage}
+        currentUserId={ctx.user.id}
+        trainingMode={trainingMode}
+        showTeamLink={ctx.isAdmin}
+      />
       {/* Child segments render the drawer overlay (deal/contact/proposal); null on the bare board. */}
       {children}
     </AppShell>

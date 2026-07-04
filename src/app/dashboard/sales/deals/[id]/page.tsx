@@ -10,6 +10,7 @@ import { getAuthContext } from "@/auth/context";
 import { getDealDetail } from "@/services/sales";
 import { listProposalsForDeal } from "@/services/proposals";
 import { getContractRoom } from "@/services/contract";
+import { getDealProcess } from "@/services/process";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
@@ -33,9 +34,10 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     throw e;
   });
   const { deal, org, owner, contact, provenance, history } = detail;
-  const [proposals, room] = await Promise.all([
+  const [proposals, room, process] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
     getContractRoom(ctx, deal.id),
+    getDealProcess(ctx, deal.id),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
@@ -76,6 +78,17 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
         provenance={provenance ? { source: provenance.source, notes: provenance.notes, createdAt: provenance.createdAt.toISOString() } : null}
         scout={{ md: provenance?.scoutMd ?? null, score: provenance?.scoutScore ?? null, verdict: provenance?.scoutVerdict ?? null }}
+        process={{
+          trainingMode: process.trainingMode,
+          readiness: process.readiness,
+          fields: process.fields,
+          journey: process.journey,
+          journeyIndex: process.journeyIndex,
+          goal: process.goal,
+          nextActions: process.nextActions,
+          calls: process.calls.map((c) => ({ ...c, recordedAt: c.recordedAt.toISOString() })),
+        }}
+        postMortemMd={deal.postMortemMd}
         proposalNode={proposalNode}
         agreementsNode={agreementsNode}
         historyNode={<HistoryTimeline items={history} />}

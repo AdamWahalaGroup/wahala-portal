@@ -67,6 +67,13 @@ export const AGENT_DEFS: AgentDef[] = [
     defaultModel: aiSearchModel,
     supportsReasoning: false,
   },
+  {
+    key: "package_extractor",
+    label: "Package extractor (readiness)",
+    description: "Reads each recorded call and updates the 10 Discovery Package fields that drive the deal's readiness score.",
+    defaultModel: aiDraftModel,
+    supportsReasoning: true,
+  },
 ];
 
 export type AgentConfig = {

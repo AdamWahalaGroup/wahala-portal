@@ -16,7 +16,8 @@ The file in this bundle (`Wahala Portal.dc.html`) is a **design reference create
 in HTML** — a prototype showing intended look and behavior, **not production code
 to copy directly**. It is a single pannable "canvas" of labeled frames — the
 brand/design-system panel, the delivery screens (01–20), the **sales pipeline
-(21–27)**, and a component note (C1). The task is to **recreate these
+(21–27)**, the **CRM restructure (30–37)**, the **training & scorecard band (38–41)**,
+and a component note (C1). The task is to **recreate these
 designs in the target codebase** (Next.js App Router / React Server Components on
 Cloudflare Workers — see §9 below) using its established patterns, not to ship the
 HTML as-is.
@@ -48,7 +49,8 @@ relevant `.md` to see exactly what moved.
 **Always-on**
 - [`design-system.md`](design-system.md) — brand tokens, color, type, spacing, and the core components every screen composes.
 - [`patterns.md`](patterns.md) — Server/Island split, stage state machine, state management, vocabulary, non-negotiable constraints, a11y, assets.
-- [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **NEWEST (read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
+- [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **(read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
+- [`TRAINING-AND-SCORECARD.md`](TRAINING-AND-SCORECARD.md) — **NEWEST:** training mode, readiness scoring, nudge-on-advance, deal post-mortem, admin scorecard (frames 38–41). One process model → guide / nudge / score.
 
 **Screens**
 - [`design-system.md`](design-system.md) — Design system — tokens & core components
@@ -82,6 +84,8 @@ relevant `.md` to see exactly what moved.
 | 27 Settings (AI agents) | `sales/settings.md` |
 | Sales cross-cutting (IA, chips, markdown pattern) | `sales/00-overview.md` |
 | **30–34 CRM restructure (canonical)** | `CRM-RESTRUCTURE.md` |
+| 35 Invite · 36 Quote approval · 37 Closeout→next deal | `HANDOFF-DELTA-2026-07-04.md` |
+| **38–41 Training mode, nudge, post-mortem, scorecard** | `TRAINING-AND-SCORECARD.md` |
 
 ## Files in this folder
 - `Wahala Portal.dc.html` — the full design canvas (all frames). Open in a browser.

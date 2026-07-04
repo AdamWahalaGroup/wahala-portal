@@ -369,6 +369,8 @@ export type DealItem = {
   msaOnFile: boolean;
   /** Chip: born from / running as paid discovery. */
   paidDiscovery: boolean;
+  /** Proposal-readiness snapshot (0–10) — drives the frame-39 nudge on advance. */
+  readinessScore: number | null;
 };
 
 async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealItem[]> {
@@ -466,6 +468,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       depositDue: d.stage === "committed" && !d.depositPaidAt,
       msaOnFile: msaOrgs.has(d.organizationId),
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
+      readinessScore: d.readinessScore,
     };
   });
 }
@@ -475,7 +478,13 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
  * in the audit log and resets the days-in-stage clock. Winning flips the org to
  * 'active' (prospect became customer).
  */
-export async function setDealStage(ctx: AuthContext, dealId: string, stage: string, reason?: string): Promise<void> {
+export async function setDealStage(
+  ctx: AuthContext,
+  dealId: string,
+  stage: string,
+  reason?: string,
+  opts: { override?: boolean } = {},
+): Promise<void> {
   assertSalesManager(ctx, "set_deal_stage");
   if (!isDealStage(stage)) throw new StageError("VALIDATION", "Unknown sales stage.");
   const db = getDb();
@@ -518,6 +527,38 @@ export async function setDealStage(ctx: AuthContext, dealId: string, stage: stri
     // checklist and the card's docs-N/M chip have rows to read.
     const { seedDealPackage } = await import("@/services/agreements");
     await seedDealPackage(deal.organizationId, dealId);
+  }
+
+  // Process model (TRAINING-AND-SCORECARD.md): every move logs an append-only
+  // event with a readiness SNAPSHOT; an overridden nudge logs alongside it; Lost
+  // auto-generates the post-mortem. Guidance never blocks — it only remembers.
+  const { recordProcessEvent, generatePostMortem } = await import("@/services/process");
+  await recordProcessEvent({
+    organizationId: deal.organizationId,
+    dealId,
+    ownerUserId: deal.ownerUserId,
+    actorUserId: ctx.user.id,
+    kind: "stage_moved",
+    fromStep: deal.stage,
+    toStep: stage,
+    readinessScore: deal.readinessScore,
+    metadata: reason?.trim() ? { reason: reason.trim() } : null,
+  });
+  if (opts.override) {
+    await recordProcessEvent({
+      organizationId: deal.organizationId,
+      dealId,
+      ownerUserId: deal.ownerUserId,
+      actorUserId: ctx.user.id,
+      kind: "nudge_overridden",
+      fromStep: deal.stage,
+      toStep: stage,
+      readinessScore: deal.readinessScore,
+      metadata: { via: "advance_anyway" },
+    });
+  }
+  if (stage === "lost") {
+    await generatePostMortem(dealId, ctx.user.id, reason ?? null);
   }
 }
 
@@ -608,6 +649,8 @@ export type DealDetail = {
     depositCents: number;
     depositSentAt: Date | null;
     depositPaidAt: Date | null;
+    readinessScore: number | null;
+    postMortemMd: string | null;
   };
   org: { id: string; name: string; status: string };
   owner: { id: string; name: string } | null;
@@ -706,6 +749,8 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       depositCents: deal.depositCents,
       depositSentAt: deal.depositSentAt,
       depositPaidAt: deal.depositPaidAt,
+      readinessScore: deal.readinessScore,
+      postMortemMd: deal.postMortemMd,
     },
     org: { id: org.id, name: org.name, status: org.status },
     owner: owner ? { id: owner.id, name: owner.name } : null,

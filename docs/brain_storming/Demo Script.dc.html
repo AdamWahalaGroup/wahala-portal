@@ -30,7 +30,7 @@
     <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:2px 9px; border-radius:999px;">LIVE</span>
     <span style="font-size:11px; font-weight:700; background:#fcefdc; color:#b45309; padding:2px 9px; border-radius:999px;">INTERIM</span>
     <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:2px 9px; border-radius:999px;">DESIGN-ONLY</span>
-    <span style="font-size:12px; color:#767b85;">— everything below is live in prod (commit f490113) except payment checkout (08): the pay-gate itself is enforced; an admin marks paid until Stripe lands.</span>
+    <span style="font-size:12px; color:#767b85;">— verify LIVE sales screens on staging before presenting; 08 / 35 / 36 / 37 are not built yet.</span>
   </div>
 
   <h2 style="margin:26px 0 8px; font-size:15px; font-weight:800; letter-spacing:-.01em;">Cast &amp; dataset — one coherent story</h2>
@@ -86,8 +86,8 @@
     <div style="display:flex; gap:14px;">
       <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">6</span>
       <div style="flex:1;">
-        <div style="font-size:14px; font-weight:700;">Invite them in <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 35 · fires after Create project + from the Account page's Contacts card → welcome, frame 15</div>
+        <div style="font-size:14px; font-weight:700;">Invite them in <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 35 (new) → welcome, frame 15 (live)</div>
         <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The moment the project exists, Rob gets a magic link — no password — and lands on a welcome page with a named human on it."</em> This replaces the old Clients-list invite (frame 14, retired).</div>
       </div>
     </div>
@@ -116,9 +116,9 @@
     <div style="display:flex; gap:14px;">
       <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">9</span>
       <div style="flex:1;">
-        <div style="font-size:14px; font-weight:700;">Client approves — deliberately <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 36 · /dashboard/stages/:id/approve — quoted stages show the client a "Review &amp; approve quote" link</div>
-        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Approval is logged against a name. And approving is not paying —"</em> Request changes posts a note to the project thread, flagged waiting-on-Wahala.</div>
+        <div style="font-size:14px; font-weight:700;">Client approves — deliberately <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 36 (new) — the approve <em>action</em> is live on the stage screen; the mobile review moment is design</div>
+        <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"Approval is logged against a name. And approving is not paying —"</em></div>
       </div>
     </div>
     <div style="display:flex; gap:14px;">
@@ -153,8 +153,8 @@
     <div style="display:flex; gap:14px;">
       <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#9aa0aa; width:20px; flex-shrink:0;">13</span>
       <div style="flex:1;">
-        <div style="font-size:14px; font-weight:700;">Closeout proposes the next deal <span style="font-size:11px; font-weight:700; background:#dcf5e3; color:#15803d; padding:1px 8px; border-radius:999px; margin-left:6px;">LIVE</span></div>
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 37 · prompt on the project page when the final stage is accepted · dismissible once, logged</div>
+        <div style="font-size:14px; font-weight:700;">Closeout proposes the next deal <span style="font-size:11px; font-weight:700; background:#eef0fe; color:#2536c4; padding:1px 8px; border-radius:999px; margin-left:6px;">DESIGN-ONLY</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9aa0aa; margin:2px 0 4px;">frame 37 (new) · fires when a project's final stage is accepted</div>
         <div style="font-size:13.5px; line-height:1.6; color:#3a3f47;"><em>"The roadmap we just delivered becomes the next proposal — and because the MSA lives on the account, round two skips legal entirely."</em></div>
       </div>
     </div>
@@ -172,13 +172,13 @@
   <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.7; color:#3a3f47;">
     <li><strong>"Do they pay the deposit AND Stage 1?"</strong> No — the deposit IS Stage 1's payment in full. Stage 1 opens Paid; Stages 2–3 pay-gate as usual. (It's now written on frame 34.)</li>
     <li><strong>"Is payment live?"</strong> The pay-gate is enforced today; checkout is admin "Mark paid" until Stripe ships. Frame 08 is the target UI.</li>
-    <li><strong>"Can we delete a client?"</strong> No — archive only (frame 14b): hides the account, revokes portal access, deletes nothing. An <em>Archived</em> filter on the accounts list carries Restore. Records are forever; that's the audit story we sell.</li>
+    <li><strong>"Can we delete a client?"</strong> No — archive only (frame 14b). Records are forever; that's the audit story we sell.</li>
     <li><strong>"Why do deals and projects both say 'stage'?"</strong> They don't anymore: deals move through <em>pipeline steps</em>; projects have paid <em>Stages</em>.</li>
     <li><strong>"What if a client goes silent?"</strong> SLA nudges + the at-risk strip + the stuck pill (frames 28 / 31); proposal follow-up defaults to 7 days.</li>
     <li><strong>"Change orders bypass Stripe?"</strong> Interim, yes — admin marks paid. Client card-payment for change orders lands with milestone billing.</li>
   </ul>
 
-  <div style="margin-top:26px; padding-top:12px; border-top:1px solid #ededf1; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b4b9c1; line-height:1.7;">Cast note: the Meridian client admin was renamed Ada Chen → <strong style="color:#767b85;">Maya Chen</strong> across the canvas so there is exactly one Ada in the room. <strong style="color:#b45309;">Pre-demo checklist:</strong> the prod seed does NOT contain these demo rows — create the Talden + Meridian data by hand in prod beforehand (capture → deal → stages), or show those beats on the canvas. Demo dataset dates: capture 02 May · discovery won 12 May · MSA 20 May · roadmap accepted 12 Jun · proposal 24 Jun · Committed 30 Jun ‖ Maya's dashboard 29 Jun · Stage 2 paid 30 Jun 11:02.</div>
+  <div style="margin-top:26px; padding-top:12px; border-top:1px solid #ededf1; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b4b9c1; line-height:1.7;">Cast note: the Meridian client admin was renamed Ada Chen → <strong style="color:#767b85;">Maya Chen</strong> across the canvas so there is exactly one Ada in the room. Demo dataset dates: capture 02 May · discovery won 12 May · MSA 20 May · roadmap accepted 12 Jun · proposal 24 Jun · Committed 30 Jun ‖ Maya's dashboard 29 Jun · Stage 2 paid 30 Jun 11:02.</div>
 
 </x-import>
 

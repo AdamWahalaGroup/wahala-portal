@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { Avatar } from "@/components/People";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { TrainingCard } from "@/components/TrainingToggle";
 
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
@@ -30,6 +31,7 @@ export function AppShell({
   accountOwner,
   leadCount,
   wide,
+  trainingMode,
   children,
 }: {
   active: NavKey;
@@ -40,6 +42,8 @@ export function AppShell({
   leadCount?: number | null;
   /** Wider main column for deep detail pages (contact workspace, proposal editor). */
   wide?: boolean;
+  /** Training mode state (frame 38) — renders the cobalt-dashed sidebar card when set. */
+  trainingMode?: boolean | null;
   children: React.ReactNode;
 }) {
   const inSales = active === "sales" || active.startsWith("sales-");
@@ -143,6 +147,7 @@ export function AppShell({
         </nav>
 
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+          {user.isStaff && trainingMode !== null && trainingMode !== undefined && <TrainingCard on={trainingMode} />}
           {accountOwner && (
             <div style={{ background: "rgba(255,255,255,.06)", borderRadius: 12, padding: 12 }}>
               <div className="kicker" style={{ color: "#6b7079", marginBottom: 8 }}>

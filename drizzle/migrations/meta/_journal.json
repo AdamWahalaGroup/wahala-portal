@@ -134,6 +134,13 @@
       "when": 1783095072791,
       "tag": "0018_woozy_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1783177607204,
+      "tag": "0019_stale_gauntlet",
+      "breakpoints": true
     }
   ]
 }

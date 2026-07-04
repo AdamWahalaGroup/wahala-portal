@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, TRIAGE_COLOR, stageSelectStyle } from "@/components/SalesChips";
 import { ContactCaptureModal } from "@/components/ContactCaptureModal";
+import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
+import { PROPOSAL_READY_AT } from "@/domain/process";
 import type { SalesOverview, DealItem, ContactItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
@@ -303,7 +305,7 @@ function CardChip({ text, tone }: { text: string; tone: "amber" | "green" | "gre
   );
 }
 
-function KanbanView({ overview, canManage, filter, currentUserId }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string }) {
+function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string; trainingMode: boolean }) {
   const router = useRouter();
   // Filter chips lens the board (frame 29). Counts in the summary strip stay whole.
   const dealPred = (d: DealItem): boolean => {
@@ -321,6 +323,9 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Frame 39: the not-proposal-ready nudge (modal in training mode; inline line otherwise).
+  const [nudge, setNudge] = useState<{ dealId: string; dealName: string } | null>(null);
+  const [inlineWarn, setInlineWarn] = useState<string | null>(null);
 
   // A card click goes straight to its drawer (soft nav — the board stays behind).
   const openDrawer = (href: string) => router.push(href, { scroll: false });
@@ -360,6 +365,26 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
       if (reason === null) return;
       await run(`/api/deals/${p.id}`, { stage: "lost", reason });
       return;
+    }
+    if (target === "proposal_out") {
+      // Frame 39: proposal-ready check. Steps are never gates — training mode gets
+      // the modal, training off gets a one-line inline warning; both log.
+      const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === p.id);
+      const score = deal?.readinessScore ?? 0;
+      if (deal && deal.stage === "discovery" && score < PROPOSAL_READY_AT) {
+        if (trainingMode) {
+          setNudge({ dealId: deal.id, dealName: deal.name });
+          return; // the modal decides: keep in Discovery, or advance with override
+        }
+        setInlineWarn(`⚠ ${deal.name} advanced below proposal-ready (${(deal.readinessScore ?? 0).toFixed(1)}/10) — logged to the deal.`);
+        fetch(`/api/deals/${p.id}/readiness`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ outcome: "fired", metadata: { surface: "board_drag_quiet" } }),
+        }).catch(() => {});
+        await run(`/api/deals/${p.id}`, { stage: target, override: true });
+        return;
+      }
     }
     if (target === "won") {
       // The package nudges, never blocks: warn when docs are open, then proceed.
@@ -600,6 +625,26 @@ function KanbanView({ overview, canManage, filter, currentUserId }: { overview: 
 
       {error && (
         <p style={{ color: "#b00020", fontSize: 13, margin: "0 0 12px" }}>{error}</p>
+      )}
+      {inlineWarn && (
+        <p className="mono" style={{ color: "#B45309", fontSize: 11, margin: "0 0 12px" }}>
+          {inlineWarn}
+          <button onClick={() => setInlineWarn(null)} style={{ border: 0, background: "none", color: "#C4C8CF", cursor: "pointer", marginLeft: 8 }}>×</button>
+        </p>
+      )}
+
+      {nudge && (
+        <ReadinessNudgeModal
+          dealId={nudge.dealId}
+          dealName={nudge.dealName}
+          onKeep={() => setNudge(null)}
+          onAdvance={async () => {
+            const id = nudge.dealId;
+            setNudge(null);
+            await run(`/api/deals/${id}`, { stage: "proposal_out", override: true });
+          }}
+          onClose={() => setNudge(null)}
+        />
       )}
 
       {/* Columns: Triage (contacts) + the four deal stages */}
@@ -856,7 +901,21 @@ const VIEW_KEY = "wahala.sales-view";
 
 export type SalesFilter = "all" | "mine" | "to_qualify" | "proposals_out" | "stuck";
 
-export function SalesBoard({ overview, canManage, currentUserId }: { overview: SalesOverview; canManage: boolean; currentUserId?: string }) {
+export function SalesBoard({
+  overview,
+  canManage,
+  currentUserId,
+  trainingMode = false,
+  showTeamLink = false,
+}: {
+  overview: SalesOverview;
+  canManage: boolean;
+  currentUserId?: string;
+  /** Frame 39: modal nudge chrome when on; quiet inline warning when off. */
+  trainingMode?: boolean;
+  /** Frame 41: owners get the Team scorecard link. */
+  showTeamLink?: boolean;
+}) {
   const router = useRouter();
   const search = useSearchParams();
   const filter = (search.get("filter") as SalesFilter) || "all";
@@ -955,6 +1014,15 @@ export function SalesBoard({ overview, canManage, currentUserId }: { overview: S
           {tab("board", "▦ Board")}
           {tab("list", "☰ List")}
         </div>
+        {showTeamLink && (
+          <Link
+            href="/dashboard/sales/team"
+            style={{ flex: "none", fontSize: 12.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", padding: "9px 4px" }}
+            title="Process scorecard — owners only"
+          >
+            Team →
+          </Link>
+        )}
         <button
           onClick={() => setCapturing(true)}
           style={{
@@ -976,7 +1044,7 @@ export function SalesBoard({ overview, canManage, currentUserId }: { overview: S
       {capturing && <ContactCaptureModal canStartDeal={canManage} onClose={() => setCapturing(false)} />}
 
       {view === "board" ? (
-        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} />
+        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} />
       ) : (
         <ListView overview={overview} canManage={canManage} />
       )}
