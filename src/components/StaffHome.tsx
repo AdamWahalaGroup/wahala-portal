@@ -6,11 +6,11 @@ import Link from "next/link";
 import type { AuthContext } from "@/auth/context";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/People";
-import { MeetingsCard } from "@/components/MeetingsCard";
+import { TodayStrip, MeetingInbox } from "@/components/TodayStrip";
 import { staffRevenueOverview } from "@/services/staff-home";
 import { salesOverview } from "@/services/sales";
-import { calendarConnection, listUpcomingEvents } from "@/services/integrations/google-calendar";
-import { listUnmatchedMeetings } from "@/services/integrations/zoom";
+import { calendarConnection } from "@/services/integrations/google-calendar";
+import { syncIfStale, todayMeetings, meetingInbox } from "@/services/meetings";
 
 function usd(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -22,14 +22,15 @@ function greeting(hour: number): string {
 }
 
 export async function StaffHome({ ctx }: { ctx: AuthContext }) {
-  const [ov, sales, connection, unmatched] = await Promise.all([
+  await syncIfStale(ctx); // frame 45: the strip + inbox read the synced meetings table
+  const [ov, sales, connection, today, inbox] = await Promise.all([
     staffRevenueOverview(ctx),
     salesOverview(ctx),
     calendarConnection(ctx.user.id),
-    listUnmatchedMeetings(ctx),
+    todayMeetings(ctx),
+    meetingInbox(ctx),
   ]);
-  const events = connection.connected ? ((await listUpcomingEvents(ctx, 5)) ?? []) : [];
-  const openDealsForAttach = sales.columns.flatMap((c) => c.deals).map((d) => ({ id: d.id, name: d.name, orgName: d.organizationName }));
+  const openDealsForLink = sales.columns.flatMap((c) => c.deals).map((d) => ({ id: d.id, name: d.name, orgName: d.organizationName }));
   const openDealCount = sales.columns.reduce((n, c) => n + c.deals.length, 0);
   const triageCount = sales.triage.length;
   const now = new Date();
@@ -111,15 +112,39 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         <span style={{ marginLeft: "auto", color: "var(--muted-line)" }}>›</span>
       </Link>
 
-      {/* Meetings (Google Calendar + unmatched Zoom transcripts) */}
-      <MeetingsCard
-        connected={connection.connected}
-        email={connection.email}
-        events={events.map((e) => ({ id: e.id, title: e.title, start: e.start.toISOString(), joinUrl: e.joinUrl, allDay: e.allDay }))}
-        unmatched={unmatched.map((m) => ({ id: m.id, topic: m.topic, startsAt: m.startsAt?.toISOString() ?? null, durationMin: m.durationMin }))}
-        deals={openDealsForAttach}
-        canManage={ctx.isAdmin || ctx.user.role === "account_owner"}
+      {/* Today strip + meeting inbox (frame 45) */}
+      {!connection.connected && (
+        <p className="mono" style={{ fontSize: 10.5, color: "var(--muted-line)", margin: "14px 0 0" }}>
+          your meetings can live here —{" "}
+          <Link href="/dashboard/settings/integrations" style={{ color: "var(--cobalt-text)", fontWeight: 700, textDecoration: "none" }}>
+            connect Google Calendar in Settings →
+          </Link>
+        </p>
+      )}
+      <TodayStrip
+        meetings={today.map((m) => ({
+          id: m.id,
+          title: m.title,
+          startsAt: m.startsAt.toISOString(),
+          videoUrl: m.videoUrl,
+          dealId: m.dealId,
+          dealName: m.dealName,
+        }))}
       />
+      {(ctx.isAdmin || ctx.user.role === "account_owner") && (
+        <MeetingInbox
+          items={inbox.map((m) => ({
+            id: m.id,
+            title: m.title,
+            startsAt: m.startsAt.toISOString(),
+            reason: m.reason,
+            suggestedOrganizationId: m.suggestedOrganizationId,
+            suggestedOrgName: m.suggestedOrgName,
+            hasTranscript: m.hasTranscript,
+          }))}
+          deals={openDealsForLink}
+        />
+      )}
 
       {/* Accounts table */}
       <section style={{ marginTop: 30 }}>

@@ -19,6 +19,7 @@ const NAV = [
 const SETTINGS_SUBNAV = [
   { key: "settings-agents", label: "AI agents", href: "/dashboard/settings" },
   { key: "settings-slas", label: "SLAs & nudges", href: "/dashboard/settings/slas" },
+  { key: "settings-integrations", label: "Integrations", href: "/dashboard/settings/integrations" },
 ] as const;
 
 type NavKey = (typeof NAV)[number]["key"] | (typeof SETTINGS_SUBNAV)[number]["key"];

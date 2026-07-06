@@ -18,6 +18,8 @@ import { DealStageSelect } from "@/components/DealEditor";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
 import { DealProcessPanel, GoalRail, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
+import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 
@@ -41,8 +43,10 @@ export type DrawerProcess = {
   goal: string;
   nextActions: { n: number; text: string; active: boolean }[];
   calls: { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number }[];
-  meetings: { id: string; topic: string; startsAt: string | null; joinUrl: string | null; status: string }[];
+  meetings: MeetingCardData[];
   zoomReady: boolean;
+  calendarConnected: boolean;
+  memberEmail: string;
 };
 
 export function DealDrawer({
@@ -79,7 +83,32 @@ export function DealDrawer({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [busy, setBusy] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [logBump, setLogBump] = useState(0);
+  const [rescheduling, setRescheduling] = useState<string | null>(null);
+  const [rescheduleWhen, setRescheduleWhen] = useState("");
   const meta = STAGE_META[deal.stage];
+  // The deal's next step, upgraded to a real event when one exists (frame 42).
+  const nextMeeting = process.meetings
+    .filter((m) => m.status === "upcoming" && new Date(m.startsAt).getTime() > Date.now() - 90 * 60_000)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
+  const pastMeetings = process.meetings.filter((m) => m !== nextMeeting).slice(0, 3);
+
+  async function reschedule(meetingId: string) {
+    if (!rescheduleWhen) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ startsAt: new Date(rescheduleWhen).toISOString() }),
+      });
+      setRescheduling(null);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
   const terminal = deal.stage === "won" || deal.stage === "lost";
   const committed = deal.stage === "committed";
   // 5 segments: Triage is stage 1; a Discovery deal is "stage 2 of 5".
@@ -208,28 +237,79 @@ export function DealDrawer({
             )}
 
             {/* Committed leads with the agreement package + handoff (frame 34);
-                every other open stage gets the next-step card. */}
+                every other open stage gets the next-step card — upgraded to a real
+                Google event when one exists (frame 42). */}
             {committed ? (
               agreementsNode
             ) : (
               !terminal && (
                 <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
-                  <div className="kicker" style={{ marginBottom: 4 }}>Next step</div>
-                  <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)" }}>{nextStepFor(deal.stage)}</p>
-                  {canManage && next && (
-                    <button
-                      onClick={() => patchDeal({ stage: next })}
-                      disabled={busy}
-                      style={{ marginTop: 10, background: "var(--ink)", color: "var(--white)", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer" }}
-                    >
-                      {busy ? "Moving…" : `Done → ${next === "won" ? "Won" : STAGE_META[next].label}`}
-                    </button>
+                  <div className="kicker" style={{ marginBottom: 6 }}>Next step</div>
+                  {nextMeeting ? (
+                    <>
+                      <MeetingCard meeting={nextMeeting} canEdit={canManage} />
+                      {rescheduling === nextMeeting.id && (
+                        <div style={{ display: "flex", gap: 7, marginTop: 8, alignItems: "center" }}>
+                          <input type="datetime-local" style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 12, flex: 1 }} value={rescheduleWhen} onChange={(e) => setRescheduleWhen(e.target.value)} />
+                          <button onClick={() => reschedule(nextMeeting.id)} disabled={busy || !rescheduleWhen} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                            {busy ? "…" : "Update event"}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)" }}>{nextStepFor(deal.stage)}</p>
                   )}
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    {canManage && next && (
+                      <button
+                        onClick={() => patchDeal({ stage: next })}
+                        disabled={busy}
+                        style={{ background: "var(--ink)", color: "var(--white)", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer" }}
+                      >
+                        {busy ? "Moving…" : `Done → ${next === "won" ? "Won" : STAGE_META[next].label}`}
+                      </button>
+                    )}
+                    {canManage && nextMeeting && (
+                      <button
+                        onClick={() => setRescheduling((v) => (v === nextMeeting.id ? null : nextMeeting.id))}
+                        disabled={busy}
+                        style={{ background: "var(--white)", color: "var(--ink-soft)", border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                      >
+                        Reschedule
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             )}
 
-            {/* Discovery package + next best action + calls/meetings (frame 38 + Zoom) */}
+            {/* After the call · automatic (frame 42) */}
+            {!terminal && nextMeeting && (
+              <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: "11px 14px" }}>
+                <div className="kicker" style={{ marginBottom: 5 }}>After the call · automatic</div>
+                <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
+                  recording → transcript → ◆ AI digest → deal facts
+                </div>
+                <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 4 }}>
+                  {process.zoomReady
+                    ? "Zoom cloud recording feeds the pipeline — nothing to do after you hang up."
+                    : "until Zoom connects, log the call below after it ends — same pipeline, one paste."}
+                </div>
+              </div>
+            )}
+
+            {/* Recent meetings (past) */}
+            {pastMeetings.length > 0 && (
+              <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="kicker">Meetings</div>
+                {pastMeetings.map((m) => (
+                  <MeetingCard key={m.id} meeting={m} canEdit={canManage} showAttendees={false} />
+                ))}
+              </section>
+            )}
+
+            {/* Discovery package + next best action + recorded calls (frame 38) */}
             {!terminal && (
               <DealProcessPanel
                 dealId={deal.id}
@@ -240,10 +320,7 @@ export function DealDrawer({
                 fields={process.fields}
                 nextActions={process.nextActions}
                 calls={process.calls}
-                meetings={process.meetings}
-                zoomReady={process.zoomReady}
-                contactName={contact?.name ?? null}
-                contactHasEmail={!!contact?.email}
+                openLog={logBump}
               />
             )}
 
@@ -303,6 +380,47 @@ export function DealDrawer({
         {tab === "agreements" && <div>{agreementsNode ?? <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>The agreement package opens once a proposal is approved.</p>}</div>}
         {tab === "history" && <div>{historyNode}</div>}
       </div>
+
+      {/* Footer (frame 42): Draft proposal · Schedule call · Log a call */}
+      {!terminal && canManage && (
+        <div style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap", borderTop: "1px solid var(--border)", marginTop: 20, paddingTop: 14 }}>
+          <button
+            onClick={() => setTab("proposal")}
+            style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+          >
+            Draft proposal
+          </button>
+          <button
+            onClick={() => setScheduling(true)}
+            style={{ background: "var(--white)", color: "var(--ink)", border: "1px solid #d7d9df", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            Schedule call
+          </button>
+          <button
+            onClick={() => {
+              setTab("overview");
+              setLogBump((n) => n + 1);
+            }}
+            style={{ background: "var(--white)", color: "var(--ink)", border: "1px solid #d7d9df", borderRadius: 9, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            Log a call
+          </button>
+          <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, color: "var(--muted-line)" }}>Schedule = future · Log = past</span>
+        </div>
+      )}
+
+      {scheduling && (
+        <ScheduleCallModal
+          dealId={deal.id}
+          dealName={deal.name}
+          accountName={org.name}
+          orgId={org.id}
+          memberEmail={process.memberEmail}
+          zoomReady={process.zoomReady}
+          calendarConnected={process.calendarConnected}
+          onClose={() => setScheduling(false)}
+        />
+      )}
     </div>
   );
 }

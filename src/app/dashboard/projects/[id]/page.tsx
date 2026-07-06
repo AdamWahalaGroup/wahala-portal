@@ -8,7 +8,9 @@ import { scopedDb } from "@/db/scoped";
 import { getProjectDetail } from "@/services/projects";
 import { closeoutPromptFor } from "@/services/accounts";
 import { listFilesForProject } from "@/services/files";
+import { nextCallForClient } from "@/services/meetings";
 import { CloseoutPrompt } from "@/components/CloseoutPrompt";
+import { ClientNextCall } from "@/components/ClientNextCall";
 import { listWahalaStaff } from "@/services/clients";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
@@ -32,11 +34,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     throw e;
   });
   const sdb = scopedDb(ctx);
-  const [stages, accountOwner, files, closeout] = await Promise.all([
+  const [stages, accountOwner, files, closeout, nextCall] = await Promise.all([
     sdb.listStages(id),
     sdb.accountOwner(),
     listFilesForProject(ctx, id),
     closeoutPromptFor(ctx, id), // frame 37: null unless the final stage is accepted
+    nextCallForClient(ctx), // frame 46: null for staff / no upcoming call
   ]);
 
   const { project } = detail;
@@ -73,6 +76,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </span>
       </div>
       {project.description && <p style={{ margin: "8px 0 0", color: "var(--ink-soft)", fontSize: 14.5 }}>{project.description}</p>}
+
+      {/* Your next call with Wahala (frame 46) — client view only */}
+      {nextCall && (
+        <ClientNextCall
+          meetingId={nextCall.id}
+          title={nextCall.title}
+          startsAt={nextCall.startsAt.toISOString()}
+          endsAt={nextCall.endsAt?.toISOString() ?? null}
+          videoUrl={nextCall.videoUrl}
+          accountOwnerName={detail.accountOwner?.name ?? null}
+        />
+      )}
 
       {/* Closeout → next deal (frame 37) — once, dismissible, staff only */}
       {closeout && (

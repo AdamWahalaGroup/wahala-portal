@@ -1,0 +1,473 @@
+13:02:55 --> 13:02:58
+Adam: I mean, it's just you want to be focused on just that.
+
+13:02:58 --> 13:02:58
+Adam: Right?
+
+13:02:58 --> 13:03:01
+Adam: So I feel like I like this is just a quick.
+
+13:03:02 --> 13:03:04
+Jason: Yeah, this is an overview.
+
+13:03:09 --> 13:03:12
+Jason: I'm trying to think of one that I did recently.
+
+13:03:12 --> 13:03:14
+Jason: Final one.
+
+13:03:16 --> 13:03:19
+Adam: But your general point is that you want to see…
+
+13:03:19 --> 13:03:21
+Adam: you want it focused.
+
+13:03:31 --> 13:03:35
+Jason: What's the next thing that I need to do?
+
+13:03:36 --> 13:03:38
+Jason: And what do I need to do to do it?
+
+13:03:38 --> 13:03:40
+Jason: um…
+
+13:03:42 --> 13:03:44
+Jason: I think I did it on the…
+
+13:03:45 --> 13:03:47
+Jason: Notifications.
+
+13:03:48 --> 13:03:49
+Jason: Right.
+
+13:03:49 --> 13:03:52
+Jason: So you get your notifications here.
+
+13:03:54 --> 13:03:58
+Jason: And then you can open it like it's its own page.
+
+13:03:58 --> 13:03:59
+Adam: Okay.
+
+13:03:59 --> 13:04:01
+Adam: So keep it in the…
+
+13:04:01 --> 13:04:04
+Adam: drawer, but expand it if they click it.
+
+13:04:04 --> 13:04:05
+Jason: Yeah, I like the nav.
+
+13:04:05 --> 13:04:08
+Jason: Maybe don't click a tab like I like this here.
+
+13:04:09 --> 13:04:11
+Jason: The way you've done this, the breadcrumbs?
+
+13:04:11 --> 13:04:12
+Adam: Yeah.
+
+13:04:12 --> 13:04:14
+Jason: So, like, if I were to say…
+
+13:04:54 --> 13:04:59
+Jason: But expanded view, would this discovery package have call to actions in it?
+
+13:04:59 --> 13:05:01
+Jason: Maybe it does, you know what I mean?
+
+13:05:03 --> 13:05:05
+Jason: Like you've got this hover effect.
+
+13:05:06 --> 13:05:09
+Adam: Yeah, it's explaining why it is where it is.
+
+13:05:09 --> 13:05:10
+Jason: Right.
+
+13:05:23 --> 13:05:23
+Jason: That's where I'm…
+
+13:05:24 --> 13:05:27
+Jason: I'm coming in here and fucking smashing around, like, okay, what can I do?
+
+13:05:27 --> 13:05:28
+Jason: Is there something I can do?
+
+13:05:29 --> 13:05:30
+Jason: That was the…
+
+13:05:30 --> 13:05:32
+Adam: Sales guy perspective.
+
+13:05:32 --> 13:05:32
+Adam: Check.
+
+13:05:33 --> 13:05:34
+Adam: Yeah.
+
+13:05:34 --> 13:05:35
+Jason: Like, I'm trying to use it as Ben.
+
+13:05:36 --> 13:05:36
+Adam: Yeah.
+
+13:05:36 --> 13:05:38
+Jason: Like, what can I do here?
+
+13:05:38 --> 13:05:44
+Jason: And if there's AI, if AI is involved, and it's all about.
+
+13:05:44 --> 13:05:45
+Jason: Intake.
+
+13:05:45 --> 13:05:52
+Jason: Make that front and center, you know, make it, make it front and center on that intake piece.
+
+13:05:55 --> 13:05:58
+Jason: That, hey, I need you to upload the…
+
+13:05:59 --> 13:06:02
+Jason: Thing, you know, whatever it is.
+
+13:06:17 --> 13:06:18
+Jason: It.
+
+13:06:18 --> 13:06:21
+Jason: I felt unsure.
+
+13:06:26 --> 13:06:28
+Jason: I didn't know what was gonna happen next.
+
+13:06:28 --> 13:06:30
+Jason: And I didn't feel the like.
+
+13:06:30 --> 13:06:30
+Jason: Okay.
+
+13:06:31 --> 13:06:32
+Jason: We just achieved something.
+
+13:06:32 --> 13:06:34
+Adam: The flow of the state change.
+
+13:06:34 --> 13:06:36
+Jason: Yeah, I didn't feel that I.
+
+13:06:36 --> 13:06:37
+Adam: Into the next stage of the deal.
+
+13:06:38 --> 13:06:39
+Adam: Achieved the thing.
+
+13:06:40 --> 13:06:42
+Adam: I think that's probably part of what I was trying to say.
+
+13:06:44 --> 13:06:48
+Jason: And in the proposal, like, I want us to…
+
+13:06:50 --> 13:06:53
+Jason: Hammer that to fucking death.
+
+13:06:53 --> 13:06:54
+Jason: I…
+
+13:06:54 --> 13:06:56
+Jason: I sent you…
+
+13:07:07 --> 13:07:09
+Jason: So I added these.
+
+13:07:11 --> 13:07:12
+Speaker 5: Mm-hmm.
+
+13:07:12 --> 13:07:12
+Jason: in here.
+
+13:07:13 --> 13:07:14
+Jason: Did you get a chance to see these?
+
+13:07:14 --> 13:07:18
+Adam: I saw the Wahala client project before we went there.
+
+13:07:18 --> 13:07:18
+Jason: Okay.
+
+13:07:18 --> 13:07:21
+Adam: Proposal with options, that was the AB for Telton, right?
+
+13:07:21 --> 13:07:24
+Jason: Yeah, so, like, here's the proposal with options.
+
+13:09:14 --> 13:09:18
+Jason: and then we can get them to still sign off on every phase.
+
+13:09:18 --> 13:09:21
+Jason: Like, hey, here's the overall, here's the…
+
+13:09:21 --> 13:09:22
+Jason: here's the overall.
+
+13:09:22 --> 13:09:22
+Jason: You're gonna…
+
+13:09:23 --> 13:09:25
+Jason: you're gonna sign this proposal.
+
+13:09:25 --> 13:09:26
+Jason: And then it.
+
+13:09:28 --> 13:09:30
+Jason: This was the other document that I thought would.
+
+13:09:30 --> 13:09:32
+Speaker 4: would help.
+
+13:09:33 --> 13:09:33
+Jason: Right?
+
+13:09:33 --> 13:09:35
+Jason: Proposal options.
+
+13:09:35 --> 13:09:37
+Jason: Proposal selection.
+
+13:09:37 --> 13:09:39
+Jason: Proposal and statement of work.
+
+13:09:39 --> 13:09:41
+Jason: This one.
+
+13:12:52 --> 13:12:53
+Jason: a scope of work.
+
+13:12:53 --> 13:12:56
+Jason: It'll be a draft scope of work, effectively, right?
+
+13:12:56 --> 13:13:02
+Jason: The high, super high level, like I showed you before, and we're gonna get them that scope of work, and.
+
+13:16:49 --> 13:16:53
+Jason: They're going to agree to this entire project, and it's going to be a phased approach.
+
+13:16:54 --> 13:16:57
+Jason: The initial signature is going to be DocuSign.
+
+13:16:57 --> 13:16:59
+Jason: That'll be sealed and sent to them.
+
+13:16:59 --> 13:17:05
+Jason: Our app is going to maintain and track the status of every phase thereafter.
+
+13:17:21 --> 13:17:28
+Jason: you know, Expanded Phase 1, Expanded Phase 2, Amendment 3, Expanded Phase 3, Amendment 4…
+
+13:17:28 --> 13:17:33
+Adam: I'm just trying to think of what could get south of that, or what could potentially sour something.
+
+13:17:33 --> 13:17:35
+Jason: Well, this way you don't need the…
+
+13:17:36 --> 13:17:36
+Jason: they can get…
+
+13:17:36 --> 13:17:38
+Jason: we can have…
+
+13:17:38 --> 13:17:46
+Jason: RBAC and our app to where maybe the president of the company needs to sign off the initial DocuSign, and they can give…
+
+13:17:46 --> 13:17:47
+Jason: they can…
+
+13:17:47 --> 13:17:50
+Jason: we can have the president give.
+
+13:17:50 --> 13:17:55
+Jason: Empowers somebody with approval and that does the amendment.
+
+13:17:55 --> 13:18:00
+Adam: But an approval, how many amendments before a DocuSign's invalid?
+
+13:18:01 --> 13:18:02
+Adam: You could just amend it forever.
+
+13:18:02 --> 13:18:03
+Adam: Yeah.
+
+13:18:03 --> 13:18:06
+Jason: As long as your terms of services state.
+
+13:18:06 --> 13:18:07
+Jason: That's how that you do it?
+
+13:18:07 --> 13:18:08
+Adam: Yeah, they agree.
+
+13:18:08 --> 13:18:10
+Jason: You don't think that'll scare anybody?
+
+13:18:11 --> 13:18:13
+Adam: I'm genuinely asking, I don't know, I've never done it at all.
+
+13:18:13 --> 13:18:15
+Jason: It's not going to change the…
+
+13:18:15 --> 13:18:21
+Adam: I just know people always want to wait, they want to know how they're going to get out of this if things don't go the way.
+
+13:18:21 --> 13:18:22
+Adam: They wanna know.
+
+13:18:22 --> 13:18:23
+Jason: Yeah, our terms and services.
+
+13:18:23 --> 13:18:25
+Jason: I wanna make it black and white.
+
+13:18:25 --> 13:18:26
+Jason: I'm gonna say.
+
+13:18:26 --> 13:18:28
+Jason: At any given time.
+
+13:18:28 --> 13:18:30
+Jason: If you don't want to do business with.
+
+13:18:30 --> 13:18:32
+Jason: Wahala group anymore.
+
+13:18:32 --> 13:18:34
+Jason: You don't want to move forward to the next phases.
+
+13:18:34 --> 13:18:35
+Jason: You're not.
+
+13:18:36 --> 13:18:37
+Jason: Yeah.
+
+13:19:04 --> 13:19:06
+Jason: Whatever they they want to go a different direction.
+
+13:19:06 --> 13:19:08
+Jason: They met another group, or what I don't care.
+
+13:19:08 --> 13:19:09
+Jason: Yeah.
+
+13:19:09 --> 13:19:10
+Jason: You know what I mean like.
+
+13:19:22 --> 13:19:24
+Jason: No problem.
+
+13:19:24 --> 13:19:31
+Jason: We can make each one a fucking DocuSign, but then it has to be to the signer.
+
+13:19:31 --> 13:19:37
+Jason: So part of our initial DocuSign, they're going to list the people that are eligible to sign.
+
+13:19:38 --> 13:19:40
+Jason: to approve.
+
+13:19:40 --> 13:19:42
+Jason: And that'll be…
+
+13:19:42 --> 13:19:43
+Jason: Binding.
+
+13:19:44 --> 13:19:47
+Jason: So and so, and if they want to add somebody.
+
+13:19:47 --> 13:19:50
+Jason: Then we have to get them to read DocuSign.
+
+13:19:50 --> 13:19:56
+Jason: Or we can put, you know, like, again, you can wrap this in your terms of services as much as you want.
+
+13:19:56 --> 13:19:58
+Jason: um…
+
+13:20:00 --> 13:20:01
+Jason: Right?
+
+13:20:01 --> 13:20:04
+Jason: Once the statement of work is approved, general epic stories, tasks.
+
+13:20:05 --> 13:20:09
+Jason: That's when all this stuff happens is once they've approved the statement of work.
+
+13:20:09 --> 13:20:11
+Jason: And then…
+
+13:20:12 --> 13:20:18
+Jason: I just documented, you know, Chat helped me, obviously, but I had it document what I wanted it to do.
+
+13:20:21 --> 13:20:23
+Jason: So I was hoping this would help you.
+
+13:20:23 --> 13:20:25
+Jason: with the flow that I have looked at this.
+
+13:20:25 --> 13:20:26
+Jason: Yeah.
+
+13:20:26 --> 13:20:29
+Jason: the sales flow, hopefully it would help you with that.
+
+13:20:29 --> 13:20:31
+Jason: And then I started doing…
+
+13:20:31 --> 13:20:33
+Jason: Like, here's our MSA.
+
+13:20:33 --> 13:20:35
+Jason: This is…
+
+13:20:35 --> 13:20:37
+Adam: Yeah, this is a static thing that we give to everybody.
+
+13:20:37 --> 13:20:38
+Adam: Is that true?
+
+13:20:38 --> 13:20:40
+Jason: So the master server agreement is static.
+
+13:20:40 --> 13:20:42
+Jason: It is going to be the same thing that goes to everybody.
+
+13:20:42 --> 13:20:48
+Jason: There may be times that we need to amend the MSA based on terms.
+
+13:20:48 --> 13:20:50
+Jason: That'll be an as needed basis.
+
+13:20:50 --> 13:20:54
+Jason: But this should be a template that you can store in the database.
+
+13:20:54 --> 13:20:56
+Jason: And.
+
+13:20:56 --> 13:21:00
+Jason: That's why I did the version, so we could do version control on it.
+
+13:21:01 --> 13:21:04
+Jason: And there you go.
+
+13:21:05 --> 13:21:08
+Jason: We need to…
+
+13:21:08 --> 13:21:16
+Jason: I need to spend more time on this document and really get it dialed in, but I wanted you to see, like, here's a…
+
+13:21:16 --> 13:21:17
+Jason: yeah.
+
+13:21:18 --> 13:21:25
+Jason: Buying agrees to provide timely decisions and approval, blah, blah, blah, project acceptance, intellectual property, confidentiality, data security.
+
+13:21:25 --> 13:21:28
+Jason: Like, this is the…
+
+13:21:29 --> 13:21:35
+Jason: Master agreement, and then we can append this as often as we need to with the client.

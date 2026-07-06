@@ -13,9 +13,9 @@ import {
   handleTranscriptCompleted,
   webhookDownloader,
   markMeetingEnded,
+  webhookSecret,
   type TranscriptCompletedPayload,
 } from "@/services/integrations/zoom";
-import { zoomSecretToken } from "@/auth/server-env";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ type ZoomEvent = {
 };
 
 export async function POST(req: Request) {
-  const secret = zoomSecretToken();
+  const secret = await webhookSecret();
   const body = await req.text();
 
   const ok = await verifyZoomSignature(req.headers.get("x-zm-signature"), req.headers.get("x-zm-request-timestamp"), body, secret);

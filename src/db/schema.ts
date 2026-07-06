@@ -398,9 +398,11 @@ export const processEvents = sqliteTable(
   ],
 );
 
-// ---- Per-user integrations (Zoom+Calendar round) ----
+// ---- Per-user integrations (frames 47/48) ----
 // One row per (user, provider). Refresh tokens live plaintext in D1 — same trust
 // level as the session KV; revoke via Google account settings + row delete.
+// Disconnect is SOFT (disconnectedAt) so the frame-48 30s Undo can restore the
+// token without re-auth; a row counts as connected only while disconnectedAt IS NULL.
 export const INTEGRATION_PROVIDERS = ["google_calendar"] as const;
 export const userIntegrations = sqliteTable(
   "user_integrations",
@@ -412,38 +414,76 @@ export const userIntegrations = sqliteTable(
     refreshToken: text("refresh_token").notNull(),
     accessToken: text("access_token"),
     accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }),
+    lastSyncAt: integer("last_sync_at", { mode: "timestamp" }), // frame 47 "last sync {rel}" is real
+    disconnectedAt: integer("disconnected_at", { mode: "timestamp" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("user_integrations_user_provider_idx").on(t.userId, t.provider)],
 );
 
-// ---- Meetings (portal-scheduled Zoom calls + inbound transcripts) ----
-// Portal-scheduled rows attach deterministically (we created them with the deal);
-// transcripts for unknown meetings land here as status 'unmatched' until a human
-// attaches them (one click) — then the transcript graduates into deal_calls.
-export const MEETING_STATUSES = ["scheduled", "ended", "transcribed", "unmatched"] as const;
+// ---- Meetings (frames 42–46) — Google events are the spine ----
+// "No calendar page": meetings render on the objects they belong to. Rows arrive
+// from per-member calendar sync (source 'google') or portal scheduling (source
+// 'portal'). Linkage (account/deal/project) is the PORTAL's truth; time + attendee
+// responses are GOOGLE's truth. Unlinked rows are the frame-45 inbox. imminent/live
+// are computed from the clock, never stored.
+export const MEETING_STATUSES = ["upcoming", "ended", "awaiting_recording", "digest_ready"] as const;
+export const VIDEO_PROVIDERS = ["zoom", "manual"] as const;
+export const MEETING_SOURCES = ["portal", "google"] as const;
 export const meetings = sqliteTable(
   "meetings",
   {
     id: pk(),
-    zoomMeetingId: text("zoom_meeting_id").notNull().unique(),
+    googleEventId: text("google_event_id").unique(),
+    googleCalendarId: text("google_calendar_id"),
+    /** Kept for the Zoom transcript webhook's keying (nullable — Zoom optional). */
+    zoomMeetingId: text("zoom_meeting_id").unique(),
     organizationId: text("organization_id").references(() => organizations.id),
     dealId: text("deal_id").references(() => deals.id),
-    topic: text("topic").notNull(),
-    joinUrl: text("join_url"),
-    startUrl: text("start_url"),
-    scheduledByUserId: text("scheduled_by_user_id").references(() => users.id),
-    startsAt: integer("starts_at", { mode: "timestamp" }),
-    durationMin: integer("duration_min"),
-    status: text("status", { enum: MEETING_STATUSES }).notNull().default("scheduled"),
-    // Held here only while unmatched; moves into deal_calls on attach/ingest.
+    projectId: text("project_id"), // no FK: projects is declared later in this file
+    title: text("title").notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp" }),
+    /** [{ email, name?, response? }] — responses mirrored from Google on sync. */
+    attendees: text("attendees", { mode: "json" }),
+    videoUrl: text("video_url"),
+    videoProvider: text("video_provider", { enum: VIDEO_PROVIDERS }),
+    startUrl: text("start_url"), // Zoom host link (portal-scheduled only)
+    status: text("status", { enum: MEETING_STATUSES }).notNull().default("upcoming"),
+    /** Auto-match suggestion for the inbox ("looks like Harbor Point — domain match"). */
+    suggestedOrganizationId: text("suggested_organization_id"),
+    suggestionReason: text("suggestion_reason"),
+    /** Held here only while unlinked; graduates into deal_calls on link/ingest. */
     transcriptMd: text("transcript_md"),
     callId: text("call_id"), // deal_calls row once ingested (no FK: defined later)
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    /** Whose connected calendar synced it in (portal rows: the scheduler). */
+    syncedByUserId: text("synced_by_user_id").references(() => users.id),
+    source: text("source", { enum: MEETING_SOURCES }).notNull().default("google"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("meetings_deal_idx").on(t.dealId), index("meetings_status_idx").on(t.status)],
+  (t) => [
+    index("meetings_deal_idx").on(t.dealId),
+    index("meetings_org_idx").on(t.organizationId),
+    index("meetings_status_idx").on(t.status),
+    index("meetings_starts_idx").on(t.startsAt),
+  ],
+);
+
+// ---- Meeting suppressions ("Not client work", frame 45 — teaches the matcher) ----
+export const meetingSuppressions = sqliteTable(
+  "meeting_suppressions",
+  {
+    id: pk(),
+    /** Suppress one event, or a whole recurring series when Google provides one. */
+    googleEventId: text("google_event_id"),
+    recurringEventId: text("recurring_event_id"),
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("meeting_suppressions_event_idx").on(t.googleEventId)],
 );
 
 // ---- Contract items (R4: the commercials checklist — MSA, NDA, insurance…) ----

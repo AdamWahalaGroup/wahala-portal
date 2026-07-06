@@ -1,40 +1,100 @@
 /**
- * Zoom (Server-to-Server OAuth) — the meeting half of the capture loop:
- * portal-scheduled Zoom calls (cloud recording ON, disclosure ON — Florida is
- * all-party consent) and the webhook that delivers the finished transcript back
- * onto the deal. Real-time is deliberately out of scope ("posts, not real time,
- * good enough" — Jason). The pure helpers (VTT parsing, webhook signature) are
- * exported for unit tests; the webhook handler takes its downloader/ingester as
- * parameters so it's testable without Zoom.
+ * Zoom adapter (frames 43/47) — an OPTIONAL layer on the Google-event spine:
+ * when connected, Schedule-call auto-attaches a Zoom link and cloud-recording
+ * transcripts flow back through the webhook into the deal's digest pipeline.
+ * Credentials come from app_settings (`zoom:credentials`, the frame-47 Connect
+ * Zoom form) with env-var fallback — connecting is a settings save, not a deploy.
+ * The pure helpers (VTT parsing, webhook signature) are exported for unit tests;
+ * the webhook handler takes its downloader injected so it's testable without Zoom.
  */
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { assertSalesManager } from "@/services/sales";
 import { ingestCallCore } from "@/services/process";
-import { createEventFor, calendarConnection } from "@/services/integrations/google-calendar";
-import { zoomAccountId, zoomClientId, zoomClientSecret, zoomHostEmail } from "@/auth/server-env";
+import { zoomAccountId, zoomClientId, zoomClientSecret, zoomSecretToken, zoomHostEmail } from "@/auth/server-env";
 
 const ZOOM_API = "https://api.zoom.us/v2";
 const TOKEN_KEY = "zoom:token";
+const CREDS_KEY = "zoom:credentials";
 
-export function zoomConfigured(): boolean {
-  return !!(zoomAccountId() && zoomClientId() && zoomClientSecret());
+export type ZoomCredentials = {
+  accountId: string;
+  clientId: string;
+  clientSecret: string;
+  secretToken: string;
+  hostEmail?: string;
+};
+
+/** app_settings first (frame-47 Connect form), env fallback. Null = not connected. */
+export async function zoomCredentials(): Promise<ZoomCredentials | null> {
+  const row = await getDb().query.appSettings.findFirst({ where: eq(schema.appSettings.key, CREDS_KEY) });
+  const stored = (row?.value ?? null) as Partial<ZoomCredentials> | null;
+  if (stored?.accountId && stored.clientId && stored.clientSecret) {
+    return {
+      accountId: stored.accountId,
+      clientId: stored.clientId,
+      clientSecret: stored.clientSecret,
+      secretToken: stored.secretToken ?? "",
+      hostEmail: stored.hostEmail,
+    };
+  }
+  if (zoomAccountId() && zoomClientId() && zoomClientSecret()) {
+    return {
+      accountId: zoomAccountId(),
+      clientId: zoomClientId(),
+      clientSecret: zoomClientSecret(),
+      secretToken: zoomSecretToken(),
+      hostEmail: zoomHostEmail() || undefined,
+    };
+  }
+  return null;
+}
+
+export async function zoomConfigured(): Promise<boolean> {
+  return (await zoomCredentials()) !== null;
+}
+
+/** Save the frame-47 Connect Zoom form (admin). Clears the token cache. */
+export async function saveZoomCredentials(ctx: AuthContext, creds: ZoomCredentials): Promise<void> {
+  if (!ctx.isAdmin) throw new StageError("FORBIDDEN", "Only a Wahala admin can connect Zoom.");
+  if (!creds.accountId?.trim() || !creds.clientId?.trim() || !creds.clientSecret?.trim()) {
+    throw new StageError("VALIDATION", "Account ID, Client ID, and Client Secret are all required.");
+  }
+  const db = getDb();
+  const value: ZoomCredentials = {
+    accountId: creds.accountId.trim(),
+    clientId: creds.clientId.trim(),
+    clientSecret: creds.clientSecret.trim(),
+    secretToken: creds.secretToken?.trim() ?? "",
+    hostEmail: creds.hostEmail?.trim() || undefined,
+  };
+  const existing = await db.query.appSettings.findFirst({ where: eq(schema.appSettings.key, CREDS_KEY) });
+  if (existing) await db.update(schema.appSettings).set({ value, updatedByUserId: ctx.user.id }).where(eq(schema.appSettings.key, CREDS_KEY));
+  else await db.insert(schema.appSettings).values({ key: CREDS_KEY, value, updatedByUserId: ctx.user.id });
+  const token = await db.query.appSettings.findFirst({ where: eq(schema.appSettings.key, TOKEN_KEY) });
+  if (token) await db.update(schema.appSettings).set({ value: {} }).where(eq(schema.appSettings.key, TOKEN_KEY));
+}
+
+/** The webhook secret token (app_settings creds first, env fallback). */
+export async function webhookSecret(): Promise<string> {
+  const creds = await zoomCredentials();
+  return creds?.secretToken || zoomSecretToken();
 }
 
 // ---------------------------------------------------------------- S2S token (cached in app_settings)
 
 async function zoomToken(): Promise<string> {
-  if (!zoomConfigured()) throw new StageError("INVALID_STATE", "Zoom isn't set up yet — add the Server-to-Server app credentials.");
+  const creds = await zoomCredentials();
+  if (!creds) throw new StageError("INVALID_STATE", "Zoom isn't connected — add the Server-to-Server app in Settings → Integrations.");
   const db = getDb();
   const row = await db.query.appSettings.findFirst({ where: eq(schema.appSettings.key, TOKEN_KEY) });
   const cached = (row?.value ?? null) as { token?: string; expiresAt?: number } | null;
   if (cached?.token && cached.expiresAt && cached.expiresAt > Date.now() + 60_000) return cached.token;
 
-  const res = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${encodeURIComponent(zoomAccountId())}`, {
+  const res = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${encodeURIComponent(creds.accountId)}`, {
     method: "POST",
-    headers: { authorization: `Basic ${btoa(`${zoomClientId()}:${zoomClientSecret()}`)}` },
+    headers: { authorization: `Basic ${btoa(`${creds.clientId}:${creds.clientSecret}`)}` },
   });
   if (!res.ok) {
     console.error("[zoom] token failed:", res.status, await res.text().catch(() => ""));
@@ -47,52 +107,28 @@ async function zoomToken(): Promise<string> {
   return data.access_token;
 }
 
-// ---------------------------------------------------------------- schedule (frame-less v1 UI)
+// ---------------------------------------------------------------- create meeting
 
-export type ScheduledMeeting = {
-  meetingId: string;
-  zoomMeetingId: string;
-  joinUrl: string;
-  startUrl: string | null;
-  calendarAdded: boolean;
-};
-
-/**
- * Schedule a Zoom call FROM a deal: Zoom meeting (auto cloud recording → the
- * transcript webhook), a meetings row bound to the deal (deterministic attach),
- * and — when the scheduler has Google connected — a calendar event that invites
- * the deal contact. Sales manager.
- */
-export async function scheduleDealMeeting(
-  ctx: AuthContext,
-  dealId: string,
-  input: { topic?: string; startsAt: string; durationMin?: number; inviteContact?: boolean },
-): Promise<ScheduledMeeting> {
-  assertSalesManager(ctx, "schedule_meeting");
-  const db = getDb();
-  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
-  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
-  const startsAt = new Date(input.startsAt);
-  if (Number.isNaN(startsAt.getTime())) throw new StageError("VALIDATION", "Pick a valid start time.");
-  const durationMin = Math.max(15, Math.min(480, Math.round(input.durationMin ?? 45)));
-  const topic = input.topic?.trim() || deal.name;
-
+/** Create a scheduled Zoom meeting (cloud recording ON — disclosure stays on). */
+export async function createZoomMeeting(input: {
+  hostEmail: string;
+  topic: string;
+  startsAt: Date;
+  durationMin: number;
+}): Promise<{ id: string; joinUrl: string; startUrl: string | null }> {
+  const creds = await zoomCredentials();
   const token = await zoomToken();
-  // Host = the scheduler when their email is a Zoom user; ZOOM_HOST_EMAIL fallback; else the app account.
-  const hostCandidates = [ctx.user.email, zoomHostEmail(), "me"].filter(Boolean) as string[];
-  let created: { id: number | string; join_url: string; start_url?: string } | null = null;
+  const hostCandidates = [input.hostEmail, creds?.hostEmail, "me"].filter(Boolean) as string[];
   let lastErr = "";
   for (const host of hostCandidates) {
     const res = await fetch(`${ZOOM_API}/users/${encodeURIComponent(host)}/meetings`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({
-        topic,
+        topic: input.topic,
         type: 2, // scheduled
-        start_time: startsAt.toISOString(),
-        duration: durationMin,
+        start_time: input.startsAt.toISOString(),
+        duration: input.durationMin,
         timezone: "UTC",
         settings: {
           auto_recording: "cloud", // transcript source; recording disclosure stays ON
@@ -102,61 +138,14 @@ export async function scheduleDealMeeting(
       }),
     });
     if (res.ok) {
-      created = (await res.json()) as { id: number | string; join_url: string; start_url?: string };
-      break;
+      const created = (await res.json()) as { id: number | string; join_url: string; start_url?: string };
+      return { id: String(created.id), joinUrl: created.join_url, startUrl: created.start_url ?? null };
     }
     lastErr = `${res.status} ${await res.text().catch(() => "")}`;
     if (res.status !== 404) break; // 404 = host not a Zoom user → try the next candidate
   }
-  if (!created) {
-    console.error("[zoom] meeting create failed:", lastErr);
-    throw new StageError("INVALID_STATE", "Zoom couldn't create the meeting — check the host account.");
-  }
-
-  const meetingId = crypto.randomUUID();
-  await db.insert(schema.meetings).values({
-    id: meetingId,
-    zoomMeetingId: String(created.id),
-    organizationId: deal.organizationId,
-    dealId,
-    topic,
-    joinUrl: created.join_url,
-    startUrl: created.start_url ?? null,
-    scheduledByUserId: ctx.user.id,
-    startsAt,
-    durationMin,
-    status: "scheduled",
-  });
-
-  // Best-effort calendar event (never blocks the schedule).
-  let calendarAdded = false;
-  const { connected } = await calendarConnection(ctx.user.id);
-  if (connected) {
-    const attendees: string[] = [];
-    if (input.inviteContact && deal.primaryContactId) {
-      const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) });
-      if (contact?.email) attendees.push(contact.email);
-    }
-    calendarAdded = await createEventFor(ctx.user.id, {
-      title: topic,
-      startsAt,
-      durationMin,
-      description: `Zoom: ${created.join_url}\n\nScheduled from Wahala Portal — the transcript lands on the deal automatically after the call.`,
-      location: created.join_url,
-      attendees,
-    });
-  }
-
-  return { meetingId, zoomMeetingId: String(created.id), joinUrl: created.join_url, startUrl: created.start_url ?? null, calendarAdded };
-}
-
-/** Upcoming + recent meetings for one deal (the Recorded-calls card list). */
-export async function meetingsForDeal(ctx: AuthContext, dealId: string) {
-  const db = getDb();
-  const rows = await db.select().from(schema.meetings).where(eq(schema.meetings.dealId, dealId));
-  return rows
-    .sort((a, b) => (b.startsAt?.getTime() ?? 0) - (a.startsAt?.getTime() ?? 0))
-    .map((m) => ({ id: m.id, topic: m.topic, startsAt: m.startsAt, joinUrl: m.joinUrl, status: m.status }));
+  console.error("[zoom] meeting create failed:", lastErr);
+  throw new StageError("INVALID_STATE", "Zoom couldn't create the meeting — check the host account.");
 }
 
 // ---------------------------------------------------------------- webhook (pure helpers exported for tests)
@@ -212,14 +201,16 @@ export type TranscriptCompletedPayload = {
 };
 
 /**
- * Handle recording.transcript_completed. The downloader is injected (webhook
- * download_token vs S2S token, and unit tests). Matched meetings ingest straight
- * onto their deal; unknown meetings are held as an unmatched inbox row.
+ * Handle recording.transcript_completed. Matching order: the meetings row keyed
+ * by zoomMeetingId (covers portal-scheduled AND synced calendar events whose
+ * join link carried the meeting id). A linked row ingests straight onto its deal
+ * (→ digest_ready); a known-but-unlinked row holds the transcript for the inbox;
+ * an unknown meeting becomes a fresh inbox row.
  */
 export async function handleTranscriptCompleted(
   payload: TranscriptCompletedPayload,
   download: (url: string) => Promise<string | null>,
-): Promise<{ outcome: "ingested" | "unmatched" | "skipped" }> {
+): Promise<{ outcome: "ingested" | "held" | "unmatched" | "skipped" }> {
   const obj = payload.object ?? {};
   const zoomMeetingId = obj.id !== undefined ? String(obj.id) : null;
   const vttUrl = (obj.recording_files ?? []).find((f) => f.file_type === "TRANSCRIPT")?.download_url ?? null;
@@ -232,41 +223,49 @@ export async function handleTranscriptCompleted(
   const db = getDb();
   const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.zoomMeetingId, zoomMeetingId) });
   const recordedAt = obj.start_time ? new Date(obj.start_time) : new Date();
-  const durationMin = obj.duration ?? meeting?.durationMin ?? null;
+  const durationMin = obj.duration ?? null;
 
   if (meeting?.dealId) {
     const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, meeting.dealId) });
     if (deal) {
       const { callId } = await ingestCallCore(
         deal,
-        { title: meeting.topic, transcriptMd: transcript, recordedAt, durationMin },
-        meeting.scheduledByUserId,
+        { title: meeting.title, transcriptMd: transcript, recordedAt, durationMin },
+        meeting.createdByUserId ?? meeting.syncedByUserId,
       );
-      await db.update(schema.meetings).set({ status: "transcribed", callId, transcriptMd: null }).where(eq(schema.meetings.id, meeting.id));
+      await db.update(schema.meetings).set({ status: "digest_ready", callId, transcriptMd: null }).where(eq(schema.meetings.id, meeting.id));
       return { outcome: "ingested" };
     }
   }
 
-  // Unknown or unattached meeting → hold the transcript for the manual-attach inbox.
   if (meeting) {
-    await db.update(schema.meetings).set({ status: "unmatched", transcriptMd: transcript }).where(eq(schema.meetings.id, meeting.id));
-  } else {
-    await db.insert(schema.meetings).values({
-      zoomMeetingId,
-      topic: obj.topic?.trim() || "Zoom call",
-      startsAt: recordedAt,
-      durationMin,
-      status: "unmatched",
-      transcriptMd: transcript,
-    });
+    // Known meeting, no deal yet — hold the transcript; linking graduates it.
+    await db.update(schema.meetings).set({ status: "ended", transcriptMd: transcript }).where(eq(schema.meetings.id, meeting.id));
+    return { outcome: "held" };
   }
+
+  await db.insert(schema.meetings).values({
+    zoomMeetingId,
+    title: obj.topic?.trim() || "Zoom call",
+    startsAt: recordedAt,
+    endsAt: durationMin ? new Date(recordedAt.getTime() + durationMin * 60_000) : null,
+    status: "ended",
+    transcriptMd: transcript,
+    source: "google",
+  });
   return { outcome: "unmatched" };
 }
 
-/** meeting.ended bookkeeping (webhook) — silent no-op for unknown meetings. */
+/** meeting.ended bookkeeping (webhook) — zoom meetings go to awaiting_recording. */
 export async function markMeetingEnded(zoomMeetingId: string): Promise<void> {
   try {
-    await getDb().update(schema.meetings).set({ status: "ended" }).where(eq(schema.meetings.zoomMeetingId, zoomMeetingId));
+    const db = getDb();
+    const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.zoomMeetingId, zoomMeetingId) });
+    if (!meeting || meeting.status !== "upcoming") return;
+    await db
+      .update(schema.meetings)
+      .set({ status: meeting.videoProvider === "zoom" ? "awaiting_recording" : "ended" })
+      .where(eq(schema.meetings.id, meeting.id));
   } catch (err) {
     console.error("[zoom] meeting.ended update failed:", err);
   }
@@ -284,37 +283,4 @@ export function webhookDownloader(downloadToken: string | undefined): (url: stri
     }
     return await res.text();
   };
-}
-
-// ---------------------------------------------------------------- unmatched inbox
-
-export type UnmatchedMeeting = { id: string; topic: string; startsAt: Date | null; durationMin: number | null };
-
-export async function listUnmatchedMeetings(ctx: AuthContext): Promise<UnmatchedMeeting[]> {
-  if (!ctx.isStaff) return [];
-  const rows = await getDb().select().from(schema.meetings).where(eq(schema.meetings.status, "unmatched"));
-  return rows
-    .sort((a, b) => (b.startsAt?.getTime() ?? 0) - (a.startsAt?.getTime() ?? 0))
-    .map((m) => ({ id: m.id, topic: m.topic, startsAt: m.startsAt, durationMin: m.durationMin }));
-}
-
-/** Attach an unmatched transcript to a deal — it graduates into deal_calls + extractor. */
-export async function attachMeetingToDeal(ctx: AuthContext, meetingId: string, dealId: string): Promise<{ callId: string; readiness: number }> {
-  assertSalesManager(ctx, "attach_meeting");
-  const db = getDb();
-  const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.id, meetingId) });
-  if (!meeting || meeting.status !== "unmatched" || !meeting.transcriptMd) throw new StageError("NOT_FOUND", "Unmatched transcript not found.");
-  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
-  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-
-  const { callId, readiness } = await ingestCallCore(
-    deal,
-    { title: meeting.topic, transcriptMd: meeting.transcriptMd, recordedAt: meeting.startsAt ?? new Date(), durationMin: meeting.durationMin },
-    ctx.user.id,
-  );
-  await db
-    .update(schema.meetings)
-    .set({ status: "transcribed", dealId, organizationId: deal.organizationId, callId, transcriptMd: null })
-    .where(eq(schema.meetings.id, meetingId));
-  return { callId, readiness };
 }

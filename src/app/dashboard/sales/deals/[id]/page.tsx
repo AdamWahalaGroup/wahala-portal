@@ -11,7 +11,9 @@ import { getDealDetail } from "@/services/sales";
 import { listProposalsForDeal } from "@/services/proposals";
 import { getContractRoom } from "@/services/contract";
 import { getDealProcess } from "@/services/process";
-import { meetingsForDeal, zoomConfigured } from "@/services/integrations/zoom";
+import { meetingsForDeal, syncIfStale } from "@/services/meetings";
+import { zoomConfigured } from "@/services/integrations/zoom";
+import { calendarConnection } from "@/services/integrations/google-calendar";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
@@ -35,11 +37,14 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     throw e;
   });
   const { deal, org, owner, contact, provenance, history } = detail;
-  const [proposals, room, process, meetings] = await Promise.all([
+  await syncIfStale(ctx); // keep meeting times/attendee responses fresh (Google's truth)
+  const [proposals, room, process, meetings, connection, zoomReady] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
     getContractRoom(ctx, deal.id),
     getDealProcess(ctx, deal.id),
     meetingsForDeal(ctx, deal.id),
+    calendarConnection(ctx.user.id),
+    zoomConfigured(),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
@@ -89,8 +94,22 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
           goal: process.goal,
           nextActions: process.nextActions,
           calls: process.calls.map((c) => ({ ...c, recordedAt: c.recordedAt.toISOString() })),
-          meetings: meetings.map((m) => ({ ...m, startsAt: m.startsAt?.toISOString() ?? null })),
-          zoomReady: zoomConfigured(),
+          meetings: meetings.map((m) => ({
+            id: m.id,
+            title: m.title,
+            startsAt: m.startsAt.toISOString(),
+            endsAt: m.endsAt?.toISOString() ?? null,
+            videoUrl: m.videoUrl,
+            status: m.status,
+            attendees: m.attendees,
+            createdByName: m.createdByName,
+            synced: m.synced,
+            callId: m.callId,
+            dealId: m.dealId,
+          })),
+          zoomReady,
+          calendarConnected: connection.connected,
+          memberEmail: connection.email ?? ctx.user.email,
         }}
         postMortemMd={deal.postMortemMd}
         proposalNode={proposalNode}
