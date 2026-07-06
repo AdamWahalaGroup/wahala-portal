@@ -1,0 +1,59 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Design-review DEMO deployment — same built worker as production, but:
+  //   · DEMO_MODE=1 → getAuthContext returns the seeded viewer (no login) and
+  //     getDb() refuses writes (read-only proxy). See src/auth/demo.ts.
+  //   · Its OWN D1/KV/R2 seeded ONLY with drizzle/seed.sql fixtures — it is
+  //     physically incapable of showing production client data.
+  //   · Served on workers.dev only (no custom domain); pages emit noindex.
+  // Deploys automatically after every prod deploy (npm run deploy) so the demo
+  // always reflects the latest built UI. NEVER add DEMO_MODE to wrangler.jsonc.
+  "name": "wahala-portal-demo",
+  "main": ".open-next/worker.js",
+
+  "compatibility_date": "2026-06-25",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  "workers_dev": true,
+
+  "vars": {
+    "DEMO_MODE": "1",
+    "EMAIL_FROM": "login@wahala-services.com",
+    "ADMIN_APPROVAL_THRESHOLD_CENTS": "1000000",
+    "STAFF_SSO_DOMAINS": "wahalagroup.com",
+    "AI_PROVIDER": "openai",
+    "AI_DRAFT_MODEL": "gpt-4o-mini"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wahala-demo-db",
+      "database_id": "63e873f4-d93b-43c3-ab1a-cf346b38c875",
+      "migrations_dir": "drizzle/migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "4f34850be119417588da4c0f7c56e79e"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "wahala-files-demo"
+    }
+  ],
+
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "remote": true
+    }
+  ]
+}

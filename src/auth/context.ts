@@ -7,10 +7,11 @@
  * internal-visible vs. client-visible. Phase 1 refines per-role (e.g. an engineer
  * sees only assigned work) — without moving the enforcement point.
  */
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { readSessionCookie, getSessionUserId } from "@/auth/session";
 import { computeAccessScope, type AccessScope } from "@/auth/access";
+import { isDemoMode, DEMO_USER_ID } from "@/auth/demo";
 
 export type AuthUser = typeof schema.users.$inferSelect;
 
@@ -26,6 +27,28 @@ export type AuthContext = {
 
 /** Resolve the current auth context, or null if not signed in. */
 export async function getAuthContext(): Promise<AuthContext | null> {
+  // Demo deployment (isolated worker + fixture-only DB): every request is the
+  // seeded viewer — no session, no cookies. Writes are refused at getDb().
+  if (isDemoMode()) {
+    const db = getDb();
+    const user =
+      (await db.query.users.findFirst({ where: eq(schema.users.id, DEMO_USER_ID) })) ??
+      (await db.query.users.findFirst({
+        where: and(eq(schema.users.userType, "wahala"), eq(schema.users.role, "wahala_admin"), eq(schema.users.status, "active")),
+      }));
+    if (!user) return null;
+    const accessScope = await computeAccessScope(user);
+    return {
+      user,
+      isStaff: true,
+      isAdmin: true,
+      organizationId: null,
+      accessScope,
+      canSeeAllOrgs: accessScope.kind === "all",
+      canSeeInternal: true,
+    };
+  }
+
   const raw = await readSessionCookie();
   if (!raw) return null;
 

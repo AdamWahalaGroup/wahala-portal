@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy && npm run deploy:demo:worker",
     "deploy:cron": "wrangler deploy -c cron/wrangler.jsonc",
     "cron:dev": "wrangler dev -c cron/wrangler.jsonc --test-scheduled",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
@@ -18,7 +18,10 @@
     "db:migrate:local": "wrangler d1 migrations apply wahala-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply wahala-db --remote",
     "db:seed:local": "wrangler d1 execute wahala-db --local --file=drizzle/seed.sql",
-    "db:seed:remote": "wrangler d1 execute wahala-db --remote --file=drizzle/seed.sql"
+    "db:seed:remote": "wrangler d1 execute wahala-db --remote --file=drizzle/seed.sql",
+    "deploy:demo:worker": "wrangler deploy -c wrangler.demo.jsonc",
+    "db:migrate:demo": "wrangler d1 migrations apply wahala-demo-db --remote -c wrangler.demo.jsonc",
+    "db:seed:demo": "wrangler d1 execute wahala-demo-db --remote --file=drizzle/seed.sql -c wrangler.demo.jsonc"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.3.0",
