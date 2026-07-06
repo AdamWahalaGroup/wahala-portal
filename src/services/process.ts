@@ -16,6 +16,7 @@ import { StageError } from "@/domain/stage-machine";
 import { assertSalesManager, assertStaff } from "@/services/sales";
 import { daysInStage, STAGE_META, type DealStage } from "@/domain/sales";
 import {
+  applyManualField,
   readinessFrom,
   readinessTone,
   failedChecks,
@@ -26,7 +27,10 @@ import {
   PROPOSAL_READY_AT,
   FOLLOWUP_EXPECTED_DAYS,
   PACKAGE_FIELD_LABELS,
+  type PackageField,
+  type PackageFieldKey,
   type PackageFields,
+  type PackageFieldStatus,
   type NextAction,
 } from "@/domain/process";
 import { getDraftProvider, type DraftUsage } from "@/services/ai/provider";
@@ -249,6 +253,54 @@ export async function ingestCall(
   const scope = ctx.accessScope;
   if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   return ingestCallCore(deal, input, ctx.user.id);
+}
+
+/**
+ * Manually set one Discovery Package field (the actionable-package edit path).
+ * Sales manager — this changes readiness, same trust level as ingesting a call.
+ * Unlike the AI merge, a human may downgrade; the edit is logged as a
+ * `field_edited` process event with the before/after statuses.
+ */
+export async function setPackageField(
+  ctx: AuthContext,
+  dealId: string,
+  key: string,
+  input: { status: string; evidence?: string },
+): Promise<{ readiness: number; field: PackageField }> {
+  assertSalesManager(ctx, "set_package_field");
+  if (!(schema.PACKAGE_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown package field.");
+  if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
+  const evidence = input.evidence?.trim().slice(0, 500) || null;
+
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+
+  const previous = await loadPackage(dealId);
+  const fieldKey = key as PackageFieldKey;
+  const from = previous[fieldKey]?.status ?? "missing";
+  const { fields, readiness } = applyManualField(previous, fieldKey, { status: input.status as PackageFieldStatus, evidence });
+
+  const existing = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
+  await db.batch([
+    existing
+      ? db.update(schema.discoveryPackages).set({ fields }).where(eq(schema.discoveryPackages.dealId, dealId))
+      : db.insert(schema.discoveryPackages).values({ dealId, fields }),
+    db.update(schema.deals).set({ readinessScore: readiness }).where(eq(schema.deals.id, dealId)),
+  ]);
+  await recordProcessEvent({
+    organizationId: deal.organizationId,
+    dealId,
+    ownerUserId: deal.ownerUserId,
+    actorUserId: ctx.user.id,
+    kind: "field_edited",
+    readinessScore: readiness,
+    metadata: { field: key, from, to: input.status, source: "manual" },
+  });
+
+  return { readiness, field: fields[fieldKey] as PackageField };
 }
 
 export async function getCallTranscript(ctx: AuthContext, dealId: string, callId: string): Promise<{ title: string; recordedAt: Date; transcriptMd: string }> {

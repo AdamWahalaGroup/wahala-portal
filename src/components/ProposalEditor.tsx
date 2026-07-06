@@ -175,7 +175,7 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
     const res = await call(`/api/deals/${proposal.dealId}/proposals`, {}, "newversion");
     if (res) {
       const data = (await res.json()) as { proposalId?: string };
-      if (data.proposalId) router.push(`/dashboard/sales/proposals/${data.proposalId}`);
+      if (data.proposalId) router.push(`/dashboard/proposals/${data.proposalId}`);
     }
   }
 

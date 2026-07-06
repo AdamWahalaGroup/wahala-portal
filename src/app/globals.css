@@ -77,3 +77,30 @@ a:hover {
   border-color: var(--cobalt);
   box-shadow: 0 0 0 4px var(--cobalt-wash);
 }
+
+/* Discovery package rows — quiet "edit" affordance, revealed on row hover. */
+.pkg-row .pkg-edit {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.pkg-row:hover .pkg-edit,
+.pkg-row .pkg-edit:focus-visible {
+  opacity: 1;
+}
+
+/* Stage-advance achievement moments (Jason feedback) — toast slide, card pop,
+   and the Won confetti burst. Gated on reduced-motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+}

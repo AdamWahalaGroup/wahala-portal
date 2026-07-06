@@ -43,7 +43,7 @@ async function patchDeal(dealId: string, body: unknown): Promise<string | null> 
   }
 }
 
-export function DealStageSelect({ dealId, stage }: { dealId: string; stage: string }) {
+export function DealStageSelect({ dealId, stage, onMoved }: { dealId: string; stage: string; onMoved?: (to: string) => void }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,10 @@ export function DealStageSelect({ dealId, stage }: { dealId: string; stage: stri
     setError(null);
     const err = await patchDeal(dealId, { stage: next });
     if (err) setError(err);
-    else router.refresh();
+    else {
+      onMoved?.(next);
+      router.refresh();
+    }
     setBusy(false);
   }
 

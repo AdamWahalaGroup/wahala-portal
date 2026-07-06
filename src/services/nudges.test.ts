@@ -38,7 +38,7 @@ describe("selectFollowupProposals", () => {
     const out = selectFollowupProposals(props, sla, NOW);
     expect(out.map((n) => n.entityId)).toEqual(["p1"]);
     expect(out[0].userId).toBe("u9");
-    expect(out[0].href).toContain("/dashboard/sales/proposals/p1");
+    expect(out[0].href).toContain("/dashboard/proposals/p1");
   });
 });
 

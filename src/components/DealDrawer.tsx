@@ -18,6 +18,7 @@ import { DealStageSelect } from "@/components/DealEditor";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
 import { DealProcessPanel, GoalRail, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
@@ -87,6 +88,9 @@ export function DealDrawer({
   const [logBump, setLogBump] = useState(0);
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const [rescheduleWhen, setRescheduleWhen] = useState("");
+  // Achievement moment (Jason feedback) — fired by the stage select + Done→next.
+  const [moment, setMoment] = useState<StageMoment | null>(null);
+  const fireMoment = (to: string) => setMoment(stageMomentFor(deal.stage, to, { id: deal.id, name: deal.name, organizationName: org.name }));
   const meta = STAGE_META[deal.stage];
   // The deal's next step, upgraded to a real event when one exists (frame 42).
   const nextMeeting = process.meetings
@@ -116,10 +120,11 @@ export function DealDrawer({
   const stageNo = deal.stage === "won" ? 5 : deal.stage === "lost" ? 0 : (FUNNEL_STAGES as readonly DealStage[]).indexOf(deal.stage) + 2;
   const next = nextStageOf(deal.stage);
 
-  async function patchDeal(body: unknown) {
+  async function patchDeal(body: { stage?: string; subStatus?: string | null }) {
     setBusy(true);
     try {
-      await fetch(`/api/deals/${deal.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch(`/api/deals/${deal.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok && body.stage) fireMoment(body.stage);
       router.refresh();
     } finally {
       setBusy(false);
@@ -206,7 +211,7 @@ export function DealDrawer({
               ))}
             </select>
           )}
-          {canManage && <DealStageSelect dealId={deal.id} stage={deal.stage} />}
+          {canManage && <DealStageSelect dealId={deal.id} stage={deal.stage} onMoved={fireMoment} />}
         </div>
       </div>
 
@@ -321,6 +326,7 @@ export function DealDrawer({
                 nextActions={process.nextActions}
                 calls={process.calls}
                 openLog={logBump}
+                stage={deal.stage}
               />
             )}
 
@@ -421,6 +427,8 @@ export function DealDrawer({
           onClose={() => setScheduling(false)}
         />
       )}
+
+      <StageMomentLayer moment={moment} onDismiss={() => setMoment(null)} inDrawer />
     </div>
   );
 }

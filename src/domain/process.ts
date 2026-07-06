@@ -62,6 +62,44 @@ export function failedChecks(fields: PackageFields): { field: PackageFieldKey; l
   }));
 }
 
+/**
+ * Manual edit of one package field — unlike the AI ingest merge (which never
+ * downgrades), a human MAY downgrade a field they know is wrong. Source is
+ * forced to "manual" so the UI can show where the fact came from. Non-mutating.
+ * A later AI ingest can re-raise a manually-downgraded field (rank-based merge);
+ * that's intended — new evidence beats an old correction.
+ */
+export function applyManualField(
+  fields: PackageFields,
+  key: PackageFieldKey,
+  input: { status: PackageFieldStatus; evidence?: string | null },
+): { fields: PackageFields; readiness: number } {
+  const evidence = input.evidence?.trim() || null;
+  const next: PackageFields = { ...fields, [key]: { status: input.status, evidence, source: "manual" } };
+  return { fields: next, readiness: readinessFrom(next) };
+}
+
+// ---------------------------------------------------------------- next-call prompts
+// One concrete ask per package field — the tactical companion to the strategic
+// "next best action" card. Derived, no AI call; a missing field IS the question.
+
+export const ASK_PROMPTS: Record<PackageFieldKey, string> = {
+  business_profile: "What does the business actually do, in their words?",
+  current_workflow: "Walk me through how this works today, step by step.",
+  pain_points: "Where does today's process hurt the most?",
+  budget_posture: "What budget range are you working within for this?",
+  decision_makers: "Who signs off — can they join the next call?",
+  success_metrics: "What number tells you this worked?",
+  mvp_priorities: "If we could only ship one thing first, what is it?",
+  timeline: "When does this need to be live, and what's driving that date?",
+  customer_terminology: "What do you call these things internally?",
+  deferred_scope: "What are we explicitly NOT doing in round one?",
+};
+
+export function nextCallPrompts(fields: PackageFields): { field: PackageFieldKey; label: string; status: PackageFieldStatus; prompt: string }[] {
+  return failedChecks(fields).map((f) => ({ field: f.field, label: f.label, status: f.status, prompt: ASK_PROMPTS[f.field] }));
+}
+
 // ---------------------------------------------------------------- explain copy
 // Source of truth = the glossary in docs/brain_storming/synthesis.md. Render the
 // SAME strings everywhere (callouts in training mode, tooltips when it's off).

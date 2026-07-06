@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EXPLAIN, PACKAGE_FIELD_LABELS, type PackageFields } from "@/domain/process";
+import { EXPLAIN, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import { PACKAGE_FIELDS } from "@/db/schema";
 
 type Call = { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number };
@@ -67,6 +67,7 @@ export function DealProcessPanel({
   nextActions,
   calls,
   openLog = 0,
+  stage,
 }: {
   dealId: string;
   canManage: boolean;
@@ -78,6 +79,8 @@ export function DealProcessPanel({
   calls: Call[];
   /** Bump to force the "Log a call" form open (the drawer footer's Log button). */
   openLog?: number;
+  /** Deal stage — hides the ask-next-call strip once the asking window has passed (committed). */
+  stage?: string;
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -86,6 +89,11 @@ export function DealProcessPanel({
   const [status, setStatus] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", duration: "", transcript: "" });
   const [openTranscript, setOpenTranscript] = useState<{ id: string; text: string } | null>(null);
+  const [editing, setEditing] = useState<(typeof PACKAGE_FIELDS)[number] | null>(null);
+  const [editForm, setEditForm] = useState<{ status: PackageFieldStatus; evidence: string }>({ status: "missing", evidence: "" });
+  const [fieldBusy, setFieldBusy] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [askAll, setAskAll] = useState(false);
 
   useEffect(() => {
     if (openLog > 0) setAdding(true);
@@ -130,27 +138,126 @@ export function DealProcessPanel({
     setOpenTranscript({ id: callId, text: d.transcriptMd ?? "(transcript unavailable)" });
   }
 
+  function openFieldEditor(key: (typeof PACKAGE_FIELDS)[number]) {
+    const f = fields[key];
+    setEditForm({ status: f?.status ?? "missing", evidence: f?.evidence ?? "" });
+    setFieldError(null);
+    setEditing(editing === key ? null : key);
+  }
+
+  async function saveField() {
+    if (!editing) return;
+    setFieldBusy(true);
+    setFieldError(null);
+    try {
+      const res = await fetch(`/api/deals/${dealId}/discovery`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ field: editing, status: editForm.status, evidence: editForm.evidence }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) setFieldError(d.message ?? `Failed (${res.status}).`);
+      else {
+        setEditing(null);
+        router.refresh();
+      }
+    } catch {
+      setFieldError("Network error — please try again.");
+    } finally {
+      setFieldBusy(false);
+    }
+  }
+
+  const STATUS_OPTIONS: { value: PackageFieldStatus; glyph: string; c: (typeof TONE)[keyof typeof TONE] }[] = [
+    { value: "ok", glyph: "✓ ok", c: TONE.green },
+    { value: "partial", glyph: "– partial", c: TONE.amber },
+    { value: "missing", glyph: "✕ missing", c: TONE.red },
+  ];
+
   const fieldRow = (key: (typeof PACKAGE_FIELDS)[number]) => {
     const f = fields[key];
     const s = f?.status ?? "missing";
     const c = s === "ok" ? TONE.green : s === "partial" ? TONE.amber : TONE.red;
+    const isEditing = editing === key;
     return (
-      <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 0" }}>
-        <span style={{ width: 16, height: 16, borderRadius: 999, background: c.bg, color: c.fg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 800, flex: "none", marginTop: 1 }}>
-          {s === "ok" ? "✓" : s === "partial" ? "–" : "✕"}
-        </span>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{PACKAGE_FIELD_LABELS[key]}</div>
-          {f?.evidence && (
-            <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-              {f.evidence}
-              {f.source ? ` · ${f.source}` : ""}
+      <div key={key} style={{ padding: "6px 0" }}>
+        <div className="pkg-row" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{ width: 16, height: 16, borderRadius: 999, background: c.bg, color: c.fg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 800, flex: "none", marginTop: 1 }}>
+            {s === "ok" ? "✓" : s === "partial" ? "–" : "✕"}
+          </span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{PACKAGE_FIELD_LABELS[key]}</span>
+              {canManage && (
+                <button
+                  onClick={() => openFieldEditor(key)}
+                  className="mono pkg-edit"
+                  style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 9, fontWeight: 700, cursor: "pointer", padding: 0, opacity: isEditing ? 1 : undefined }}
+                >
+                  {isEditing ? "close" : "edit"}
+                </button>
+              )}
             </div>
-          )}
+            {f?.evidence && !isEditing && (
+              <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                {f.evidence}
+                {f.source ? ` · ${f.source}` : ""}
+              </div>
+            )}
+          </div>
         </div>
+        {isEditing && (
+          <div style={{ margin: "7px 0 2px 24px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 5 }}>
+              {STATUS_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setEditForm((v) => ({ ...v, status: o.value }))}
+                  className="mono"
+                  style={{
+                    border: editForm.status === o.value ? `1.5px solid ${o.c.fg}` : "1px solid #d7d9df",
+                    background: editForm.status === o.value ? o.c.bg : "var(--white)",
+                    color: editForm.status === o.value ? o.c.fg : "var(--muted)",
+                    borderRadius: 999,
+                    padding: "3px 9px",
+                    fontSize: 9.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  {o.glyph}
+                </button>
+              ))}
+            </div>
+            <input
+              style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5 }}
+              placeholder="What did they say? (evidence)"
+              maxLength={500}
+              value={editForm.evidence}
+              onChange={(e) => setEditForm((v) => ({ ...v, evidence: e.target.value }))}
+            />
+            {fieldError && <p style={{ color: "#b00020", fontSize: 11, margin: 0 }}>{fieldError}</p>}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                onClick={saveField}
+                disabled={fieldBusy}
+                style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 7, padding: "5px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                {fieldBusy ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditing(null)} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
+
+  // Tactical per-field asks — hidden once the asking window has passed (committed).
+  const prompts = stage === "committed" ? [] : nextCallPrompts(fields);
+  const shownPrompts = askAll ? prompts : prompts.slice(0, 3);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -166,6 +273,30 @@ export function DealProcessPanel({
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14 }}>{PACKAGE_FIELDS.map(fieldRow)}</div>
+        {prompts.length > 0 && (
+          <div style={{ marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
+            <div className="kicker" style={{ marginBottom: 6 }}>Ask on the next call</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {shownPrompts.map((p) => (
+                <div key={p.field} style={{ display: "flex", gap: 7, alignItems: "baseline" }}>
+                  <span className="mono" style={{ fontSize: 9, fontWeight: 800, color: p.status === "partial" ? TONE.amber.fg : TONE.red.fg, flex: "none", minWidth: 108 }}>
+                    {PACKAGE_FIELD_LABELS[p.field].toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: 11.5, color: "var(--muted)", lineHeight: 1.4 }}>“{p.prompt}”</span>
+                </div>
+              ))}
+            </div>
+            {prompts.length > 3 && (
+              <button
+                onClick={() => setAskAll((v) => !v)}
+                className="mono"
+                style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 9.5, fontWeight: 700, cursor: "pointer", padding: 0, marginTop: 5 }}
+              >
+                {askAll ? "show fewer" : `+${prompts.length - 3} more`}
+              </button>
+            )}
+          </div>
+        )}
         {trainingMode && (
           <div style={{ marginTop: 10 }}>
             <Explain text={EXPLAIN.whyCompleteness} />

@@ -115,6 +115,8 @@ export const PROCESS_EVENT_KINDS = [
   "nudge_overridden",
   "call_ingested",
   "postmortem_created",
+  // Manual package-field edit (kind column is plain TEXT in D1 — no migration).
+  "field_edited",
 ] as const;
 
 // ---- App settings (admin-tunable key/value; JSON values) ----

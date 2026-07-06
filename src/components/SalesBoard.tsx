@@ -14,6 +14,7 @@ import { Money } from "@/components/Money";
 import { ScoreChip, DaysTag, STAGE_COLORS, TRIAGE_COLOR, stageSelectStyle } from "@/components/SalesChips";
 import { ContactCaptureModal } from "@/components/ContactCaptureModal";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
+import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { PROPOSAL_READY_AT } from "@/domain/process";
 import type { SalesOverview, DealItem, ContactItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
@@ -222,7 +223,7 @@ export function ContactQualifyRow({
 
 // ---------------------------------------------------------------- deal row (List view)
 
-function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
+function DealRow({ deal, canManage, onMoved }: { deal: DealItem; canManage: boolean; onMoved?: (m: StageMoment | null) => void }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +233,10 @@ function DealRow({ deal, canManage }: { deal: DealItem; canManage: boolean }) {
     setError(null);
     const err = await patch(`/api/deals/${deal.id}`, { stage });
     if (err) setError(err);
-    else router.refresh();
+    else {
+      onMoved?.(stageMomentFor(deal.stage, stage, deal));
+      router.refresh();
+    }
     setBusy(false);
   }
 
@@ -305,7 +309,7 @@ function CardChip({ text, tone }: { text: string; tone: "amber" | "green" | "gre
   );
 }
 
-function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string; trainingMode: boolean }) {
+function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, onMoved }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string; trainingMode: boolean; onMoved: (m: StageMoment | null) => void }) {
   const router = useRouter();
   // Filter chips lens the board (frame 29). Counts in the summary strip stay whole.
   const dealPred = (d: DealItem): boolean => {
@@ -330,13 +334,14 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
   // A card click goes straight to its drawer (soft nav — the board stays behind).
   const openDrawer = (href: string) => router.push(href, { scroll: false });
 
-  async function run(url: string, body: unknown) {
+  async function run(url: string, body: unknown): Promise<string | null> {
     setBusy(true);
     setError(null);
     const err = await patch(url, body);
     if (err) setError(err);
     else router.refresh();
     setBusy(false);
+    return err;
   }
 
   function allowDrop(e: React.DragEvent, key: string) {
@@ -357,9 +362,12 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
         setError("To qualify a contact, drag it into Discovery. (Deals can move anywhere.)");
         return;
       }
-      await run(`/api/contacts/${p.id}`, { action: "qualify" });
+      const c = triage.find((t) => t.id === p.id);
+      const err = await run(`/api/contacts/${p.id}`, { action: "qualify" });
+      if (!err && c) onMoved(stageMomentFor(null, "discovery", { id: null, name: c.name, organizationName: c.organizationName }));
       return;
     }
+    const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === p.id);
     if (target === "lost") {
       const reason = window.prompt("Why did we lose it? (goes in the log)");
       if (reason === null) return;
@@ -369,7 +377,6 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
     if (target === "proposal_out") {
       // Frame 39: proposal-ready check. Steps are never gates — training mode gets
       // the modal, training off gets a one-line inline warning; both log.
-      const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === p.id);
       const score = deal?.readinessScore ?? 0;
       if (deal && deal.stage === "discovery" && score < PROPOSAL_READY_AT) {
         if (trainingMode) {
@@ -382,18 +389,19 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ outcome: "fired", metadata: { surface: "board_drag_quiet" } }),
         }).catch(() => {});
-        await run(`/api/deals/${p.id}`, { stage: target, override: true });
+        const err = await run(`/api/deals/${p.id}`, { stage: target, override: true });
+        if (!err) onMoved(stageMomentFor(deal.stage, target, deal));
         return;
       }
     }
     if (target === "won") {
       // The package nudges, never blocks: warn when docs are open, then proceed.
-      const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === p.id);
       if (deal?.stage === "committed" && deal.docsDone !== null && deal.docsTotal !== null && deal.docsDone < deal.docsTotal) {
         if (!window.confirm(`Agreement package is ${deal.docsDone}/${deal.docsTotal} — win it anyway? (Create the project from the deal drawer.)`)) return;
       }
     }
-    await run(`/api/deals/${p.id}`, { stage: target });
+    const err = await run(`/api/deals/${p.id}`, { stage: target });
+    if (!err && deal) onMoved(stageMomentFor(deal.stage, target, deal));
   }
 
   async function passContact(c: ContactItem) {
@@ -640,8 +648,11 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
           onKeep={() => setNudge(null)}
           onAdvance={async () => {
             const id = nudge.dealId;
+            const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === id);
             setNudge(null);
-            await run(`/api/deals/${id}`, { stage: "proposal_out", override: true });
+            const err = await run(`/api/deals/${id}`, { stage: "proposal_out", override: true });
+            // Nudge composes first; the achievement moment only after the override lands.
+            if (!err && deal) onMoved(stageMomentFor(deal.stage, "proposal_out", deal));
           }}
           onClose={() => setNudge(null)}
         />
@@ -740,7 +751,7 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode }
 
 // ---------------------------------------------------------------- list view (the old layout, kept as ☰)
 
-function ListView({ overview, canManage }: { overview: SalesOverview; canManage: boolean }) {
+function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; canManage: boolean; onMoved: (m: StageMoment | null) => void }) {
   const triage = overview.triage;
   const pursueCount = triage.filter((c) => c.aiVerdict === "pursue").length;
   const openDealCount = overview.columns.reduce((n, c) => n + c.deals.length, 0);
@@ -853,7 +864,7 @@ function ListView({ overview, canManage }: { overview: SalesOverview; canManage:
                 ) : (
                   <div style={{ display: "grid", gap: 8 }}>
                     {col.deals.map((d) => (
-                      <DealRow key={d.id} deal={d} canManage={canManage} />
+                      <DealRow key={d.id} deal={d} canManage={canManage} onMoved={onMoved} />
                     ))}
                   </div>
                 )}
@@ -921,6 +932,8 @@ export function SalesBoard({
   const filter = (search.get("filter") as SalesFilter) || "all";
   const [view, setView] = useState<"board" | "list">("board");
   const [capturing, setCapturing] = useState(false);
+  // Achievement moment (Jason feedback) — survives router.refresh, one per move.
+  const [moment, setMoment] = useState<StageMoment | null>(null);
 
   // Chip counts come from the FULL overview (they're lenses into the whole board).
   const toQualifyN = overview.triage.length;
@@ -1044,10 +1057,12 @@ export function SalesBoard({
       {capturing && <ContactCaptureModal canStartDeal={canManage} onClose={() => setCapturing(false)} />}
 
       {view === "board" ? (
-        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} />
+        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} onMoved={setMoment} />
       ) : (
-        <ListView overview={overview} canManage={canManage} />
+        <ListView overview={overview} canManage={canManage} onMoved={setMoment} />
       )}
+
+      <StageMomentLayer moment={moment} onDismiss={() => setMoment(null)} />
     </div>
   );
 }

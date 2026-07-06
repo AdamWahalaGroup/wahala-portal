@@ -75,7 +75,7 @@ export function selectFollowupProposals(
         entityType: "proposal" as const,
         entityId: p.id,
         userId: p.ownerUserId,
-        href: `${APP_BASE}/dashboard/sales/proposals/${p.id}`,
+        href: `${APP_BASE}/dashboard/proposals/${p.id}`,
         title: `Proposal needs follow-up: ${p.dealName}`,
         body: `Sent ${days} days ago (window ${sla.proposalFollowupDays}d) with no client response. Follow up.`,
         overdueDays: days - sla.proposalFollowupDays,

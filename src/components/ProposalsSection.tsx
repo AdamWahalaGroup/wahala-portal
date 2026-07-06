@@ -45,7 +45,7 @@ export function ProposalsSection({
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string; proposalId?: string };
       if (!res.ok) setError(data.message ?? `Failed (${res.status}).`);
-      else if (data.proposalId) router.push(`/dashboard/sales/proposals/${data.proposalId}`);
+      else if (data.proposalId) router.push(`/dashboard/proposals/${data.proposalId}`);
     } catch {
       setError("Network error — please try again.");
     } finally {
@@ -89,7 +89,7 @@ export function ProposalsSection({
             return (
               <Link
                 key={p.id}
-                href={`/dashboard/sales/proposals/${p.id}`}
+                href={`/dashboard/proposals/${p.id}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
