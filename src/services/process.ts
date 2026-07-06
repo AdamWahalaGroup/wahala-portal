@@ -159,25 +159,21 @@ type ExtractionOutput = {
 };
 
 /**
- * Ingest a recorded call: store the transcript, run the package extractor, merge
- * the 10 fields, recompute readiness (snapshot logged). Sales manager (costs money).
+ * The shared ingest core — the authed paste path AND the Zoom webhook (no user
+ * context, actorUserId null) both land here: store the transcript, run the
+ * package extractor, merge the 10 fields, recompute readiness (snapshot logged).
  */
-export async function ingestCall(
-  ctx: AuthContext,
-  dealId: string,
-  input: { title: string; transcriptMd: string; recordedAt?: string; durationMin?: number },
+export async function ingestCallCore(
+  deal: typeof schema.deals.$inferSelect,
+  input: { title: string; transcriptMd: string; recordedAt?: string | Date; durationMin?: number | null },
+  actorUserId: string | null,
 ): Promise<{ callId: string; readiness: number; fieldsExtracted: number; usage: DraftUsage }> {
-  assertSalesManager(ctx, "ingest_call");
   const title = input.title?.trim();
   const transcript = input.transcriptMd?.trim();
   if (!title) throw new StageError("VALIDATION", "Give the call a title.");
   if (!transcript) throw new StageError("VALIDATION", "Paste the transcript.");
-
   const db = getDb();
-  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
-  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  const dealId = deal.id;
 
   const previous = await loadPackage(dealId);
   const provider = await getDraftProvider();
@@ -218,7 +214,7 @@ export async function ingestCall(
       durationMin: input.durationMin ?? null,
       transcriptMd: transcript,
       fieldsExtracted: Math.max(0, Math.min(10, Math.round(output.fieldsImproved))),
-      createdByUserId: ctx.user.id,
+      createdByUserId: actorUserId,
     }),
     existing
       ? db.update(schema.discoveryPackages).set({ fields: merged }).where(eq(schema.discoveryPackages.dealId, dealId))
@@ -229,13 +225,30 @@ export async function ingestCall(
     organizationId: deal.organizationId,
     dealId,
     ownerUserId: deal.ownerUserId,
-    actorUserId: ctx.user.id,
+    actorUserId,
     kind: "call_ingested",
     readinessScore: readiness,
     metadata: { callId, title, fieldsImproved: output.fieldsImproved },
   });
 
   return { callId, readiness, fieldsExtracted: output.fieldsImproved, usage };
+}
+
+/**
+ * Ingest a recorded call from the UI (paste path). Sales manager (costs money).
+ */
+export async function ingestCall(
+  ctx: AuthContext,
+  dealId: string,
+  input: { title: string; transcriptMd: string; recordedAt?: string; durationMin?: number },
+): Promise<{ callId: string; readiness: number; fieldsExtracted: number; usage: DraftUsage }> {
+  assertSalesManager(ctx, "ingest_call");
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  return ingestCallCore(deal, input, ctx.user.id);
 }
 
 export async function getCallTranscript(ctx: AuthContext, dealId: string, callId: string): Promise<{ title: string; recordedAt: Date; transcriptMd: string }> {

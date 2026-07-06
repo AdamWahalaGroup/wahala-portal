@@ -6,8 +6,11 @@ import Link from "next/link";
 import type { AuthContext } from "@/auth/context";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/People";
+import { MeetingsCard } from "@/components/MeetingsCard";
 import { staffRevenueOverview } from "@/services/staff-home";
 import { salesOverview } from "@/services/sales";
+import { calendarConnection, listUpcomingEvents } from "@/services/integrations/google-calendar";
+import { listUnmatchedMeetings } from "@/services/integrations/zoom";
 
 function usd(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -19,7 +22,14 @@ function greeting(hour: number): string {
 }
 
 export async function StaffHome({ ctx }: { ctx: AuthContext }) {
-  const [ov, sales] = await Promise.all([staffRevenueOverview(ctx), salesOverview(ctx)]);
+  const [ov, sales, connection, unmatched] = await Promise.all([
+    staffRevenueOverview(ctx),
+    salesOverview(ctx),
+    calendarConnection(ctx.user.id),
+    listUnmatchedMeetings(ctx),
+  ]);
+  const events = connection.connected ? ((await listUpcomingEvents(ctx, 5)) ?? []) : [];
+  const openDealsForAttach = sales.columns.flatMap((c) => c.deals).map((d) => ({ id: d.id, name: d.name, orgName: d.organizationName }));
   const openDealCount = sales.columns.reduce((n, c) => n + c.deals.length, 0);
   const triageCount = sales.triage.length;
   const now = new Date();
@@ -100,6 +110,16 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         )}
         <span style={{ marginLeft: "auto", color: "var(--muted-line)" }}>›</span>
       </Link>
+
+      {/* Meetings (Google Calendar + unmatched Zoom transcripts) */}
+      <MeetingsCard
+        connected={connection.connected}
+        email={connection.email}
+        events={events.map((e) => ({ id: e.id, title: e.title, start: e.start.toISOString(), joinUrl: e.joinUrl, allDay: e.allDay }))}
+        unmatched={unmatched.map((m) => ({ id: m.id, topic: m.topic, startsAt: m.startsAt?.toISOString() ?? null, durationMin: m.durationMin }))}
+        deals={openDealsForAttach}
+        canManage={ctx.isAdmin || ctx.user.role === "account_owner"}
+      />
 
       {/* Accounts table */}
       <section style={{ marginTop: 30 }}>

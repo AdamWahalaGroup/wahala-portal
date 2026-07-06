@@ -141,6 +141,13 @@
       "when": 1783177607204,
       "tag": "0019_stale_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783351262239,
+      "tag": "0020_volatile_vanisher",
+      "breakpoints": true
     }
   ]
 }

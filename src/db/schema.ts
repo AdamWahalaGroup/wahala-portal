@@ -11,7 +11,7 @@
  *    client (an "on you" action item), and later an AI worker.
  *  - Assets carry a visibility flag; recordings + AI digests are internal-only.
  */
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
 // ---- shared column helpers ----
@@ -396,6 +396,54 @@ export const processEvents = sqliteTable(
     index("process_events_deal_idx").on(t.dealId),
     index("process_events_owner_idx").on(t.ownerUserId, t.kind),
   ],
+);
+
+// ---- Per-user integrations (Zoom+Calendar round) ----
+// One row per (user, provider). Refresh tokens live plaintext in D1 — same trust
+// level as the session KV; revoke via Google account settings + row delete.
+export const INTEGRATION_PROVIDERS = ["google_calendar"] as const;
+export const userIntegrations = sqliteTable(
+  "user_integrations",
+  {
+    id: pk(),
+    userId: text("user_id").notNull().references(() => users.id),
+    provider: text("provider", { enum: INTEGRATION_PROVIDERS }).notNull(),
+    email: text("email"), // the connected Google identity (may differ from login email)
+    refreshToken: text("refresh_token").notNull(),
+    accessToken: text("access_token"),
+    accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("user_integrations_user_provider_idx").on(t.userId, t.provider)],
+);
+
+// ---- Meetings (portal-scheduled Zoom calls + inbound transcripts) ----
+// Portal-scheduled rows attach deterministically (we created them with the deal);
+// transcripts for unknown meetings land here as status 'unmatched' until a human
+// attaches them (one click) — then the transcript graduates into deal_calls.
+export const MEETING_STATUSES = ["scheduled", "ended", "transcribed", "unmatched"] as const;
+export const meetings = sqliteTable(
+  "meetings",
+  {
+    id: pk(),
+    zoomMeetingId: text("zoom_meeting_id").notNull().unique(),
+    organizationId: text("organization_id").references(() => organizations.id),
+    dealId: text("deal_id").references(() => deals.id),
+    topic: text("topic").notNull(),
+    joinUrl: text("join_url"),
+    startUrl: text("start_url"),
+    scheduledByUserId: text("scheduled_by_user_id").references(() => users.id),
+    startsAt: integer("starts_at", { mode: "timestamp" }),
+    durationMin: integer("duration_min"),
+    status: text("status", { enum: MEETING_STATUSES }).notNull().default("scheduled"),
+    // Held here only while unmatched; moves into deal_calls on attach/ingest.
+    transcriptMd: text("transcript_md"),
+    callId: text("call_id"), // deal_calls row once ingested (no FK: defined later)
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("meetings_deal_idx").on(t.dealId), index("meetings_status_idx").on(t.status)],
 );
 
 // ---- Contract items (R4: the commercials checklist — MSA, NDA, insurance…) ----

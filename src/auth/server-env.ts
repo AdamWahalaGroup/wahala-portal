@@ -67,6 +67,28 @@ export function openaiApiKey(): string {
   return vars().OPENAI_API_KEY ?? "";
 }
 
+// ---- Zoom (Server-to-Server OAuth app on the Wahala Zoom account) ----
+// All four set via `wrangler secret put` (+ .dev.vars for preview). Empty string =
+// the integration is unconfigured; callers surface a friendly "not set up" message.
+
+export function zoomAccountId(): string {
+  return vars().ZOOM_ACCOUNT_ID ?? "";
+}
+export function zoomClientId(): string {
+  return vars().ZOOM_CLIENT_ID ?? "";
+}
+export function zoomClientSecret(): string {
+  return vars().ZOOM_CLIENT_SECRET ?? "";
+}
+/** The webhook "Secret Token" from the Zoom app's Event Subscriptions page. */
+export function zoomSecretToken(): string {
+  return vars().ZOOM_SECRET_TOKEN ?? "";
+}
+/** Fallback meeting host when the scheduler's email isn't a Zoom user. */
+export function zoomHostEmail(): string {
+  return vars().ZOOM_HOST_EMAIL ?? "";
+}
+
 /**
  * Email domains whose Google SSO logins are auto-provisioned as Wahala staff
  * admins (the internal team). Everyone else is invite-only. Comma-separated;

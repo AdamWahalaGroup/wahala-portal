@@ -13,6 +13,7 @@ import { EXPLAIN, PACKAGE_FIELD_LABELS, type PackageFields } from "@/domain/proc
 import { PACKAGE_FIELDS } from "@/db/schema";
 
 type Call = { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number };
+type Meeting = { id: string; topic: string; startsAt: string | null; joinUrl: string | null; status: string };
 type NextAction = { n: number; text: string; active: boolean };
 
 const TONE = {
@@ -66,6 +67,10 @@ export function DealProcessPanel({
   fields,
   nextActions,
   calls,
+  meetings,
+  zoomReady,
+  contactName,
+  contactHasEmail,
 }: {
   dealId: string;
   canManage: boolean;
@@ -75,14 +80,49 @@ export function DealProcessPanel({
   fields: PackageFields;
   nextActions: NextAction[];
   calls: Call[];
+  meetings: Meeting[];
+  zoomReady: boolean;
+  contactName: string | null;
+  contactHasEmail: boolean;
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", duration: "", transcript: "" });
+  const [zoomForm, setZoomForm] = useState({ topic: "", when: "", duration: "45", invite: true });
   const [openTranscript, setOpenTranscript] = useState<{ id: string; text: string } | null>(null);
+
+  async function scheduleZoom() {
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/deals/${dealId}/meetings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          topic: zoomForm.topic || undefined,
+          startsAt: new Date(zoomForm.when).toISOString(),
+          durationMin: zoomForm.duration ? Math.round(parseFloat(zoomForm.duration)) : undefined,
+          inviteContact: zoomForm.invite && contactHasEmail,
+        }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { message?: string; joinUrl?: string; calendarAdded?: boolean };
+      if (!res.ok) setError(d.message ?? `Failed (${res.status}).`);
+      else {
+        setStatus(`Zoom scheduled ✓${d.calendarAdded ? " · on your Google Calendar" : ""} — the transcript lands here automatically after the call.`);
+        setScheduling(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function ingest() {
     setBusy(true);
@@ -201,16 +241,100 @@ export function DealProcessPanel({
         </section>
       )}
 
-      {/* Recorded calls */}
+      {/* Recorded calls + scheduled meetings */}
       <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
           <span className="kicker">Recorded calls ({calls.length})</span>
           {canManage && (
-            <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {adding ? "cancel" : "+ add call"}
-            </button>
+            <>
+              {zoomReady && (
+                <button
+                  onClick={() => {
+                    setScheduling((v) => !v);
+                    setAdding(false);
+                  }}
+                  style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  {scheduling ? "cancel" : "Schedule Zoom"}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setAdding((v) => !v);
+                  setScheduling(false);
+                }}
+                style={{ marginLeft: zoomReady ? 0 : "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              >
+                {adding ? "cancel" : "+ add call"}
+              </button>
+            </>
           )}
         </div>
+        {scheduling && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 10, border: "1px solid #DDE1FB", background: "#FAFBFF", borderRadius: 10, padding: 11 }}>
+            <input
+              style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12.5 }}
+              placeholder="Topic (defaults to the deal name)"
+              value={zoomForm.topic}
+              onChange={(e) => setZoomForm((f) => ({ ...f, topic: e.target.value }))}
+            />
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <input
+                type="datetime-local"
+                style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, flex: "2 1 170px" }}
+                value={zoomForm.when}
+                onChange={(e) => setZoomForm((f) => ({ ...f, when: e.target.value }))}
+              />
+              <input
+                className="mono"
+                style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12.5, width: 74 }}
+                placeholder="min"
+                inputMode="numeric"
+                value={zoomForm.duration}
+                onChange={(e) => setZoomForm((f) => ({ ...f, duration: e.target.value.replace(/[^0-9]/g, "") }))}
+              />
+            </div>
+            {contactHasEmail && (
+              <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12 }}>
+                <input type="checkbox" checked={zoomForm.invite} onChange={(e) => setZoomForm((f) => ({ ...f, invite: e.target.checked }))} style={{ accentColor: "#2B3EE6" }} />
+                invite {contactName ?? "the contact"} (calendar invite)
+              </label>
+            )}
+            <button
+              onClick={scheduleZoom}
+              disabled={busy || !zoomForm.when}
+              style={{ alignSelf: "flex-start", background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              {busy ? "Scheduling…" : "Schedule Zoom call →"}
+            </button>
+            <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
+              cloud recording on (announced) · transcript lands on this deal automatically
+            </div>
+          </div>
+        )}
+        {meetings.filter((m) => m.status === "scheduled").length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            {meetings
+              .filter((m) => m.status === "scheduled")
+              .map((m) => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 0", borderBottom: "1px solid var(--border-softer)" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0 }}>{m.topic}</span>
+                  <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", flex: "none" }}>
+                    {m.startsAt ? new Date(m.startsAt).toLocaleString("en-US", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "scheduled"}
+                  </span>
+                  {m.joinUrl && (
+                    <a href={m.joinUrl} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+                      join →
+                    </a>
+                  )}
+                </div>
+              ))}
+            <div className="mono" style={{ fontSize: 9, color: "var(--muted-line)", marginTop: 4 }}>
+              transcript lands here automatically after the call
+            </div>
+          </div>
+        )}
         {adding && (
           <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 10 }}>
             <div style={{ display: "flex", gap: 7 }}>

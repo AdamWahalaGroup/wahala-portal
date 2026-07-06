@@ -41,6 +41,8 @@ export type DrawerProcess = {
   goal: string;
   nextActions: { n: number; text: string; active: boolean }[];
   calls: { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number }[];
+  meetings: { id: string; topic: string; startsAt: string | null; joinUrl: string | null; status: string }[];
+  zoomReady: boolean;
 };
 
 export function DealDrawer({
@@ -227,7 +229,7 @@ export function DealDrawer({
               )
             )}
 
-            {/* Discovery package + next best action + recorded calls (frame 38) */}
+            {/* Discovery package + next best action + calls/meetings (frame 38 + Zoom) */}
             {!terminal && (
               <DealProcessPanel
                 dealId={deal.id}
@@ -238,6 +240,10 @@ export function DealDrawer({
                 fields={process.fields}
                 nextActions={process.nextActions}
                 calls={process.calls}
+                meetings={process.meetings}
+                zoomReady={process.zoomReady}
+                contactName={contact?.name ?? null}
+                contactHasEmail={!!contact?.email}
               />
             )}
 
