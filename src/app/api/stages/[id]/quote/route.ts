@@ -23,7 +23,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       billingMode?: "upfront" | "on_delivery";
       lineItems?: { description?: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
     }>(req);
-    if (!body.name?.trim()) throw new ApiError(400, "validation", "A phase name is required.");
+    if (!body.name?.trim()) throw new ApiError(400, "validation", "A stage name is required.");
 
     const stage = await saveQuoteDraft(ctx, id, {
       name: body.name,

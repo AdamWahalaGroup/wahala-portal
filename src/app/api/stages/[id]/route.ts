@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const sdb = scopedDb(ctx);
     const stage = await sdb.getStage(id);
-    if (!stage) throw new ApiError(404, "not_found", "Phase not found.");
+    if (!stage) throw new ApiError(404, "not_found", "Stage not found.");
     const lineItems = await sdb.listStageLineItems(id);
     return NextResponse.json({ stage, lineItems });
   } catch (e) {

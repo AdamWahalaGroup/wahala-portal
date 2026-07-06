@@ -163,7 +163,7 @@ export default async function Dashboard() {
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
                       <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>
                         {p.workType ?? "Project"}
-                        {total > 0 ? ` · Phase ${num} of ${total}` : ""}
+                        {total > 0 ? ` · Stage ${num} of ${total}` : ""}
                       </div>
                     </div>
                     {s ? <StatusBadge status={s.status} /> : null}

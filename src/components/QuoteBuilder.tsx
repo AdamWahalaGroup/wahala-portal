@@ -162,7 +162,7 @@ export function QuoteBuilder({
   }
 
   async function onSend() {
-    if (!name.trim()) return setError("A phase name is required.");
+    if (!name.trim()) return setError("A stage name is required.");
     setBusy("send");
     setError(null);
     try {
@@ -206,10 +206,10 @@ export function QuoteBuilder({
       {/* Editor */}
       <div>
         <label style={{ display: "grid", gap: 6 }}>
-          <span className="kicker">Phase name</span>
+          <span className="kicker">Stage name</span>
           <input
             style={{ ...inputStyle, fontSize: 16, fontWeight: 600 }}
-            placeholder="e.g. Phase 1 — Private Beta Foundation"
+            placeholder="e.g. Stage 1 — Private Beta Foundation"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -222,7 +222,7 @@ export function QuoteBuilder({
           <span className="kicker">Scope description</span>
           <textarea
             style={{ ...inputStyle, minHeight: 70 }}
-            placeholder="What this phase delivers — the client sees this."
+            placeholder="What this stage delivers — the client sees this."
             value={scope}
             onChange={(e) => {
               setScope(e.target.value);
@@ -235,7 +235,7 @@ export function QuoteBuilder({
           Scope by focus area
         </div>
         <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "var(--muted)" }}>
-          Group deliverables under a focus area. The phase is one fixed price (set on the right) — deliverables have no individual prices.
+          Group deliverables under a focus area. The stage is one fixed price (set on the right) — deliverables have no individual prices.
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -325,7 +325,7 @@ export function QuoteBuilder({
       {/* Summary rail */}
       <aside style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 24 }}>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 18, boxShadow: "var(--shadow-card)" }}>
-          <div className="kicker">Phase price · fixed</div>
+          <div className="kicker">Stage price · fixed</div>
           <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 4 }}>
             <span className="tabular" style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)" }}>$</span>
             <input
@@ -390,7 +390,7 @@ export function QuoteBuilder({
             <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "#b45309", lineHeight: 1.5 }}>
               {isAdmin
                 ? "You're a Wahala admin, so you can send this quote."
-                : "Only a Wahala admin can send a quote this size. Request a co-sign — an admin can review and send it from the phase."}
+                : "Only a Wahala admin can send a quote this size. Request a co-sign — an admin can review and send it from the stage."}
             </p>
           </div>
         )}

@@ -157,10 +157,10 @@ export function assertPayGate(
   mode: BillingMode = "upfront",
 ): void {
   if (mode === "upfront" && to === "in_progress" && !paidAt) {
-    throw new StageError("PAY_GATE", "A phase cannot start before its payment is confirmed.");
+    throw new StageError("PAY_GATE", "A stage cannot start before its payment is confirmed.");
   }
   if (mode === "on_delivery" && to === "accepted" && !paidAt) {
-    throw new StageError("PAY_GATE", "This phase can't be accepted until payment is confirmed.");
+    throw new StageError("PAY_GATE", "This stage can't be accepted until payment is confirmed.");
   }
 }
 
@@ -203,12 +203,12 @@ export function assertMarkPaidOnDelivery(
   paidAt: Date | number | null | undefined,
 ): void {
   if (paidAt) {
-    throw new StageError("INVALID_STATE", "This phase is already marked paid.");
+    throw new StageError("INVALID_STATE", "This stage is already marked paid.");
   }
   if (!MARK_PAID_LEGAL_STATUSES.includes(currentStatus)) {
     throw new StageError(
       "INVALID_STATE",
-      `Cannot mark paid — phase is in status "${currentStatus}".`,
+      `Cannot mark paid — stage is in status "${currentStatus}".`,
     );
   }
 }

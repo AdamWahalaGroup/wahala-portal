@@ -51,7 +51,7 @@ export function GenerateTasksButton({ stageId }: { stageId: string }) {
           fontWeight: 600,
           cursor: busy ? "default" : "pointer",
         }}
-        title="AI breaks this phase's deliverables into internal tasks + subtasks for the delivery team"
+        title="AI breaks this stage's deliverables into internal tasks + subtasks for the delivery team"
       >
         {busy ? "Breaking down (~20s)…" : "◆ Generate tasks"}
       </button>

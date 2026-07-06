@@ -30,12 +30,12 @@ export async function POST(req: Request) {
     const name = body.name?.trim();
     if (!organizationId || !name) throw new ApiError(400, "validation", "organizationId and name are required.");
     if (!Array.isArray(body.stages) || body.stages.length === 0) {
-      throw new ApiError(400, "validation", "At least one phase is required.");
+      throw new ApiError(400, "validation", "At least one stage is required.");
     }
 
     const stages = body.stages.map((s, i) => {
       const sn = s.name?.trim();
-      if (!sn) throw new ApiError(400, "validation", `Phase ${i + 1} needs a name.`);
+      if (!sn) throw new ApiError(400, "validation", `Stage ${i + 1} needs a name.`);
       const deliverables = (s.deliverables ?? [])
         .map((d) => ({ epic: (d.epic ?? "").trim(), description: (d.description ?? "").trim() }))
         .filter((d) => d.description.length > 0);

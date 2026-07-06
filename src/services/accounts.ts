@@ -102,14 +102,14 @@ function toTimelineItem(a: typeof schema.auditLog.$inferSelect, dealNames: Map<s
     case a.action === "deal.deposit_paid":
       return { domain: "deal", title: `Deposit cleared — ${dealName}`, detail: "project unlocked", loop: false, at };
     case a.action === "contract.executed":
-      return { domain: "project", title: `${dealName} became a project`, detail: "phases drafted from the proposal", loop: true, at };
+      return { domain: "project", title: `${dealName} became a project`, detail: "stages drafted from the proposal", loop: true, at };
     case a.action.startsWith("agreement."): {
       const kind = String(meta.label ?? meta.kind ?? "Agreement");
       const status = a.action.split("_").pop();
       return status === "signed" ? { domain: "account", title: `${kind} signed`, detail: kind.toLowerCase().includes("master") ? "umbrella terms on file for all future work" : null, loop: false, at } : null;
     }
     case a.action === "stage.accepted" || a.action === "quote.approved" || a.action === "stage.paid":
-      return { domain: "project", title: a.action === "stage.accepted" ? "Phase accepted" : a.action === "stage.paid" ? "Phase paid" : "Quote approved", detail: null, loop: false, at };
+      return { domain: "project", title: a.action === "stage.accepted" ? "Stage accepted" : a.action === "stage.paid" ? "Stage paid" : "Quote approved", detail: null, loop: false, at };
     default:
       return null;
   }

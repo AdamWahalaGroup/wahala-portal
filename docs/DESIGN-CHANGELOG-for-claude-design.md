@@ -114,3 +114,48 @@ Threaded, attributed comms. **Two thread levels:** an **Account** thread per cli
 - **Milestone billing** (deposit at signing + payment on each phase's acceptance) is the
   next phase and **not built** — today a stage is still "pay in full before work" (admin
   "Mark paid"). A future payment-schedule screen will come with it.
+
+---
+
+# Update — 2026-07-06 (demo-review response)
+
+Responses to the three findings from the first demo-URL review
+(https://wahala-portal-demo.jason-milton-43f.workers.dev):
+
+## 1. "Phase" vocabulary — code fixed, "Stage" is canonical
+The docs were right; the code had drifted. Delivery units are **Stages**
+(draft→quoted→approved→paid→in_progress→delivered→accepted); sales deals move
+through **pipeline steps** (never "stages" — that word is reserved for delivery).
+Renamed across every shipped surface: project page ("Stages (N)", "+ New stage —
+scope the next phase" per the original frame copy), stage detail ("Stage total"),
+quote builder ("Stage name", "Stage price · fixed"), AI draft flow, client
+welcome ("delivered stage by stage"), client dashboard cards ("Stage N of M"),
+accept page, confirm dialogs, change orders, and API/domain error messages.
+The word "phase" now appears only as informal prose where it isn't naming the
+object, and in AI extraction prompts that must echo a client SOW's own
+"Phase 1/2/3" naming verbatim (source fidelity, not chrome).
+
+## 2. "AI memory" card on the Account page — intentional, please add to canvas
+Not new drift — it shipped with the frame-33 Account page round as a documented
+addition (previously called the "client memo"). Spec to document:
+- **Object:** one markdown memo per Account (`organizations.ai_context_md`),
+  labeled "AI memory" with caption "client-memory.md" (mono).
+- **Purpose:** the durable account-level context every AI agent reads before
+  drafting (proposals, SOWs, digests). Two write paths: staff edit it directly
+  (collapsed card, edit-in-place, admin or the account owner only), and **winning
+  a deal auto-graduates the deal's Discovery summary into it** — that's the
+  reason it lives on the Account, not the deal.
+- **Placement:** collapsed card on the Account page overview, below the timeline.
+
+## 3. Demo data now covers the Stage-detail screen (frame 05) + quote flow
+The demo Acme project ("Acme Website Revamp") now carries the full pay-as-you-go
+spine: **Stage 1 accepted** (paid + delivered + client-accepted), **Stage 2
+in_progress** (quote approved, paid, acceptance checklist with 2 of 4
+deliverables completed, grouped under "Design system" / "Site build" focus
+areas), **Stage 3 quoted** (awaiting client approval — renders the quote/approval
+surfaces). Fetch `/dashboard/projects/prj_acme_0001` and follow the stage links.
+Also seeded earlier for this loop: a sent A/B proposal at
+`/dashboard/proposals/prop_harbor_0001`.
+
+Standing note: the demo redeploys automatically with every production deploy, so
+"pull latest from GitHub + fetch the demo URL" always compares like against like.

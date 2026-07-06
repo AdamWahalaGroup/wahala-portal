@@ -1065,3 +1065,27 @@ INSERT OR IGNORE INTO process_events (id, organization_id, deal_id, owner_user_i
   ('pe_vega_0008', 'org_vega_0001', 'deal_vega_0001', 'usr_staff_jason_0001', 'usr_staff_jason_0001', 'stage_moved', 'proposal_out', 'lost', 5.8, '{"reason": "went with cheaper vendor"}', 1783004400),
   ('pe_vega_0009', 'org_vega_0001', 'deal_vega_0001', 'usr_staff_jason_0001', 'usr_staff_jason_0001', 'postmortem_created', NULL, NULL, 5.8, '{"findings": 3, "reason": "went with cheaper vendor"}', 1783004400);
 
+-- ======================================================================
+-- Demo-review stages (design frame 05 / quote builder): Acme Website Revamp
+-- gets the full pay-as-you-go spine — Stage 1 accepted, Stage 2 in_progress
+-- (paid, with an acceptance checklist), Stage 3 quoted (awaiting approval).
+-- ======================================================================
+INSERT OR IGNORE INTO stages (id, organization_id, project_id, name, sequence, scope_description, status, total_amount_cents, billing_mode, requires_admin_approval, approved_by_user_id, quote_approved_at, paid_at, delivered_at, accepted_by_user_id, accepted_at, created_at, updated_at) VALUES
+ ('stg_acme_0001', 'org_acme_0001', 'prj_acme_0001', 'Stage 1 — Discovery & information architecture', 1,
+  'Content audit of the current site, stakeholder interviews, and the sitemap + wireframes the rebuild is scoped against.',
+  'accepted', 450000, 'upfront', 0, 'usr_client_admin_0001', 1782000000, 1782086400, 1782432000, 'usr_client_admin_0001', 1782518400, 1781913600, 1782518400),
+ ('stg_acme_0002', 'org_acme_0001', 'prj_acme_0001', 'Stage 2 — Design system & site build', 2,
+  'The visual design system, CMS setup, and the build of every page from the approved wireframes. Ends with a staging walkthrough.',
+  'in_progress', 1200000, 'upfront', 1, 'usr_client_admin_0001', 1782604800, 1782691200, NULL, NULL, NULL, 1782518400, 1782691200),
+ ('stg_acme_0003', 'org_acme_0001', 'prj_acme_0001', 'Stage 3 — Launch & handover', 3,
+  'Content migration, redirects, analytics, launch checklist, and a training session so the Acme team owns the CMS.',
+  'quoted', 680000, 'upfront', 0, NULL, NULL, NULL, NULL, NULL, NULL, 1782691200, 1782691200);
+
+INSERT OR IGNORE INTO stage_line_items (id, stage_id, group_label, description, estimate_note, amount_cents, sort_order, accepted, completed, created_at) VALUES
+ ('sli_acme_0201', 'stg_acme_0002', 'Design system', 'Color, type, and component library in Figma + code', 'tokens shared with the app team', 0, 0, 0, 1, 1782604800),
+ ('sli_acme_0202', 'stg_acme_0002', 'Design system', 'Responsive page templates (home, product, article, contact)', NULL, 0, 1, 0, 1, 1782604800),
+ ('sli_acme_0203', 'stg_acme_0002', 'Site build', 'CMS collections + editor roles configured', NULL, 0, 2, 0, 0, 1782604800),
+ ('sli_acme_0204', 'stg_acme_0002', 'Site build', 'All 14 pages built from approved wireframes', 'staging walkthrough at the end', 0, 3, 0, 0, 1782604800),
+ ('sli_acme_0301', 'stg_acme_0003', 'Launch', 'Content migration + 301 redirect map', NULL, 0, 0, 0, 0, 1782691200),
+ ('sli_acme_0302', 'stg_acme_0003', 'Launch', 'Analytics, search console, and launch checklist', NULL, 0, 1, 0, 0, 1782691200),
+ ('sli_acme_0303', 'stg_acme_0003', 'Handover', 'CMS training session + editor guide', NULL, 0, 2, 0, 0, 1782691200);
