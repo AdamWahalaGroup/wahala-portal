@@ -1,0 +1,1 @@
+ALTER TABLE `deals` ADD `discovery_note` text;

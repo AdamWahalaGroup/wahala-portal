@@ -59,7 +59,8 @@ relevant `.md` to see exactly what moved.
 - [`patterns.md`](patterns.md) — Server/Island split, phase state machine, state management, vocabulary, non-negotiable constraints, a11y, assets.
 - [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **(read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
 - [`TRAINING-AND-SCORECARD.md`](TRAINING-AND-SCORECARD.md) — training mode, readiness scoring, nudge-on-advance, deal post-mortem, admin scorecard (frames 38–41). One process model → guide / nudge / score.
-- [`CALENDAR-AND-MEETINGS.md`](CALENDAR-AND-MEETINGS.md) — **NEWEST:** Google Calendar / Zoom integration UI (frames 42–48). MeetingCard states, schedule modal, today strip + meeting inbox, client call card, integrations settings, guarded disconnect. Zoom is not connected yet — the degraded states are the launch reality.
+- [`CALENDAR-AND-MEETINGS.md`](CALENDAR-AND-MEETINGS.md) — Google Calendar / Zoom integration UI (frames 42–48). MeetingCard states, schedule modal, today strip + meeting inbox, client call card, integrations settings, guarded disconnect. Zoom is not connected yet — the degraded states are the launch reality.
+- [`HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md`](HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md) — **NEWEST, read before any Proposals work:** full phased-sign-off proposal rebuild + the new linked Contract/SOW document (Draft→Sent→Executed lock, amendment log, staleness/resync). **Supersedes `sales/proposals.md` entirely.** Reference is a real interactive prototype (`Wahala Portal - Interactive.dc.html` in this folder), not the static canvas — open it in a browser and click through it.
 
 **Screens**
 - [`design-system.md`](design-system.md) — Design system — tokens & core components
@@ -72,7 +73,7 @@ relevant `.md` to see exactly what moved.
 - [`sales/sales-home.md`](sales/sales-home.md) — Sales home / pipeline (frame 21)
 - [`sales/leads.md`](sales/leads.md) — Leads — list & workspace (frames 22–23)
 - [`sales/deal-room.md`](sales/deal-room.md) — Deal room (frame 24) — most important
-- [`sales/proposals.md`](sales/proposals.md) — Proposals — editor & public page (frames 25–26)
+- [`sales/proposals.md`](sales/proposals.md) — ~~Proposals — editor & public page (frames 25–26)~~ **STALE — superseded by [`HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md`](HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md).** Kept only for historical reference.
 - [`sales/settings.md`](sales/settings.md) — Admin settings · AI agents (frame 27)
 - [`patterns.md`](patterns.md) — Cross-cutting — architecture, behavior, constraints
 
@@ -89,7 +90,7 @@ relevant `.md` to see exactly what moved.
 | 21 Sales home | `sales/sales-home.md` |
 | 22 Leads · 23 Lead workspace | `sales/leads.md` |
 | 24 Deal room | `sales/deal-room.md` |
-| 25 Proposal editor · 26 Public proposal | `sales/proposals.md` |
+| 25 Proposal editor · 26 Public proposal | ~~`sales/proposals.md`~~ → `HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md` (supersedes) |
 | 27 Settings (AI agents) | `sales/settings.md` |
 | Sales cross-cutting (IA, chips, markdown pattern) | `sales/00-overview.md` |
 | **30–34 CRM restructure (canonical)** | `CRM-RESTRUCTURE.md` |
@@ -99,5 +100,6 @@ relevant `.md` to see exactly what moved.
 
 ## Files in this folder
 - `Wahala Portal.dc.html` — the full design canvas (all frames). Open in a browser.
-- `support.js` — runtime the canvas needs to render.
+- `Wahala Portal - Interactive.dc.html` — **real interactive prototype** for the Proposals + Contract/SOW feature (see the 07 Jul delta above). Click through it, don't just read about it.
+- `support.js` — runtime both canvases need to render.
 - `*.md` — the written spec, split as mapped above.

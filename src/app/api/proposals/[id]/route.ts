@@ -1,12 +1,12 @@
 /**
- * GET   /api/proposals/[id] — full proposal detail (staff)
- * PATCH /api/proposals/[id] — edit a DRAFT proposal (admin / account owner):
- *   { title?, executiveSummaryMd?, assumptionsMd?,
- *     option?: { id, name?, summaryMd?, timelineNote?, priceCents?, priceNote? } }
+ * GET    /api/proposals/[id] — full proposal detail (staff)
+ * PATCH  /api/proposals/[id] — edit a DRAFT proposal (admin / account owner):
+ *   { title?, executiveSummaryMd?, assumptionsMd?, complexityScore? }
+ * DELETE /api/proposals/[id] — draft/sent only (admin / account owner)
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson } from "@/lib/api";
-import { getProposal, updateProposal, updateProposalOption } from "@/services/proposals";
+import { getProposal, updateProposal, deleteProposal } from "@/services/proposals";
 
 export const dynamic = "force-dynamic";
 
@@ -25,29 +25,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const ctx = await requireAuth();
     const { id } = await params;
-    const body = await readJson<{
-      title?: string;
-      executiveSummaryMd?: string;
-      assumptionsMd?: string;
-      option?: { id: string; name?: string; summaryMd?: string; timelineNote?: string; priceCents?: number; priceNote?: string };
-    }>(req);
+    const body = await readJson<{ title?: string; executiveSummaryMd?: string; assumptionsMd?: string; complexityScore?: number }>(req);
+    await updateProposal(ctx, id, {
+      title: body.title,
+      executiveSummaryMd: body.executiveSummaryMd,
+      assumptionsMd: body.assumptionsMd,
+      complexityScore: body.complexityScore,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return handleApiError(e);
+  }
+}
 
-    if (body.title !== undefined || body.executiveSummaryMd !== undefined || body.assumptionsMd !== undefined) {
-      await updateProposal(ctx, id, {
-        title: body.title,
-        executiveSummaryMd: body.executiveSummaryMd,
-        assumptionsMd: body.assumptionsMd,
-      });
-    }
-    if (body.option?.id) {
-      await updateProposalOption(ctx, id, body.option.id, {
-        name: body.option.name,
-        summaryMd: body.option.summaryMd,
-        timelineNote: body.option.timelineNote,
-        priceCents: body.option.priceCents,
-        priceNote: body.option.priceNote,
-      });
-    }
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await requireAuth();
+    const { id } = await params;
+    await deleteProposal(ctx, id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleApiError(e);

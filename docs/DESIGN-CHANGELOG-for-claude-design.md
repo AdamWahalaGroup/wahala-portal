@@ -193,3 +193,52 @@ briefly standardized delivery on "Stage":
   Agreements; summary label now reads "AI memory (client-memory.md)" to match.
 - **Demo data relabeled:** the Acme fixtures are now "Phase 1/2/3 — …";
   `/dashboard/phases/stg_acme_0002` is the in-progress key screen.
+
+---
+
+# Update — 2026-07-07 (Proposals & Contract/SOW rebuild SHIPPED)
+
+`HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md` + the interactive
+prototype are implemented end-to-end and live (prod + demo).
+
+- **Phased sign-off system:** N options A–H (min 1, "+ Add option" / ✕), each
+  lump-sum or phased (editable name/$/weeks rows); recommended is admin-chosen
+  with toggle-OFF valid, nothing ever auto-recommended; complexity is 5
+  clickable dots while Draft (default from the deal-size formula). Editor is
+  the two-column spine layout: master signature dot (grey/cobalt/green ·
+  "DocuSign · sealed"), per-phase rows with "Activate & amend →" + inline
+  Cancel/Confirm (strict preconditions; every amendment audit-logged as
+  `proposal.phase_amended` — one better than the prototype's toast), approvers
+  at the bottom. Draft inputs vs locked text gated on opposite booleans per §3.
+- **Sign flow:** public page rebuilt mobile-first — ink header, tap-to-select
+  tiles (recommended preselected), type-name → Sign & approve, **Decline (new —
+  the public page previously had no decline path at all)**, and the "Signed &
+  sealed" dark takeover with the what-unlocked list. On sign the deal moves to
+  **Committed** (per the updated §3.3) and Phase 1 flips active.
+- **Contract/SOW:** one-time snapshot per §5 (exact boilerplate, WG-2026-NNN,
+  deposit % dfaults, out-of-scope/change-mgmt track complexity>3), fixed section
+  order, flat one-per-line textareas, Draft→Sent→Executed with the single lock
+  wrapper, staleness banner + name-matched resync (draft only), executed-only
+  amendment log. Payment schedule reproduces the Talden numbers exactly
+  ($22,500 / $42,500 / $95,000 / $65,000 / $225,000) — unit-test pinned.
+- **Hybrid drafting (decision):** the setup modal's math (option shapes, phase
+  splits, prices, complexity) is the prototype's formulas verbatim (in cents);
+  a real AI call writes ONLY the prose (exec summary grounded in
+  `deal.discoveryNote`, option names, concrete phase names) with the
+  deterministic template strings as automatic fallback. AI never prices — the
+  schema has nowhere to put a number.
+- **Nav:** ◆ Proposals sits between Sales and Accounts with the sent-count
+  badge. **Path deviation:** pages live at `/dashboard/proposals[/:id[/contract]]`,
+  not the prototype's `/dashboard/sales/proposals` — that segment renders the
+  board+drawer behind children, contradicting "first-class nav item"; old URLs
+  redirect.
+- **Deal drawer:** Proposal tab = the two creation paths side by side ("◆ Rough
+  out a draft" setup modal / "+ Blank proposal") or the "◆ View full proposal →
+  {status}" shortcut; a declined proposal re-opens the creation paths.
+- **Demo data:** `deal_harbor_0003` carries the approved Talden-shaped proposal
+  (Phase 1 active) + generated contract at
+  `/dashboard/proposals/prop_harbor_1001` (+`/contract`); the marina deal has a
+  sent 2-path proposal (badge shows 1) with a live public page. Old A/B fixture
+  replaced. Versioning/supersede semantics remain in storage; UI is
+  one-live-proposal-per-deal with Delete (draft/sent only) instead of
+  "Draft new version".

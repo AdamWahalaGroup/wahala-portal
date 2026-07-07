@@ -7,6 +7,7 @@ import { TrainingCard } from "@/components/TrainingToggle";
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
+  { key: "proposals", label: "◆ Proposals", href: "/dashboard/proposals" as string | null, staffOnly: true, adminOnly: false },
   { key: "accounts", label: "Accounts", href: "/dashboard/accounts" as string | null, staffOnly: true, adminOnly: false },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "files", label: "Files", href: null, staffOnly: false, adminOnly: false },
@@ -31,6 +32,7 @@ export function AppShell({
   orgName,
   accountOwner,
   leadCount,
+  proposalCount,
   wide,
   trainingMode,
   children,
@@ -41,6 +43,8 @@ export function AppShell({
   accountOwner?: { name: string } | null;
   /** "To qualify" triage-contact count for the Sales badge (pass from pages that know it). */
   leadCount?: number | null;
+  /** Sent-awaiting-response count for the Proposals badge (same pattern as leadCount). */
+  proposalCount?: number | null;
   /** Wider main column for deep detail pages (contact workspace, proposal editor). */
   wide?: boolean;
   /** Training mode state (frame 38) — renders the cobalt-dashed sidebar card when set. */
@@ -98,6 +102,11 @@ export function AppShell({
                 {item.key === "sales" && user.isStaff && typeof leadCount === "number" && leadCount > 0 && (
                   <span className="tabular" style={{ fontSize: 10, fontWeight: 800, background: isActive ? "rgba(255,255,255,.25)" : "#2c2f36", color: "var(--white)", borderRadius: 999, padding: "1px 7px" }}>
                     {leadCount}
+                  </span>
+                )}
+                {item.key === "proposals" && user.isStaff && typeof proposalCount === "number" && proposalCount > 0 && (
+                  <span className="tabular" style={{ fontSize: 10, fontWeight: 800, background: isActive ? "rgba(255,255,255,.25)" : "var(--cobalt)", color: "var(--white)", borderRadius: 999, padding: "1px 7px" }}>
+                    {proposalCount}
                   </span>
                 )}
                 {!href && (

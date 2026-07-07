@@ -162,6 +162,20 @@
       "when": 1783359802284,
       "tag": "0022_fantastic_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1783446740874,
+      "tag": "0023_condemned_switch",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1783446797770,
+      "tag": "0024_eminent_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

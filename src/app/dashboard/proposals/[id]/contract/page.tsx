@@ -1,6 +1,7 @@
 /**
- * Proposal — dedicated full page (HANDOFF-DELTA-2026-07-07): the phased
- * sign-off editor with the dark phase spine. Staff only. First-class nav item.
+ * Contract / SOW page (HANDOFF-DELTA-2026-07-07 §5) — the separate, linked
+ * legal document generated from the proposal. Staff only; no contract yet →
+ * back to the editor (the generate button lives there).
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -9,11 +10,11 @@ import { getProposal, countSentProposals } from "@/services/proposals";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
-import { ProposalEditor } from "@/components/ProposalEditor";
+import { ContractDoc } from "@/components/ContractDoc";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ContractPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isStaff) redirect("/dashboard");
@@ -26,6 +27,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
     }),
     countSentProposals(ctx),
   ]);
+  if (!p.contract) redirect(`/dashboard/proposals/${id}`);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   return (
@@ -39,10 +41,15 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
     >
       <div className="mono" style={{ fontSize: 11, color: "var(--muted-line)" }}>
         <Link href="/dashboard/proposals" style={{ color: "inherit" }}>Proposals</Link> /{" "}
-        <Link href={`/dashboard/sales/deals/${p.dealId}`} style={{ color: "inherit" }}>{p.dealName}</Link> / v{p.version}
+        <Link href={`/dashboard/proposals/${p.id}`} style={{ color: "inherit" }}>{p.dealName}</Link> / contract
       </div>
-      <h1 style={{ margin: "12px 0 16px", fontSize: 23, fontWeight: 800, letterSpacing: "-.025em" }}>{p.dealName}</h1>
-      <ProposalEditor proposal={p} canManage={canManage} />
+      <ContractDoc
+        proposalId={p.id}
+        organizationName={p.organizationName}
+        contract={p.contract}
+        contractStale={p.contractStale}
+        canManage={canManage}
+      />
     </AppShell>
   );
 }

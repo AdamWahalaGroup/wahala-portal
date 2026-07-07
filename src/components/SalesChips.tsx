@@ -51,17 +51,17 @@ export function ScoreChip({
   );
 }
 
-/** Proposal complexity chip: C{n}; ≤3 neutral cobalt, >3 amber with ⚠ (soft flag). */
+/** Proposal complexity chip: ◆ C{n}/5; ≤3 cobalt-wash fast-track, >3 amber (soft flag). */
 export function ComplexityChip({ score }: { score: number | null }) {
   if (score === null) return null;
   const hot = score > 3;
   return (
     <span
       className="kicker"
-      style={{ fontSize: 9.5, padding: "3px 8px", borderRadius: 6, background: hot ? "#FCEFDC" : "#EEF0FE", color: hot ? "#B45309" : "#2536C4", flex: "none" }}
+      style={{ fontSize: 9.5, padding: "3px 8px", borderRadius: 6, background: hot ? "#FFF7ED" : "#EEF0FE", color: hot ? "#B45309" : "#2536C4", flex: "none" }}
       title={hot ? "Above the fast-track line — needs engineering review (soft flag)" : "Fast-track territory"}
     >
-      {hot ? "⚠ " : ""}C{score}
+      ◆ C{score}/5
     </span>
   );
 }

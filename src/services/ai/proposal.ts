@@ -1,105 +1,101 @@
 /**
- * Proposal generator (R3 — docs/brain_storming/synthesis.md).
+ * Proposal prose writer (HANDOFF-DELTA-2026-07-07) — the AI half of the hybrid
+ * "Rough out a draft": deterministic math (src/domain/proposal-math.ts) owns the
+ * option shapes, prices, phase splits, and complexity; this call writes ONLY the
+ * client-facing prose — exec summary, option names, phase names.
  *
- * Drafts the commercial offering from the Discovery Package: an executive summary in
- * the customer's own language, ALWAYS two genuinely different options (A: customer-
- * owned custom build; B: leaner phased/platform path), a complexity read (1–5) with
- * rationale, and the assumptions the offer rests on.
- *
- * HARD RULE carried over from the AI draft feature: the model NEVER prices anything.
- * No dollar figures, no person-weeks. Prices are typed in by an admin afterwards.
+ * HARD RULE: the model NEVER prices anything. Shapes are passed as structural
+ * context (no amounts) and the schema has nowhere to put a number.
  */
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { COMPLEXITY_MAX, COMPLEXITY_MIN } from "@/domain/sales";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
 import { resolveAgentConfig } from "./agent-config";
 
-export type ProposalDraftOutput = {
-  title: string;
-  executiveSummaryMd: string;
-  options: { label: string; name: string; summaryMd: string; timelineNote: string }[];
-  complexityScore: number;
-  complexityRationale: string;
-  assumptionsMd: string;
+export type ProposalProseOutput = {
+  execSummary: string;
+  options: { label: string; name: string; phaseNames: string[] }[];
 };
 
-const proposalJsonSchema = {
+const proseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["title", "executiveSummaryMd", "options", "complexityScore", "complexityRationale", "assumptionsMd"],
+  required: ["execSummary", "options"],
   properties: {
-    title: { type: "string" },
-    executiveSummaryMd: { type: "string" },
+    execSummary: { type: "string" },
     options: {
       type: "array",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["label", "name", "summaryMd", "timelineNote"],
+        required: ["label", "name", "phaseNames"],
         properties: {
-          label: { type: "string", enum: ["A", "B"] },
+          label: { type: "string" },
           name: { type: "string" },
-          summaryMd: { type: "string" },
-          timelineNote: { type: "string" },
+          phaseNames: { type: "array", items: { type: "string" } },
         },
       },
     },
-    complexityScore: { type: "integer", enum: [1, 2, 3, 4, 5] },
-    complexityRationale: { type: "string" },
-    assumptionsMd: { type: "string" },
   },
 } as const;
 
+export type ProposalShape = {
+  label: string;
+  name: string; // the deterministic default name — the model may improve it
+  phased: boolean;
+  phaseCount: number;
+  timelineNote: string;
+};
 
-/** Compose grounded parts + call the provider. Pure AI step — persistence lives in services/proposals.ts. */
-export async function draftProposal(
+/** One structured call; throws on out-of-shape output (caller falls back wholesale). */
+export async function draftProposalProse(
   _ctx: AuthContext,
   input: {
     orgName: string;
     dealName: string;
-    dealNotes: string | null;
+    discoveryNote: string | null;
     discoveryMd: string | null;
     clientMemoryMd: string | null;
-    previousProposalMd: string | null; // exec summary + options of the version being replaced
+    weightingNote: string | null;
+    shapes: ProposalShape[];
   },
-): Promise<{ draft: ProposalDraftOutput; usage: DraftUsage }> {
+): Promise<{ output: ProposalProseOutput; usage: DraftUsage }> {
   const context: string[] = [`Company: ${input.orgName}`, `Deal: ${input.dealName}`];
-  if (input.dealNotes) context.push(`Deal notes:\n${input.dealNotes}`);
-  if (input.clientMemoryMd) context.push(`Client memory (client-memory.md):\n${input.clientMemoryMd}`);
+  if (input.discoveryNote?.trim()) context.push(`Discovery note (what we actually learned about their need):\n${input.discoveryNote}`);
+  if (input.clientMemoryMd?.trim()) context.push(`Client memory (client-memory.md):\n${input.clientMemoryMd}`);
+  if (input.weightingNote?.trim()) context.push(`The salesperson asked to weight this in the framing:\n${input.weightingNote}`);
 
-  const parts: DraftPart[] = [{ kind: "text", text: `PLATFORM CONTEXT\n\n${context.join("\n\n")}` }];
-  if (input.discoveryMd?.trim()) {
-    parts.push({ kind: "text", text: `DISCOVERY PACKAGE\n\n${input.discoveryMd}` });
-  } else {
-    parts.push({
+  const shapeLines = input.shapes
+    .map((s) => `- Option ${s.label}: "${s.name}" — ${s.phased ? `phased (${s.phaseCount} phases)` : "single delivery"} · ${s.timelineNote}`)
+    .join("\n");
+
+  const parts: DraftPart[] = [
+    { kind: "text", text: `CONTEXT\n\n${context.join("\n\n")}` },
+    input.discoveryMd?.trim()
+      ? { kind: "text", text: `DISCOVERY PACKAGE (long form)\n\n${input.discoveryMd}` }
+      : { kind: "text", text: "DISCOVERY PACKAGE\n\n(None captured yet — ground the summary in the discovery note and client memory only.)" },
+    {
       kind: "text",
-      text: "DISCOVERY PACKAGE\n\n(None captured yet — ground the proposal in the deal notes and client memory only, and say so in assumptionsMd.)",
-    });
-  }
-  if (input.previousProposalMd?.trim()) {
-    parts.push({
-      kind: "text",
-      text: `PREVIOUS PROPOSAL VERSION (being rewritten — improve on it, keep what the client already reacted well to)\n\n${input.previousProposalMd}`,
-    });
-  }
+      text: `OPTION SHAPES (fixed by the salesperson + pricing math — do NOT change the structure, only write names)\n\n${shapeLines}\n\nReturn one options entry per shape, same labels, in order. phaseNames must have exactly the phase count for phased options and be [] for single-delivery options.`,
+    },
+  ];
 
   const provider = await getDraftProvider();
   const cfg = await resolveAgentConfig("proposal");
-  const { output, usage } = await provider.completeStructured<ProposalDraftOutput>({
+  const { output, usage } = await provider.completeStructured<ProposalProseOutput>({
     system: cfg.systemPrompt,
     parts,
-    schemaName: "ProposalDraft",
-    schema: proposalJsonSchema,
+    schemaName: "ProposalProse",
+    schema: proseJsonSchema,
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
   });
 
-  if (!Array.isArray(output.options) || output.options.length !== 2) {
-    throw new StageError("VALIDATION", "The model did not return exactly two options — try again.");
+  if (!Array.isArray(output.options) || output.options.length !== input.shapes.length) {
+    throw new StageError("VALIDATION", "The model did not return one entry per option shape.");
   }
-  if (output.complexityScore < COMPLEXITY_MIN || output.complexityScore > COMPLEXITY_MAX) {
-    throw new StageError("VALIDATION", "The model returned an out-of-range complexity score — try again.");
+  if (!output.execSummary?.trim()) {
+    throw new StageError("VALIDATION", "The model returned an empty summary.");
   }
-  return { draft: output, usage };
+  return { output, usage };
 }

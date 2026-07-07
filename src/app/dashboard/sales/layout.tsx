@@ -9,6 +9,7 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { salesOverview } from "@/services/sales";
+import { countSentProposals } from "@/services/proposals";
 import { trainingModeFor } from "@/services/process";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -21,7 +22,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isStaff) redirect("/dashboard");
 
-  const [overview, trainingMode] = await Promise.all([salesOverview(ctx), trainingModeFor(ctx)]);
+  const [overview, trainingMode, proposalCount] = await Promise.all([salesOverview(ctx), trainingModeFor(ctx), countSentProposals(ctx)]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   return (
@@ -31,6 +32,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       orgName="Wahala Group"
       accountOwner={null}
       leadCount={overview.triage.length}
+      proposalCount={proposalCount}
       trainingMode={trainingMode}
     >
       <SalesBoard

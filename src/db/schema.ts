@@ -329,6 +329,9 @@ export const deals = sqliteTable(
     // business profile, workflows, goals, pain points, decision makers, terminology.
     // Editable by staff; seeds the org's AI memory when the deal is won.
     discoveryMd: text("discovery_md"),
+    // Short paragraph of what discovery actually learned (HANDOFF-DELTA-2026-07-07)
+    // — grounds the proposal exec summary; distinct from the long-form discoveryMd.
+    discoveryNote: text("discovery_note"),
     // R4 seam: set when the contract executes and the SOW becomes a real project
     // ("signed contract automatically creates a project"). Plain text — projects is
     // declared later in this file, and the link is one-way from the sales side.
@@ -558,6 +561,11 @@ export const proposals = sqliteTable(
     respondedByName: text("responded_by_name"), // typed name from the public approve
     responseNote: text("response_note"),
     selectedOptionId: text("selected_option_id"),
+    // Who on the client side can sign / approve amendments (HANDOFF-DELTA-2026-07-07).
+    approvers: text("approvers", { mode: "json" }).$type<import("../domain/proposal-doc").Approver[] | null>(),
+    // The Contract/SOW document — a one-time SNAPSHOT of the chosen option (never a
+    // live binding). Draft→sent→executed lifecycle + amendment log live inside.
+    contract: text("contract", { mode: "json" }).$type<import("../domain/proposal-doc").ProposalContract | null>(),
     createdByUserId: text("created_by_user_id").references(() => users.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -570,14 +578,19 @@ export const proposalOptions = sqliteTable(
   {
     id: pk(),
     proposalId: text("proposal_id").notNull().references(() => proposals.id),
-    label: text("label").notNull(), // "A" | "B"
-    name: text("name").notNull(), // e.g. "Custom build — you own everything"
+    label: text("label").notNull(), // "A"–"H" (up to 8 options)
+    name: text("name").notNull(), // e.g. "Phased buildout"
     summaryMd: text("summary_md").notNull(),
     timelineNote: text("timeline_note"),
-    // Admin-set. 0 = not priced yet; both options must be priced before send.
+    // Admin-set. 0 = not priced yet; EVERY option must be priced before send.
     priceCents: integer("price_cents").notNull().default(0),
     priceNote: text("price_note"), // e.g. "+ $500/mo platform subscription"
     sortOrder: integer("sort_order").notNull().default(0),
+    // null = lump-sum option; array = the phased sign-off structure (statuses
+    // mutate post-approval via the in-app Activate & amend mechanic).
+    phases: text("phases", { mode: "json" }).$type<import("../domain/proposal-doc").ProposalPhase[] | null>(),
+    // Admin-chosen, never automatic; zero recommended options is valid.
+    recommended: integer("recommended", { mode: "boolean" }).notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [index("proposal_options_proposal_idx").on(t.proposalId)],
