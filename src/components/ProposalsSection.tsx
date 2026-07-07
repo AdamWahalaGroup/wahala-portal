@@ -9,7 +9,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ProposalStatusPill, ComplexityChip } from "@/components/SalesChips";
 import { ProposalSetupModal } from "@/components/ProposalSetupModal";
 
 type Summary = {
@@ -60,10 +59,10 @@ export function ProposalsSection({
     }
   }
 
+  const STATUS_LABEL: Record<string, string> = { draft: "Draft", sent: "Sent", approved: "Approved", declined: "Declined", superseded: "Superseded" };
+
   return (
     <section>
-      <div className="kicker" style={{ marginBottom: 8 }}>Proposal</div>
-
       {live && live.status !== "declined" && (
         <Link
           href={`/dashboard/proposals/${live.id}`}
@@ -79,15 +78,14 @@ export function ProposalsSection({
             color: "inherit",
           }}
         >
-          <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--cobalt-text)", flex: "none" }}>◆ View full proposal →</span>
+          <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--cobalt-text)", flex: "none" }}>◆ View full proposal</span>
           <span style={{ flex: 1 }} />
-          <ComplexityChip score={live.complexityScore} />
           {live.selectedLabel && (
             <span className="kicker" style={{ flex: "none", fontSize: 9.5, padding: "3px 7px", borderRadius: 5, background: "#DCF5E3", color: "#15803D" }}>
               Option {live.selectedLabel}
             </span>
           )}
-          <ProposalStatusPill status={live.status} version={live.version} />
+          <span style={{ fontWeight: 700, fontSize: 13, color: "var(--cobalt-text)", flex: "none" }}>{STATUS_LABEL[live.status] ?? live.status} →</span>
         </Link>
       )}
 

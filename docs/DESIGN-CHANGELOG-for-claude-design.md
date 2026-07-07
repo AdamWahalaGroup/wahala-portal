@@ -242,3 +242,34 @@ prototype are implemented end-to-end and live (prod + demo).
   replaced. Versioning/supersede semantics remain in storage; UI is
   one-live-proposal-per-deal with Delete (draft/sent only) instead of
   "Draft new version".
+
+---
+
+# Update — 2026-07-07 (deal drawer aligned to the prototype card)
+
+Adam flagged that the shipped drawer didn't match the prototype's deal card;
+now aligned:
+
+- **Tabs are gone** (Overview / Proposal / Agreements / History). The proposal
+  CTA sits directly under the value — "◆ Rough out a draft" + "+ Blank
+  proposal" side by side when none exists, "◆ View full proposal … {status} →"
+  when one does (opens the Proposals page). Agreements render inline at
+  Committed as before (deposit → Create project untouched). **History left the
+  drawer; the audit backend + HistoryTimeline component are intact — its new
+  surface is TBD with Adam.**
+- **4-step stepper** (Discovery → Proposal out → Negotiating → Committed) with
+  "stage N of 4 — {label}" caption replaces the 5-segment bar + stage dropdown;
+  **"Move to {next}"** + **"Mark lost"** (reason prompt) replace "Done → next".
+  Move-to carries the same readiness-nudge intercept as board drag (training →
+  modal; off → quiet override log). Backward/skip moves = board drag only
+  (Adam's call). Caption: "stages are never gates — overrides are logged to
+  the deal".
+- **Compact TRAINING/readiness card** under the stepper (goal sentence +
+  DISCOVERY PACKAGE + READY pill + explainer) replaces the goal rail.
+- **Deliberately kept below the designed card** (Adam's call — he'll raise
+  with design): next-call MeetingCard + reschedule, after-the-call card, past
+  meetings, the FULL discovery-package panel (field rows, ask-next-call strip,
+  recorded calls), discovery distill, scout report, contact, deal record;
+  footer is now "Schedule call · Log a call" only.
+- Omitted for now: the meta line's "· N phases · N wks" suffix (drawer doesn't
+  load option phases; cheap to add if wanted).

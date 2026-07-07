@@ -1,9 +1,9 @@
 /**
- * Deal drawer (frames 29 + 34) — the deal room rendered as a drawer over the
- * persistent board layout. The heavy sections (discovery, proposals, agreements,
- * history, fields) are built here as server nodes and handed to the client
- * DealDrawer, which arranges them into Overview · Proposal · Agreements · History.
- * Staff only.
+ * Deal drawer — the deal room rendered as a drawer over the persistent board
+ * (prototype card layout: no tabs; proposal CTA on top, agreements inline at
+ * Committed). The heavy sections are built here as server nodes. Staff only.
+ * History left the drawer (audit backend + HistoryTimeline component intact —
+ * relocation surface TBD).
  */
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
@@ -18,7 +18,6 @@ import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
 import { DealDrawer } from "@/components/DealDrawer";
-import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { DealFieldsForm } from "@/components/DealEditor";
 import { DiscoveryPanel } from "@/components/DiscoveryPanel";
 import { ProposalsSection } from "@/components/ProposalsSection";
@@ -36,7 +35,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     if (e instanceof StageError && e.code === "NOT_FOUND") notFound();
     throw e;
   });
-  const { deal, org, owner, contact, provenance, history } = detail;
+  const { deal, org, owner, contact, provenance } = detail;
   await syncIfStale(ctx); // keep meeting times/attendee responses fresh (Google's truth)
   const [proposals, room, process, meetings, connection, zoomReady] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
@@ -48,25 +47,23 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
-  const proposalNode = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />
-      <ProposalsSection
-        dealId={deal.id}
-        proposals={proposals.map((p) => ({
-          id: p.id,
-          version: p.version,
-          status: p.status,
-          title: p.title,
-          complexityScore: p.complexityScore,
-          needsReview: p.needsReview,
-          selectedLabel: p.selectedLabel,
-        }))}
-        canManage={canManage}
-        hasDiscovery={!!deal.discoveryMd}
-      />
-    </div>
+  const proposalCtaNode = (
+    <ProposalsSection
+      dealId={deal.id}
+      proposals={proposals.map((p) => ({
+        id: p.id,
+        version: p.version,
+        status: p.status,
+        title: p.title,
+        complexityScore: p.complexityScore,
+        needsReview: p.needsReview,
+        selectedLabel: p.selectedLabel,
+      }))}
+      canManage={canManage}
+      hasDiscovery={!!deal.discoveryMd}
+    />
   );
+  const discoveryNode = <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />;
   const agreementsNode = room.available ? (
     <ContractRoom dealId={deal.id} orgId={org.id} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org.name} />
   ) : null;
@@ -112,9 +109,9 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
           memberEmail: connection.email ?? ctx.user.email,
         }}
         postMortemMd={deal.postMortemMd}
-        proposalNode={proposalNode}
+        proposalCtaNode={proposalCtaNode}
+        discoveryNode={discoveryNode}
         agreementsNode={agreementsNode}
-        historyNode={<HistoryTimeline items={history} />}
         fieldsNode={fieldsNode}
         canManage={canManage}
       />
