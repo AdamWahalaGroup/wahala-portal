@@ -1,6 +1,6 @@
 /**
- * GET  /api/stages?projectId=...  — list a project's stages (tenant-scoped)
- * POST /api/stages                — create a draft stage with line items
+ * GET  /api/phases?projectId=...  — list a project's stages (tenant-scoped)
+ * POST /api/phases                — create a draft stage with line items
  */
 import { NextResponse } from "next/server";
 import { ApiError, requireAuth, handleApiError, readJson } from "@/lib/api";

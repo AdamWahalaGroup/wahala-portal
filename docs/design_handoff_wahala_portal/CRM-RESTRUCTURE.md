@@ -216,9 +216,9 @@ Same 520px drawer shell + navigation contract as frame 29 (`← Board`, mono rou
   board unchanged behind".
 
 **Create project action:** creates `projects` row on the same account
-(`spawned_from_deal_id` set), one stage per proposal phase (names, amounts, durations
-from proposal line items), status per the existing stage lifecycle (draft). Deal leaves
-the board (won). Navigate to the new project.
+(`spawned_from_deal_id` set), one **Phase** per proposal line item (names, amounts,
+durations from proposal line items), status per the existing Phase lifecycle (draft).
+Deal leaves the board (won). Navigate to the new project.
 
 ---
 
@@ -256,6 +256,13 @@ badge). Main on `#FBFBFC`, padding `26px 30px 30px`.
        pill.
     4. **Agreements** — account-level list: 16px ✓/– circles, name, mono date or note
        (`needed — PII in scope`). This is the same data the deal drawer's checklist reads.
+    5. **AI memory** (`client-memory.md`) — an editable markdown note, one per account,
+       that grounds every AI agent call made about this account (drafts, discovery
+       package extraction, proposals) — cheap to include, kept on-context. Plain
+       textarea-with-preview (the sales markdown pattern, `sales/00-overview.md`),
+       labeled "Editable", with **Save**. This is account-level context — distinct from
+       the per-deal `discovery_packages` record in `TRAINING-AND-SCORECARD.md`, which
+       is AI-extracted from calls, not hand-written.
 
 ---
 

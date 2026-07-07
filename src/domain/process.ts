@@ -2,13 +2,13 @@
  * Process model (TRAINING-AND-SCORECARD.md) — pure logic, no DB.
  *
  * The ONE idea: guidance and measurement are the same feature. This module knows,
- * for any deal, what should happen next (given its pipeline step, gates passed,
+ * for any deal, what should happen next (given its stage, gates passed,
  * time elapsed, and Discovery Package completeness). Pointed forward it GUIDES
  * (training mode, frame 38); pointed at elapsed history it MEASURES (nudges,
  * post-mortems frame 40, scorecard frame 41). Build the model once; render it
  * three ways.
  *
- * Non-negotiable: pipeline steps are dispositions — the portal NEVER blocks a
+ * Non-negotiable: stages are dispositions — the portal NEVER blocks a
  * move. Only gates block. Every guidance surface can be overridden; overrides
  * are logged, never prevented.
  */
@@ -106,7 +106,7 @@ export function nextCallPrompts(fields: PackageFields): { field: PackageFieldKey
 
 export const EXPLAIN = {
   stagesVsGates:
-    "Pipeline steps are dispositions — move a deal wherever it actually is, the portal never blocks a step. Gates are different: hard invariants like no payment before contract and no engineering before contract. Steps report; gates enforce.",
+    "Stages are dispositions — move a deal wherever it actually is, the portal never blocks a stage move. Gates are different: hard invariants like no payment before contract and no engineering before contract. Stages report; gates enforce.",
   whyCompleteness:
     "A proposal written on a thin Discovery Package is a guess — that's how “we said it would take two days” happens. Completeness isn't paperwork; it's what makes the fixed price and the timeline survivable.",
 } as const;

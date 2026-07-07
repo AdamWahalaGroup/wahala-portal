@@ -260,7 +260,7 @@ export function ContractRoom({
             <Link href={`/dashboard/projects/${room.project.id}`} style={{ fontWeight: 700 }}>
               {room.project.name} →
             </Link>
-            <span style={{ color: "var(--muted)", fontSize: 12.5 }}> Quote Stage 1 there; the pay-gates take it from here.</span>
+            <span style={{ color: "var(--muted)", fontSize: 12.5 }}> Quote Phase 1 there; the pay-gates take it from here.</span>
           </div>
         ) : (
           <>
@@ -278,7 +278,7 @@ export function ContractRoom({
             <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 6 }}>
               SOW drafts after signature — the proposal scope carries over, nothing re-typed.
               <br />
-              Stage 1 opens <b>paid</b> (the deposit invoice is its payment record); later stages follow the normal pay-gate.
+              Phase 1 opens <b>paid</b> (the deposit invoice is its payment record); later phases follow the normal pay-gate.
             </div>
             {canManage && (
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
@@ -340,8 +340,8 @@ export function ContractRoom({
             <h3 style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800 }}>Create the project?</h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14 }}>
               The AI writes the statement of work from the approved option + discovery as a real project on the {orgName} account —
-              stages, focus areas, deliverables, no prices — and the deal is marked won. You&apos;ll land on the new project to review
-              and quote Stage 1.
+              phases, focus areas, deliverables, no prices — and the deal is marked won. You&apos;ll land on the new project to review
+              and quote Phase 1.
               {confirm === "force" && <strong> The deposit hasn&apos;t cleared — this is an admin override.</strong>}
               {!complete && confirm === "execute" && " Some agreements are still open — that's on you to chase."}
             </p>

@@ -10,11 +10,15 @@
   interactive pieces are **client islands** (see Build Note frame 13 + the
   Server/Island table below).
 - **Routes today:** `/login`, `/dashboard`, `/dashboard/projects/:id`,
-  `/dashboard/stages/:id`.
-- **JSON API:** `GET/POST /api/projects`, `GET/POST /api/stages`,
-  `GET /api/stages/:id`, `POST /api/stages/:id/:action` where `:action` ∈
+  `/dashboard/phases/:id`.
+- **JSON API:** `GET/POST /api/projects`, `GET/POST /api/phases`,
+  `GET /api/phases/:id`, `POST /api/phases/:id/:action` where `:action` ∈
   `send_quote | approve_quote | reject_quote | mark_paid | start_work | deliver |
   accept | request_revision`.
+- **Naming note:** this lifecycle object is called **Phase** everywhere in the
+  product now — **Stage** is reserved for the deal pipeline
+  (`CRM-RESTRUCTURE.md`). The table below (still labeled by its old name in a
+  few places) describes Phase status.
 
 ---
 
@@ -38,7 +42,7 @@
 > Primary action buttons are **Ink**, not cobalt — cobalt is reserved for brand
 > moments, focus, and links (Stripe-style restraint).
 
-### Color — semantic stage status (badge = soft tint bg + dark text + solid dot)
+### Color — semantic phase status (badge = soft tint bg + dark text + solid dot)
 | Status | Dot / solid | Badge bg | Badge text |
 |---|---|---|---|
 | draft | `#6B7280` | `#F1F2F4` | `#4B5159` |

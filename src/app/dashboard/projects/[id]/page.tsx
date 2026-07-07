@@ -138,9 +138,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {/* Stages */}
       <section style={{ marginTop: 30 }}>
-        <div className="kicker" style={{ marginBottom: 12 }}>Stages ({stages.length})</div>
+        <div className="kicker" style={{ marginBottom: 12 }}>Phases ({stages.length})</div>
         {stages.length === 0 ? (
-          <p style={{ color: "var(--muted)" }}>No stages yet. Add one to build its quote.</p>
+          <p style={{ color: "var(--muted)" }}>No phases yet. Add one to build its quote.</p>
         ) : (
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             {stages.map((s, i) => {
@@ -148,7 +148,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               return (
                 <Link
                   key={s.id}
-                  href={`/dashboard/stages/${s.id}`}
+                  href={`/dashboard/phases/${s.id}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "28px 1fr auto auto 16px",

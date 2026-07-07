@@ -130,7 +130,7 @@ export function ReadinessNudgeModal({
             </button>
           </div>
           <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", textAlign: "center", marginTop: 9 }}>
-            pipeline steps are never gates — overrides are logged to the deal
+            stages are never gates — overrides are logged to the deal
           </div>
         </div>
       </div>

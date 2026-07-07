@@ -1,5 +1,5 @@
 /**
- * PATCH /api/deals/[id] — move a deal between pipeline steps (free disposition)
+ * PATCH /api/deals/[id] — move a deal between stages (free disposition)
  * and/or update its fields. `override: true` marks the move as a nudge override
  * (logged to process_events — steps are never gates). Admin / account owner only.
  */

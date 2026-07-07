@@ -1,5 +1,5 @@
 /**
- * POST /api/stages/:id/:action — drive a stage through its lifecycle.
+ * POST /api/phases/:id/:action — drive a stage through its lifecycle.
  *
  * :action is any stage action (hyphens or underscores), e.g. send_quote,
  * approve_quote, mark_paid, start_work, deliver, accept, request_revision.

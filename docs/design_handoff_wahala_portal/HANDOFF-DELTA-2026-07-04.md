@@ -52,8 +52,13 @@ Shown once to staff when a project's **final stage is accepted**; dismissible.
 - **Deposit = Stage 1's payment** (frame 34): when the deposit clears and the project is
   created, **Stage 1 is created in `paid` state** (payment record = the deposit invoice).
   Stages 2–3 follow the normal pay-gate. Copy on the drawer now says this explicitly.
-- **Vocabulary:** deals move through **pipeline steps** ("pipeline step 5 of 5 —
-  Committed"); only projects have **Stages**. Grep drawer/board copy for "stage".
+- **Vocabulary (superseded 06 Jul — see `patterns.md`):** ~~deals move through
+  pipeline steps; only projects have Stages~~ — final call is the **opposite**:
+  deals move through **Stages** ("stage 5 of 5 — Committed"); projects are
+  broken into **Phases** (the lifecycle formerly called "Stage":
+  draft→quoted→approved→paid→in_progress→delivered→accepted). Grep drawer/board
+  copy for "pipeline step" and fix to "stage"; grep project/delivery copy for
+  "stage" and fix to "phase".
 - **Frame 14 (Clients) is superseded** — dimmed on the canvas. Accounts (frame 33) is
   the org destination; invites move to frame 35. Keep `/dashboard/clients` as a redirect.
 - **Account header money** (frame 33): show `won $12k · committed $225k` — never a

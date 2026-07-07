@@ -148,8 +148,8 @@ export function PortalInviteModal({
               {success.projectName}
             </span>
             <span className="mono" style={{ fontSize: 10, color: "#15803D", flex: "none" }}>
-              {success.stagesN} stage{success.stagesN === 1 ? "" : "s"}
-              {success.depositPaid ? " · Stage 1 Paid via deposit" : ""}
+              {success.stagesN} phase{success.stagesN === 1 ? "" : "s"}
+              {success.depositPaid ? " · Phase 1 Paid via deposit" : ""}
             </span>
           </div>
         )}

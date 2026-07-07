@@ -11,16 +11,16 @@
   flow);
   then one **client group** per org — a heading row (org avatar + name + project
   count + the assigned Wahala person on the right) with a 2px ink underline,
-  followed by that client's project rows (name + work-type/stage meta +
+  followed by that client's project rows (name + work-type/phase meta +
   StatusBadge + chevron). Groups are visually distinct (heading divider + spacing)
   so clients never blur together. Respects tenant scoping (only orgs the staffer
   can see). **Note:** "New project" lives **here**, not on the staff home (frame 17).
 
 ### 17 — Staff home / admin landing (`/dashboard`, staff role) — clients & revenue
 - **Purpose:** The **Wahala admin's landing page**. Deliberately **not** a project
-  or stage worklist — it answers "who are my clients and where does the money
-  stand." It does **NOT** show a projects list or active-stage cards (those live on
-  the Projects page / stage screens).
+  or phase worklist — it answers "who are my clients and where does the money
+  stand." It does **NOT** show a projects list or active-phase cards (those live on
+  the Projects page / phase screens).
 - **Layout:** standard staff shell — 228px ink sidebar (wahala logo; **"Wahala
   Group / all clients"** org switcher; nav Home *(active)* / Clients / Projects /
   Files / Messages; **Ada Obi · "Wahala admin"** pinned bottom) + main column.
@@ -30,8 +30,8 @@
     `#F4FBF7`/`#D6EFE4`, green dot) showing total **accepted & paid** (`$27,700`,
     sub "Across N clients · accepted & paid"); and **"Promised on completion"**
     (amber-tinted, `#FFFAF2`/`#FADCB4`, amber dot) showing total **in-flight +
-    approved-quote value invoiced as stages complete** (`$32,100`, sub "In-flight +
-    approved quotes · invoiced as stages complete"). Big numbers are mono/tnum
+    approved-quote value invoiced as phases complete** (`$32,100`, sub "In-flight +
+    approved quotes · invoiced as phases complete"). Big numbers are mono/tnum
     32px 800.
   - **Clients table**: header row ("Clients" + "N active"); a column-label row
     (Client / Paid to date / Promised — last two right-aligned mono uppercase);
@@ -40,10 +40,10 @@
     **Promised** (amber mono/tnum), chevron. Rows clickable → that client's account
     hub (frame 12).
 - **Definitions for the developer:**
-  - **Paid to date** = sum of stages with status **accepted & paid** for that
+  - **Paid to date** = sum of phases with status **accepted & paid** for that
     client (lifetime collected).
-  - **Promised** = sum of **in-progress** stages + **approved/quoted** stages not
-    yet paid — i.e. committed value that will be invoiced as those stages complete.
+  - **Promised** = sum of **in-progress** phases + **approved/quoted** phases not
+    yet paid — i.e. committed value that will be invoiced as those phases complete.
   - Summary-card totals are the column sums across all visible (tenant-scoped)
     clients.
 - **Islands:** none required (static, server-rendered) beyond the org switcher.

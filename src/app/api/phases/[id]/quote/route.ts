@@ -1,9 +1,9 @@
 /**
- * PUT  /api/stages/:id/quote  — save the itemized draft quote (frame-06 builder)
- * POST /api/stages/:id/quote  — request a Wahala admin co-sign (over-threshold)
+ * PUT  /api/phases/:id/quote  — save the itemized draft quote (frame-06 builder)
+ * POST /api/phases/:id/quote  — request a Wahala admin co-sign (over-threshold)
  *
  * Static `quote` segment wins over the dynamic `[action]` route, so this handles
- * the path; sending the quote still goes through POST /api/stages/:id/send_quote.
+ * the path; sending the quote still goes through POST /api/phases/:id/send_quote.
  * All authorization, draft-only, and total/threshold logic live in the service.
  */
 import { NextResponse } from "next/server";
@@ -23,7 +23,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       billingMode?: "upfront" | "on_delivery";
       lineItems?: { description?: string; estimateNote?: string; amountCents?: number; groupLabel?: string }[];
     }>(req);
-    if (!body.name?.trim()) throw new ApiError(400, "validation", "A stage name is required.");
+    if (!body.name?.trim()) throw new ApiError(400, "validation", "A phase name is required.");
 
     const stage = await saveQuoteDraft(ctx, id, {
       name: body.name,

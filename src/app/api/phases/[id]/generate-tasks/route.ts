@@ -1,5 +1,5 @@
 /**
- * POST /api/stages/[id]/generate-tasks — AI-break this phase's SOW deliverables
+ * POST /api/phases/[id]/generate-tasks — AI-break this phase's SOW deliverables
  * into INTERNAL tasks (+subtasks). Admin or the project's lead engineer. Appends.
  * (Static segment — takes precedence over the [action] sibling.)
  */

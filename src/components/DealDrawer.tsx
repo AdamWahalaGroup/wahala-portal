@@ -169,7 +169,7 @@ export function DealDrawer({
         {contact ? ` · ${contact.name}` : ""}
         {owner ? ` · ${owner.name}` : ""}
         {" · "}
-        {deal.daysInStage}d in step
+        {deal.daysInStage}d in stage
         {deal.stuck ? " ⚠ stuck" : ""}
       </div>
       {deal.origin === "spawned_from_project" && (
@@ -184,7 +184,7 @@ export function DealDrawer({
         ))}
       </div>
       <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 5 }}>
-        {terminal ? meta.label.toLowerCase() : `pipeline step ${stageNo} of ${SEGMENTS} — ${meta.label}`}
+        {terminal ? meta.label.toLowerCase() : `stage ${stageNo} of ${SEGMENTS} — ${meta.label}`}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8, flexWrap: "wrap" }}>
         <span

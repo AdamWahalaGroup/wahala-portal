@@ -156,7 +156,7 @@ export function ChangeOrders({ stageId, projectId, items, tasks }: { stageId: st
       )}
 
       {items.length === 0 ? (
-        <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>No change requests on this stage.</p>
+        <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>No change requests on this phase.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {items.map((co) => {

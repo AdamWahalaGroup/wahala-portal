@@ -70,8 +70,8 @@ export function DealStageSelect({ dealId, stage, onMoved }: { dealId: string; st
         ))}
       </select>
       <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--muted)" }}>
-        Pipeline steps are dispositions — move it wherever the deal actually is. Every move is logged.
-        Only projects have Stages.
+        Stages are dispositions — move it wherever the deal actually is. Every move is logged.
+        Phases belong to projects; Stages belong to deals.
       </p>
       {error && <p style={{ color: "#b00020", fontSize: 13, margin: "8px 0 0" }}>{error}</p>}
     </div>

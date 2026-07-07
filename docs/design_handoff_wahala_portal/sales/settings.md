@@ -3,16 +3,24 @@
 > Part of the **Wahala Portal** design handoff — see [handoff index](../README.md). Visual reference: the labeled frames in `../Wahala Portal.dc.html`.
 
 ### 27 — Admin settings · AI agents (`/dashboard/settings`, admin only)
-- Calm admin-tool aesthetic in the AppShell (Settings active). One card per **AI
-  agent** (6, from `agent-config.ts`): **Project draft / SOW writer · Discovery
-  analyst · Proposal writer · Task breakdown · Lead scout · Lead recon**. Each:
-  label + a **`default · gpt-4o-mini`** (grey) or **`custom · gpt-4o`** (cobalt) chip,
-  a description line, a **model input** (datalist suggestions), a **reasoning-effort
-  select** (Off / Minimal / Low / Medium / High) — **hidden for Lead recon** (search
-  model, no reasoning) — and Save. A muted **⚠ warning** notes reasoning effort is
-  ignored on non-reasoning models. A dashed **"Coming to this page"** card reserves
-  room for future knobs (complexity threshold, stuck-days window, probability
-  anchors).
+- Calm admin-tool aesthetic in the AppShell (Settings active). **Settings has its own
+  sub-nav: AI agents · SLAs & nudges · Integrations** (frame 47) — the sub-nav
+  replaces the single-page "Coming to this page" placeholder originally sketched
+  here; the complexity threshold, stuck-days window, and probability anchors live on
+  the **SLAs & nudges** page instead, with an inline pointer from the bottom of this
+  page ("Looking for the thresholds? → SLAs & nudges").
+- One card per **AI agent** (7, from `agent-config.ts`): **Project draft / SOW
+  writer · Discovery analyst · Proposal writer · Task breakdown · Contact scout
+  (analysis) · Lead recon (web search) · Package extractor (readiness)**. ("Contact
+  scout" renamed from "Lead scout" to match the lead→contact rename in
+  `CRM-RESTRUCTURE.md`; "Package extractor" is new — it reads each recorded call and
+  updates the 10 `discovery_packages` fields that drive `deals.readiness_score`, see
+  `TRAINING-AND-SCORECARD.md`.) Each card: label + a **`default · gpt-4o-mini`**
+  (grey) or **`custom · gpt-4o`** (cobalt) chip, a description line, a **model input**
+  (datalist suggestions), a **reasoning-effort select** (Off / Minimal / Low / Medium
+  / High) — **hidden for Lead recon** (search model, no reasoning) — and Save. A
+  muted **⚠ warning** notes reasoning effort is ignored on non-reasoning models. Each
+  card also has a collapsed **▸ System prompt** disclosure.
 
 ### Small updates to existing frames
 - **Frame 17 (staff home):** add a one-line **Sales pipeline strip** under the two

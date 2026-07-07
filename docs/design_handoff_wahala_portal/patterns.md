@@ -13,15 +13,18 @@
 | AcceptanceChecklist, FileUpload, MessageComposer | **island** |
 
 Pages (`/login`, `/dashboard`, `/dashboard/projects/:id`,
-`/dashboard/stages/:id`) are **RSC**: they fetch from D1, compute the action set,
+`/dashboard/phases/:id`) are **RSC**: they fetch from D1, compute the action set,
 and stream HTML. Islands render only what they're handed.
 
 ---
 
 ## Interactions & Behavior
-- **Stage lifecycle (state machine):** `draft → quoted → approved → paid →
+- **Phase lifecycle (state machine):** `draft → quoted → approved → paid →
   in_progress → delivered → accepted`. Branches: `quoted → rejected → (re-draft)
-  draft`; `delivered → needs_revision → in_progress`.
+  draft`; `delivered → needs_revision → in_progress`. (Deals run a separate,
+  unrelated lifecycle — the 5-stage pipeline in `CRM-RESTRUCTURE.md`. Don't
+  confuse the two: **Phase** = project delivery unit, **Stage** = deal pipeline
+  step.)
 - **Action set is server-computed** from role + state (+ threshold). The UI renders
   exactly that set — never invent or client-side-gate actions.
 - **Confirm steps** required for weighty actions: pay, accept, reject, request
@@ -34,7 +37,7 @@ and stream HTML. Islands render only what they're handed.
 ## State Management
 - Auth/session (magic-link, KV) → current user + role.
 - Current org (clients locked to one; staff may switch).
-- Per-stage: status, **deliverables (grouped by epic)**, fixed price, payment state,
+- Per-phase: status, **deliverables (grouped by epic)**, fixed price, payment state,
   **tasks → subtasks + notes worklog**, **change orders** (own status), history,
   allowed-action set.
 - Optimistic UI in islands is fine, but the **server is authoritative** for state
@@ -44,19 +47,23 @@ and stream HTML. Islands render only what they're handed.
   changes appear live — no manual refresh, no dedicated visual.
 
 ## Vocabulary (use consistently across the UI)
-- **Stage** = a fixed-price phase (paid before work). **Deliverable** = a client-
-  facing scope item (renamed from "line item"; amount optional/illustrative).
-  Deliverables group under **Epics**. Internal **Tasks** hang under a deliverable
-  and carry **Subtasks** (checklist) + **Notes** (worklog). A **Change order** is
-  the client's/staff's "request a change" object with its own
-  Requested→Quoted→Approved→Paid→Applied (or Declined) gate.
+- **Phase** = a project's fixed-price unit of delivery (paid before work) — this
+  is the object the old "Stage" name referred to. **Stage** now belongs
+  exclusively to the deal pipeline (`CRM-RESTRUCTURE.md`: Triage → Discovery →
+  Proposal out → Negotiating → Committed). **Phases belong to projects, Stages
+  belong to deals — never mix the two up in code, routes, or copy.**
+- **Deliverable** = a client-facing scope item (renamed from "line item"; amount
+  optional/illustrative). Deliverables group under **Epics**. Internal **Tasks**
+  hang under a deliverable and carry **Subtasks** (checklist) + **Notes**
+  (worklog). A **Change order** is the client's/staff's "request a change"
+  object with its own Requested→Quoted→Approved→Paid→Applied (or Declined) gate.
 - **Not yet built:** milestone billing (deposit + per-phase payment) is a future
   phase — today a stage is still "pay in full before work" (admin "Mark paid").
   Don't design final billing UI around the old per-line model.
 
 ## Non-negotiable functional constraints (§7)
 1. **Role + state gating** — render only allowed actions (server returns the set).
-2. **Pay-gate is a wall** — never show start/deliver on an unpaid stage; make
+2. **Pay-gate is a wall** — never show start/deliver on an unpaid phase; make
    **Paid** a clear, almost-celebrated threshold.
 3. **Threshold co-sign** — quotes over a configurable $ require a **Wahala admin**
    to send; surface "needs admin co-sign".

@@ -106,7 +106,7 @@ export default async function Dashboard() {
                     <StatusBadge status={s.status} />
                     <Money cents={s.totalAmountCents} style={{ fontWeight: 700, fontSize: 15 }} />
                     <Link
-                      href={!ctx.isStaff && s.status === "delivered" ? `/dashboard/stages/${s.id}/accept` : `/dashboard/stages/${s.id}`}
+                      href={!ctx.isStaff && s.status === "delivered" ? `/dashboard/phases/${s.id}/accept` : `/dashboard/phases/${s.id}`}
                       style={{
                         background: "var(--ink)",
                         color: "var(--white)",
@@ -163,7 +163,7 @@ export default async function Dashboard() {
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
                       <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>
                         {p.workType ?? "Project"}
-                        {total > 0 ? ` · Stage ${num} of ${total}` : ""}
+                        {total > 0 ? ` · Phase ${num} of ${total}` : ""}
                       </div>
                     </div>
                     {s ? <StatusBadge status={s.status} /> : null}

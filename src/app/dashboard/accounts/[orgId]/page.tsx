@@ -272,7 +272,7 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
 
           {/* AI memo — existing feature, kept as a collapsed card */}
           <details style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "14px 18px" }}>
-            <summary className="kicker" style={{ cursor: "pointer", listStyle: "none" }}>AI memory (grounds drafts)</summary>
+            <summary className="kicker" style={{ cursor: "pointer", listStyle: "none" }}>AI memory (client-memory.md)</summary>
             <div style={{ marginTop: 10 }}>
               <ClientMemoEditor orgId={orgId} initial={hub.org.aiContextMd ?? ""} canEdit={canEditMemo} />
             </div>

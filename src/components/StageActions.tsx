@@ -8,13 +8,13 @@ import { ACTION_LABELS } from "@/lib/format";
 const CONFIRM: Record<string, { title: string; body: string; confirmLabel: string; tone: "ink" | "green" | "red" }> = {
   accept: {
     title: "Accept this delivery?",
-    body: "This is recorded as accepted by you and unlocks the next stage. It can't be undone.",
+    body: "This is recorded as accepted by you and unlocks the next phase. It can't be undone.",
     confirmLabel: "Yes, accept",
     tone: "green",
   },
   reject_quote: {
     title: "Reject this quote?",
-    body: "The stage returns to draft so it can be re-scoped and re-quoted.",
+    body: "The phase returns to draft so it can be re-scoped and re-quoted.",
     confirmLabel: "Reject quote",
     tone: "red",
   },
@@ -25,8 +25,8 @@ const CONFIRM: Record<string, { title: string; body: string; confirmLabel: strin
     tone: "red",
   },
   mark_paid: {
-    title: "Mark this stage as paid?",
-    body: "Records that payment landed for this stage (normally handled by Stripe). Use this if the money came in outside the system.",
+    title: "Mark this phase as paid?",
+    body: "Records that payment landed for this phase (normally handled by Stripe). Use this if the money came in outside the system.",
     confirmLabel: "Mark paid",
     tone: "ink",
   },
@@ -72,7 +72,7 @@ export function StageActions({ stageId, actions }: { stageId: string; actions: s
     setError(null);
     setConfirm(null);
     try {
-      const res = await fetch(`/api/stages/${stageId}/${action}`, {
+      const res = await fetch(`/api/phases/${stageId}/${action}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{}",

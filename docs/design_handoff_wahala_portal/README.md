@@ -8,8 +8,16 @@ accountability and clear communication — every client has a dedicated account
 owner, every dollar maps to an itemized scope **paid before work begins**, every
 delivery is **formally accepted**, and every action is logged.
 
-The spine of the product is the **pay-as-you-go Stage lifecycle**. This package
+The spine of the product is the **pay-as-you-go Phase lifecycle**. This package
 covers the brand/design-system and the priority screens for the first build pass.
+
+> **Naming (06 Jul 2026):** the project delivery unit is **Phase**
+> (draft→quoted→approved→paid→in_progress→delivered→accepted) — the old "Stage"
+> name. **Stage** is now reserved for the deal pipeline (Triage → Discovery →
+> Proposal out → Negotiating → Committed, see `CRM-RESTRUCTURE.md`). Phases
+> belong to projects, Stages belong to deals. Older docs in this folder may still
+> say "stage" for a project phase — that's the pre-06-Jul name; the canvas
+> (`Wahala Portal.dc.html`) hasn't been relabeled yet either.
 
 ## About the Design Files
 The file in this bundle (`Wahala Portal.dc.html`) is a **design reference created
@@ -48,7 +56,7 @@ relevant `.md` to see exactly what moved.
 ## Map
 **Always-on**
 - [`design-system.md`](design-system.md) — brand tokens, color, type, spacing, and the core components every screen composes.
-- [`patterns.md`](patterns.md) — Server/Island split, stage state machine, state management, vocabulary, non-negotiable constraints, a11y, assets.
+- [`patterns.md`](patterns.md) — Server/Island split, phase state machine, state management, vocabulary, non-negotiable constraints, a11y, assets.
 - [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **(read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
 - [`TRAINING-AND-SCORECARD.md`](TRAINING-AND-SCORECARD.md) — training mode, readiness scoring, nudge-on-advance, deal post-mortem, admin scorecard (frames 38–41). One process model → guide / nudge / score.
 - [`CALENDAR-AND-MEETINGS.md`](CALENDAR-AND-MEETINGS.md) — **NEWEST:** Google Calendar / Zoom integration UI (frames 42–48). MeetingCard states, schedule modal, today strip + meeting inbox, client call card, integrations settings, guarded disconnect. Zoom is not connected yet — the degraded states are the launch reality.
@@ -57,7 +65,7 @@ relevant `.md` to see exactly what moved.
 - [`design-system.md`](design-system.md) — Design system — tokens & core components
 - [`screens/auth-and-onboarding.md`](screens/auth-and-onboarding.md) — Auth & onboarding
 - [`screens/client-portal.md`](screens/client-portal.md) — Client-facing screens
-- [`screens/delivery.md`](screens/delivery.md) — Delivery — stages, quote, tasks
+- [`screens/delivery.md`](screens/delivery.md) — Delivery — phases, quote, tasks
 - [`screens/staff-home-projects.md`](screens/staff-home-projects.md) — Staff home & projects
 - [`screens/ai-project-draft.md`](screens/ai-project-draft.md) — Draft a project with AI (frames 18–20)
 - [`sales/00-overview.md`](sales/00-overview.md) — Sales pipeline — overview & cross-cutting decisions

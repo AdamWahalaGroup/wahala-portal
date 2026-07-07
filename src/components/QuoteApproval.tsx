@@ -55,7 +55,7 @@ export function QuoteApproval({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/stages/${stageId}/approve_quote`, {
+      const res = await fetch(`/api/phases/${stageId}/approve_quote`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{}",
@@ -67,7 +67,7 @@ export function QuoteApproval({
         setBusy(false);
         return;
       }
-      router.push(`/dashboard/stages/${stageId}`);
+      router.push(`/dashboard/phases/${stageId}`);
     } catch {
       setError("Network error — please try again.");
       setBusy(false);
@@ -164,7 +164,7 @@ export function QuoteApproval({
           padding: "14px 16px",
         }}
       >
-        <span style={{ fontSize: 13.5, color: "var(--muted)", fontWeight: 600 }}>Stage total · fixed price</span>
+        <span style={{ fontSize: 13.5, color: "var(--muted)", fontWeight: 600 }}>Phase total · fixed price</span>
         <span className="tabular" style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-.02em" }}>
           {formatCents(totalCents)}
         </span>

@@ -18,7 +18,7 @@ export function GenerateTasksButton({ stageId }: { stageId: string }) {
     setError(null);
     setStatus(null);
     try {
-      const res = await fetch(`/api/stages/${stageId}/generate-tasks`, {
+      const res = await fetch(`/api/phases/${stageId}/generate-tasks`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{}",
@@ -51,7 +51,7 @@ export function GenerateTasksButton({ stageId }: { stageId: string }) {
           fontWeight: 600,
           cursor: busy ? "default" : "pointer",
         }}
-        title="AI breaks this stage's deliverables into internal tasks + subtasks for the delivery team"
+        title="AI breaks this phase's deliverables into internal tasks + subtasks for the delivery team"
       >
         {busy ? "Breaking down (~20s)…" : "◆ Generate tasks"}
       </button>

@@ -13,10 +13,10 @@ export function NewStageButton({ projectId }: { projectId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/stages", {
+      const res = await fetch("/api/phases", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId, name: "Untitled stage", totalAmountCents: 0 }),
+        body: JSON.stringify({ projectId, name: "Untitled phase", totalAmountCents: 0 }),
       });
       const data = (await res.json().catch(() => ({}))) as { stage?: { id: string }; message?: string };
       if (!res.ok || !data.stage) {
@@ -24,7 +24,7 @@ export function NewStageButton({ projectId }: { projectId: string }) {
         setBusy(false);
         return;
       }
-      router.push(`/dashboard/stages/${data.stage.id}/quote`);
+      router.push(`/dashboard/phases/${data.stage.id}/quote`);
     } catch {
       setError("Network error — please try again.");
       setBusy(false);
@@ -49,7 +49,7 @@ export function NewStageButton({ projectId }: { projectId: string }) {
           cursor: busy ? "default" : "pointer",
         }}
       >
-        {busy ? "Creating…" : "+ New stage — scope the next phase"}
+        {busy ? "Creating…" : "+ New phase — scope the next one"}
       </button>
       {error && <p style={{ color: "#b00020", fontSize: 12.5, margin: "8px 0 0" }}>{error}</p>}
     </div>

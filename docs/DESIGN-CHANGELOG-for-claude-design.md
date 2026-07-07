@@ -159,3 +159,37 @@ Also seeded earlier for this loop: a sent A/B proposal at
 
 Standing note: the demo redeploys automatically with every production deploy, so
 "pull latest from GitHub + fetch the demo URL" always compares like against like.
+
+---
+
+# Update — 2026-07-07 (vocabulary flip implemented)
+
+The 06-Jul naming call (**Phase** = project delivery unit, **Stage** = deal
+pipeline, exclusively) is now live in the build — this inverts the previous
+"pipeline steps / project Stages" convention AND the 06-Jul-code rename that
+briefly standardized delivery on "Stage":
+
+- **Delivery is Phase everywhere:** project page ("Phases (N)", "+ New phase —
+  scope the next one"), phase detail ("Phase total"), quote builder ("Phase
+  name", "Phase price · fixed"), quote approval ("Phase total · fixed price"),
+  AI draft flow, client welcome + dashboard cards ("Phase N of M"), contract
+  room ("Phase 1 opens paid"), invite modal, confirm dialogs, change orders,
+  and API/domain error messages.
+- **Deal pipeline is Stage:** drawer says "stage 5 of 5 — Committed" and
+  "{N}d in stage"; the disposition caption now reads "Stages are dispositions…
+  Phases belong to projects; Stages belong to deals"; the training-mode
+  stages-vs-gates explainer matches ("Stages report; gates enforce").
+- **Routes renamed** per `design-system.md`: `/dashboard/phases/:id`
+  (+ /accept /approve /quote) and `/api/phases/...`. Old `/dashboard/stages/...`
+  URLs (in previously-sent emails/notifications) 307-redirect to the phase
+  routes. NOT renamed (documented deviation): internal identifiers — the D1
+  table is still `stages`, and code symbols like `StageError`/`stage-machine`
+  keep their names; the design constraint reads on user-visible surfaces, and a
+  live-DB table rename is all risk for no user-facing gain.
+- **Settings · AI agents (frame 27 refresh):** already matched the updated spec
+  (7 cards incl. "Contact scout (analysis)" and "Package extractor (readiness)",
+  sub-nav, thresholds pointer, ▸ System prompt disclosure) — no change needed.
+- **AI memory rail item 5:** already in place on the Account page rail below
+  Agreements; summary label now reads "AI memory (client-memory.md)" to match.
+- **Demo data relabeled:** the Acme fixtures are now "Phase 1/2/3 — …";
+  `/dashboard/phases/stg_acme_0002` is the in-progress key screen.
