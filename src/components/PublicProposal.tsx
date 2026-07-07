@@ -30,6 +30,7 @@ export function PublicProposal({
   respondedAt,
   selectedOptionId,
   options,
+  preview = false,
 }: {
   token: string;
   status: "sent" | "approved" | "declined" | "draft" | "superseded";
@@ -37,6 +38,8 @@ export function PublicProposal({
   respondedAt: string | null;
   selectedOptionId: string | null;
   options: PublicOption[];
+  /** Staff draft preview — everything renders, sign/decline are inert. */
+  preview?: boolean;
 }) {
   const recommended = options.find((o) => o.recommended);
   const [picked, setPicked] = useState<string>(selectedOptionId ?? recommended?.id ?? options[0]?.id ?? "");
@@ -49,7 +52,7 @@ export function PublicProposal({
   const signedOption = options.find((o) => o.id === (status === "approved" ? selectedOptionId : picked));
 
   async function sign() {
-    if (!name.trim()) return;
+    if (preview || !name.trim()) return;
     setBusy("sign");
     setError(null);
     try {
@@ -72,6 +75,7 @@ export function PublicProposal({
   }
 
   async function decline() {
+    if (preview) return;
     setBusy("decline");
     setError(null);
     try {
@@ -230,7 +234,7 @@ export function PublicProposal({
         {error && <p style={{ color: "#b00020", fontSize: 12.5, margin: "8px 0 0" }}>{error}</p>}
         <button
           onClick={sign}
-          disabled={!name.trim() || busy !== null}
+          disabled={preview || !name.trim() || busy !== null}
           style={{
             width: "100%",
             marginTop: 10,
@@ -247,12 +251,12 @@ export function PublicProposal({
           {busy === "sign" ? "Signing…" : `Sign & approve${signedOption ? ` — Option ${signedOption.label}` : ""}`}
         </button>
         <p className="mono" style={{ margin: "8px 0 0", fontSize: 9.5, color: "var(--muted-line)", textAlign: "center" }}>
-          your typed name is recorded as the master signature · no payment due at signing
+          {preview ? "preview — buttons activate on the real link" : "your typed name is recorded as the master signature · no payment due at signing"}
         </p>
         <div style={{ textAlign: "center", marginTop: 10 }}>
           <button
             onClick={decline}
-            disabled={busy !== null}
+            disabled={preview || busy !== null}
             style={{ border: 0, background: "none", color: "#B91C1C", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
           >
             {busy === "decline" ? "…" : "Decline"}

@@ -183,8 +183,8 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
           : { bg: "#3a3f47", icon: "·", note: "Not yet sent" };
 
   const spine = (
-    <aside style={{ background: "var(--ink)", borderRadius: 14, padding: "16px 14px", color: "#cfd2da", alignSelf: "start", position: "sticky", top: 20 }}>
-      <div className="kicker" style={{ color: "#6b7079", marginBottom: 10 }}>Sign-off spine</div>
+    <aside style={{ background: "var(--ink)", borderRadius: 14, padding: "16px 14px", color: "#cfd2da" }}>
+      <div className="kicker" style={{ color: "#6b7079", marginBottom: 10 }}>Phased agreement</div>
       {/* Master signature */}
       <div style={{ display: "flex", gap: 9, alignItems: "flex-start", paddingBottom: 12, borderBottom: "1px solid #2c2f36" }}>
         <span style={{ width: 20, height: 20, borderRadius: 999, background: sigDot.bg, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>
@@ -266,13 +266,13 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
         ) : (
           (proposal.approvers ?? []).map((a, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "3px 0" }}>
-              <span style={{ width: 22, height: 22, borderRadius: 999, background: "#2c2f36", color: "#cfd2da", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flex: "none" }}>
+              <span style={{ width: 22, height: 22, borderRadius: 999, background: "#2b3ee6", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flex: "none" }}>
                 {a.name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("")}
               </span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--white)" }}>{a.name}</div>
-                {a.role && <div className="mono" style={{ fontSize: 9, color: "#8b909a" }}>{a.role}</div>}
-              </div>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--white)", minWidth: 0 }}>
+                {a.name}
+                {a.role ? <span style={{ color: "#8b909a", fontWeight: 600 }}> — {a.role}</span> : null}
+              </span>
             </div>
           ))
         )}
@@ -286,52 +286,34 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
     <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
       {spine}
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
-        {/* Header row */}
+        {/* Header row: ORG · V{n} · status pill · COMPLEXITY dots (design layout) */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)" }}>
+          <span className="kicker" style={{ fontSize: 10 }}>
             {proposal.organizationName} · v{proposal.version}
           </span>
           <ProposalStatusPill status={proposal.status} />
-          <span
-            className="mono"
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              padding: "3px 9px",
-              borderRadius: 999,
-              background: complexity > 3 ? "#FFF7ED" : "#EEF0FE",
-              color: complexity > 3 ? "#B45309" : "#2536C4",
-            }}
-          >
-            ◆ C{complexity}/5{complexity <= 3 ? " · fast-track" : ""}
-          </span>
-          {saved && <span className="mono" style={{ fontSize: 10, color: "#15803d", marginLeft: "auto" }}>saved ✓</span>}
-        </div>
-
-        {/* Complexity dots (draft only) */}
-        {isDraft && (
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span className="kicker">Complexity</span>
+          <span className="kicker" style={{ fontSize: 9.5, marginLeft: 4 }}>Complexity</span>
+          <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
-                onClick={() => void structural(() => api(`/api/proposals/${proposal.id}`, "PATCH", { complexityScore: n }), "complexity")}
-                title={`C${n}`}
+                onClick={isDraft ? () => void structural(() => api(`/api/proposals/${proposal.id}`, "PATCH", { complexityScore: n }), "complexity") : undefined}
+                title={`C${n}${complexity > 3 ? " — needs engineering review" : ""}`}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 15,
+                  height: 15,
                   borderRadius: 999,
-                  border: "1.5px solid " + (n <= complexity ? (complexity > 3 ? "#B45309" : "#2536C4") : "#d7d9df"),
-                  background: n <= complexity ? (complexity > 3 ? "#B45309" : "#2536C4") : "var(--white)",
-                  color: "var(--white)",
-                  cursor: "pointer",
+                  border: "1px solid " + (n <= complexity ? (complexity > 3 ? "#B45309" : "#2b3ee6") : "#d7d9df"),
+                  background: n <= complexity ? (complexity > 3 ? "#B45309" : "#2b3ee6") : "#EDEDF1",
+                  cursor: isDraft ? "pointer" : "default",
                   padding: 0,
                 }}
               />
             ))}
-            <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>&gt;3 routes to engineering review</span>
-          </div>
-        )}
+          </span>
+          {saved && <span className="mono" style={{ fontSize: 10, color: "#15803d", marginLeft: "auto" }}>saved ✓</span>}
+        </div>
+        <h1 style={{ margin: 0, fontSize: 23, fontWeight: 800, letterSpacing: "-.025em" }}>{proposal.dealName}</h1>
 
         {/* Needs-review card */}
         {complexity > 3 && (
@@ -363,7 +345,7 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
                 setSummary(e.target.value);
                 saveSummary(e.target.value);
               }}
-              placeholder="What their problem is and what this engagement does about it — real client-facing prose."
+              placeholder="What does this client need, and why this approach?"
               style={{ ...inputStyle, width: "100%", minHeight: 90, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
             />
           )}
@@ -427,13 +409,14 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
         )}
 
         {/* Option cards */}
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
+        <div className="kicker" style={{ marginTop: 2 }}>Options</div>
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: -6 }}>
           {opts.map((o) => (
             <div
               key={o.id}
               style={{
-                background: "var(--white)",
-                border: o.id === proposal.selectedOptionId ? "2px solid #16a34a" : o.recommended ? "2px solid #2536C4" : "1px solid var(--border)",
+                background: o.recommended || o.id === proposal.selectedOptionId ? "#F4FBF7" : "var(--white)",
+                border: o.id === proposal.selectedOptionId ? "2px solid #16a34a" : o.recommended ? "2px solid #A7DDB9" : "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 14,
                 display: "flex",
@@ -442,16 +425,31 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <span style={{ width: 26, height: 26, borderRadius: 8, background: "var(--ink)", color: "var(--white)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flex: "none" }}>
+                <span style={{ width: 26, height: 26, borderRadius: 8, background: o.recommended || o.id === proposal.selectedOptionId ? "#16a34a" : "var(--ink)", color: "var(--white)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flex: "none" }}>
                   {o.label}
                 </span>
-                {isDraft && (
-                  <input value={o.name} onChange={(e) => patchOpt(o.id, { name: e.target.value })} placeholder="Option name" style={{ ...inputStyle, flex: 1, fontWeight: 700 }} />
-                )}
-                {isLocked && <span style={{ fontWeight: 800, fontSize: 14.5, flex: 1, minWidth: 0 }}>{o.name}</span>}
+                <span style={{ fontWeight: 800, fontSize: 14.5, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</span>
                 {o.id === proposal.selectedOptionId && (
                   <span className="kicker" style={{ fontSize: 9, background: "#DCF5E3", color: "#15803D", borderRadius: 5, padding: "3px 7px", flex: "none" }}>SIGNED</span>
                 )}
+                {/* Recommended — admin-chosen; clicking the green label toggles it OFF */}
+                {o.recommended ? (
+                  <button
+                    onClick={() => (isDraft ? void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec") : undefined)}
+                    title={isDraft ? "Click to un-mark" : undefined}
+                    className="kicker"
+                    style={{ border: 0, background: "none", color: "#15803D", fontSize: 9.5, fontWeight: 800, letterSpacing: ".1em", cursor: isDraft ? "pointer" : "default", padding: 0, flex: "none" }}
+                  >
+                    RECOMMENDED
+                  </button>
+                ) : isDraft ? (
+                  <button
+                    onClick={() => void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec")}
+                    style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0, flex: "none" }}
+                  >
+                    Mark recommended
+                  </button>
+                ) : null}
                 {isDraft && opts.length > 1 && (
                   <button
                     onClick={() => void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "DELETE"), `rm-${o.id}`)}
@@ -461,26 +459,6 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
                     ✕
                   </button>
                 )}
-              </div>
-
-              {/* Recommended toggle — admin-chosen, toggle OFF is valid */}
-              <div>
-                {o.recommended ? (
-                  <button
-                    onClick={() => (isDraft ? void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec") : undefined)}
-                    title={isDraft ? "Click to un-mark" : undefined}
-                    style={{ border: 0, background: "#DCF5E3", color: "#15803D", borderRadius: 999, padding: "3px 10px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em", cursor: isDraft ? "pointer" : "default" }}
-                  >
-                    RECOMMENDED
-                  </button>
-                ) : isDraft ? (
-                  <button
-                    onClick={() => void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec")}
-                    style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
-                  >
-                    Mark recommended
-                  </button>
-                ) : null}
               </div>
 
               {/* Price + timeline */}
@@ -498,7 +476,7 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
                     <input
                       value={o.timelineNote ?? ""}
                       onChange={(e) => patchOpt(o.id, { timelineNote: e.target.value })}
-                      placeholder="timeline note"
+                      placeholder="Timeline note, e.g. ~10 weeks"
                       style={{ ...inputStyle, flex: "1 1 130px" }}
                     />
                   </>
@@ -562,7 +540,7 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
                   {isDraft && (
                     <button
                       onClick={() => patchOpt(o.id, { phases: [...o.phases!, { name: `Phase ${o.phases!.length + 1}`, amountCents: 0, amountDollars: "", weeks: 2, status: "awaiting_amendment" as const }] })}
-                      style={{ alignSelf: "flex-start", border: "1px dashed #d7d9df", background: "var(--white)", color: "var(--ink-soft)", borderRadius: 7, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                      style={{ alignSelf: "flex-start", border: 0, background: "none", color: "#15803D", padding: 0, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
                     >
                       + Add phase
                     </button>
@@ -587,35 +565,64 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
 
         {error && <p style={{ color: "#b00020", fontSize: 13, margin: 0 }}>{error}</p>}
 
-        {/* Action row */}
+        {/* Action row (design): Save draft · Send to client → · Preview public page ↗ · Generate contract/SOW · Delete */}
         {canManage && (
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            {isDraft && (
+              <button
+                onClick={() =>
+                  void (async () => {
+                    setBusy("save");
+                    let ok = await api(`/api/proposals/${proposal.id}`, "PATCH", { executiveSummaryMd: summary });
+                    for (const o of opts) {
+                      if (!ok) break;
+                      ok = await api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", {
+                        timelineNote: o.timelineNote ?? "",
+                        priceCents: o.priceDollars ? Math.round(parseFloat(o.priceDollars) * 100) || 0 : 0,
+                        phases: o.phases ? o.phases.map((p) => ({ name: p.name, amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0, weeks: p.weeks })) : null,
+                      });
+                    }
+                    setBusy(null);
+                    if (ok) {
+                      flashSaved();
+                      router.refresh();
+                    }
+                  })()
+                }
+                disabled={busy === "save"}
+                style={btn("plain", busy === "save")}
+              >
+                {busy === "save" ? "Saving…" : "Save draft"}
+              </button>
+            )}
             {isDraft && (
               <button onClick={() => setConfirmSend(true)} disabled={busy === "send"} style={btn("ink", busy === "send")}>
                 Send to client →
               </button>
             )}
-            {(proposal.status === "approved" || proposal.status === "sent" || proposal.contract) &&
-              (proposal.contract ? (
-                <Link href={`/dashboard/proposals/${proposal.id}/contract`} style={{ ...btn("cobalt"), textDecoration: "none", display: "inline-block" }}>
-                  View contract / SOW →
-                </Link>
-              ) : (
-                <button
-                  onClick={() =>
-                    void (async () => {
-                      setBusy("contract");
-                      const ok = await api(`/api/proposals/${proposal.id}/contract`, "POST");
-                      setBusy(null);
-                      if (ok) router.push(`/dashboard/proposals/${proposal.id}/contract`);
-                    })()
-                  }
-                  disabled={busy === "contract"}
-                  style={btn("cobalt", busy === "contract")}
-                >
-                  {busy === "contract" ? "Generating…" : "◆ Generate contract / SOW"}
-                </button>
-              ))}
+            <Link href={`/dashboard/proposals/${proposal.id}/preview`} target="_blank" style={{ ...btn("plain"), textDecoration: "none", display: "inline-block" }}>
+              Preview public page ↗
+            </Link>
+            {proposal.contract ? (
+              <Link href={`/dashboard/proposals/${proposal.id}/contract`} style={{ ...btn("plain"), textDecoration: "none", display: "inline-block" }}>
+                ◆ View contract / SOW →
+              </Link>
+            ) : (
+              <button
+                onClick={() =>
+                  void (async () => {
+                    setBusy("contract");
+                    const ok = await api(`/api/proposals/${proposal.id}/contract`, "POST");
+                    setBusy(null);
+                    if (ok) router.push(`/dashboard/proposals/${proposal.id}/contract`);
+                  })()
+                }
+                disabled={busy === "contract"}
+                style={btn("plain", busy === "contract")}
+              >
+                {busy === "contract" ? "Generating…" : "◆ Generate contract / SOW"}
+              </button>
+            )}
             {(proposal.status === "draft" || proposal.status === "sent") && (
               <button
                 onClick={() => setConfirmDelete(true)}

@@ -41,8 +41,9 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
         <Link href="/dashboard/proposals" style={{ color: "inherit" }}>Proposals</Link> /{" "}
         <Link href={`/dashboard/sales/deals/${p.dealId}`} style={{ color: "inherit" }}>{p.dealName}</Link> / v{p.version}
       </div>
-      <h1 style={{ margin: "12px 0 16px", fontSize: 23, fontWeight: 800, letterSpacing: "-.025em" }}>{p.dealName}</h1>
-      <ProposalEditor proposal={p} canManage={canManage} />
+      <div style={{ marginTop: 14 }}>
+        <ProposalEditor proposal={p} canManage={canManage} />
+      </div>
     </AppShell>
   );
 }

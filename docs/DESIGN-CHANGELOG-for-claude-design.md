@@ -273,3 +273,23 @@ now aligned:
   footer is now "Schedule call · Log a call" only.
 - Omitted for now: the meta line's "· N phases · N wks" suffix (drawer doesn't
   load option phases; cheap to add if wanted).
+
+---
+
+# Update — 2026-07-07 (proposal editor design pass)
+
+Per Adam's screenshot review of the editor:
+- Header = mono `ORG · V{n}` + status pill + COMPLEXITY dots inline (interactive
+  in draft, static locked); deal name h1 below; the ◆ Cn/5 pill is gone.
+- Option names are static text (not editable for now — server capability kept).
+- Recommended = the green treatment (green tint card, green letter tile,
+  RECOMMENDED label top-right; clicking it toggles off). "Mark recommended" is
+  the quiet grey link beside ✕.
+- "+ Add phase" is a green text link; timeline placeholder matches the frame.
+- Spine spans the full height of the content beside it; kicker is "PHASED
+  AGREEMENT"; approvers render one-line ("Bob Ross — Owner").
+- Action row: Save draft (flushes autosave) · Send to client → · **Preview
+  public page ↗** (new staff-only /dashboard/proposals/[id]/preview — drafts
+  have no share token, so this renders the exact public page with sign/decline
+  inert) · ◆ Generate contract / SOW (now available in Draft; becomes View →)
+  · Delete proposal (red, right).
