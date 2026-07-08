@@ -35,12 +35,13 @@ function initials(name: string): string {
 
 const stateLabel = (s: string) => (s === "active" ? "client" : s === "archived" ? "past client" : "prospect");
 
-export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: boolean; onClose: () => void }) {
+export function ContactCaptureModal({ canStartDeal, currentUserId, onClose }: { canStartDeal: boolean; currentUserId?: string; onClose: () => void }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
-  const [form, setForm] = useState({ name: "", email: "", source: "", value: "", notes: "" });
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
+  const [form, setForm] = useState({ name: "", email: "", source: "", value: "", notes: "", ownerUserId: currentUserId ?? "" });
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   // Account combobox state: either an existing account is picked, or a free-text
   // name will create one inline ("+ create new").
@@ -59,6 +60,10 @@ export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: b
         setAccounts((d.clients ?? []).map((c) => ({ id: c.org.id, name: c.org.name, state: stateLabel(c.org.status) })));
       })
       .catch(() => setAccounts([]));
+    fetch("/api/staff")
+      .then((r) => (r.ok ? r.json() : { staff: [] }))
+      .then((d) => setStaff((d as { staff?: { id: string; name: string }[] }).staff ?? []))
+      .catch(() => setStaff([]));
   }, []);
 
   useEffect(() => {
@@ -77,8 +82,10 @@ export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: b
 
   const checkedN = CHECKS.filter((c) => checks[c]).length;
   const fastLane = checkedN >= 2;
+  // The account is created AT CAPTURE (QA delta 07-08 §2) — qualify never asks.
   const hasAccount = !!picked || (createNew && accountQuery.trim().length > 0);
-  const canSubmitDeal = canStartDeal && fastLane && hasAccount && !!form.name.trim();
+  const canSave = !!form.name.trim() && hasAccount;
+  const canSubmitDeal = canStartDeal && fastLane && canSave;
 
   async function submit(qualifyNow: boolean) {
     setBusy(true);
@@ -95,6 +102,7 @@ export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: b
           source: form.source || undefined,
           estValueCents: form.value ? Math.round(parseFloat(form.value) * 100) : undefined,
           notes: form.notes || undefined,
+          ownerUserId: form.ownerUserId || undefined,
           qualifyNow,
           checks: CHECKS.filter((c) => checks[c]),
         }),
@@ -226,24 +234,39 @@ export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: b
           )}
         </div>
 
-        {/* Source + value */}
+        {/* Source */}
+        <div style={{ marginTop: 12 }}>
+          <div className="kicker" style={labelStyle}>Source</div>
+          <select style={inputStyle} value={form.source} onChange={set("source")}>
+            <option value="">—</option>
+            {SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Est. value · Owner (two-up, prototype layout — nothing captured is re-typed) */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-          <div>
-            <div className="kicker" style={labelStyle}>Source</div>
-            <select style={inputStyle} value={form.source} onChange={set("source")}>
-              <option value="">—</option>
-              {SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <div className="kicker" style={labelStyle}>
               Est. value <span style={{ textTransform: "none", letterSpacing: 0 }}>— gut call is fine</span>
             </div>
             <input className="mono" style={inputStyle} inputMode="numeric" placeholder="$30,000" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))} />
+          </div>
+          <div>
+            <div className="kicker" style={labelStyle}>
+              Owner <span style={{ textTransform: "none", letterSpacing: 0 }}>— who works it</span>
+            </div>
+            <select style={inputStyle} value={form.ownerUserId} onChange={set("ownerUserId")}>
+              {staff.length === 0 && <option value="">me</option>}
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.id === currentUserId ? " (me)" : ""}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -297,8 +320,9 @@ export function ContactCaptureModal({ canStartDeal, onClose }: { canStartDeal: b
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
           <button
             onClick={() => submit(false)}
-            disabled={busy || !form.name.trim()}
-            style={{ background: "var(--white)", color: "var(--ink)", border: "1px solid #d7d9df", borderRadius: 9, padding: "10px 16px", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "1 1 30%" }}
+            disabled={busy || !canSave}
+            title={!hasAccount ? "Pick or create an account first — every contact has one" : undefined}
+            style={{ background: "var(--white)", color: canSave ? "var(--ink)" : "#B4B9C1", border: "1px solid #d7d9df", borderRadius: 9, padding: "10px 16px", fontSize: 13.5, fontWeight: 700, cursor: canSave && !busy ? "pointer" : "default", flex: "1 1 30%" }}
           >
             {busy ? "Saving…" : "Save to Triage"}
           </button>

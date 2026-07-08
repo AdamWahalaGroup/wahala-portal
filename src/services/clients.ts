@@ -78,6 +78,51 @@ export async function listWahalaStaff(ctx: AuthContext): Promise<{ id: string; n
 }
 
 /**
+ * QA delta 07-08 §3: accepting a portal invite links the login to the existing
+ * contact record (matched by email on the account); if none exists, create one
+ * on first login. One record forever — no duplicate person rows. Called from the
+ * magic-link verify flow on the invited→active flip; must never block login.
+ */
+export async function linkAcceptedInviteToContact(user: {
+  id: string;
+  organizationId: string | null;
+  userType: string;
+  name: string;
+  email: string;
+}): Promise<void> {
+  if (user.userType !== "client" || !user.organizationId) return;
+  const db = getDb();
+  const email = user.email.trim().toLowerCase();
+  const existing = await db.query.contacts.findFirst({
+    where: and(eq(schema.contacts.organizationId, user.organizationId), eq(schema.contacts.email, email)),
+  });
+  if (existing) return; // already one record — the login and the contact are the same person
+
+  const contactId = crypto.randomUUID();
+  await db.batch([
+    db.insert(schema.contacts).values({
+      id: contactId,
+      organizationId: user.organizationId,
+      name: user.name,
+      email,
+      state: "qualified", // a portal user is a known person, never triage
+      source: "portal invite",
+    }),
+    db.insert(schema.contactCompanies).values({ contactId, organizationId: user.organizationId, isPrimary: true }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: user.organizationId,
+        actorUserId: user.id,
+        action: "contact.created_from_invite",
+        entityType: "contact",
+        entityId: contactId,
+        metadata: { email, userId: user.id },
+      }),
+    ),
+  ]);
+}
+
+/**
  * Onboard a prospect: create the org + primary client contact (invited), assign an
  * Account Owner (the chosen Wahala "agent", defaulting to the inviting admin), and
  * send/return the invite link. Admin only.

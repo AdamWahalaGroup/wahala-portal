@@ -8,7 +8,6 @@ import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getContactDetail } from "@/services/contact-workspace";
 import { listWahalaStaff } from "@/services/clients";
-import { scopedDb } from "@/db/scoped";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
@@ -34,10 +33,7 @@ export default async function ContactDrawerPage({ params }: { params: Promise<{ 
     throw e;
   });
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
-  const [staff, orgs] = await Promise.all([
-    listWahalaStaff(ctx),
-    contact.state === "to_qualify" && canManage ? scopedDb(ctx).listOrganizations() : Promise.resolve([]),
-  ]);
+  const staff = await listWahalaStaff(ctx);
   const chip = STATE_CHIP[contact.state];
 
   return (
@@ -52,6 +48,23 @@ export default async function ContactDrawerPage({ params }: { params: Promise<{ 
       <div className="mono" style={{ fontSize: 10.5, color: "var(--muted-line)", marginTop: 4 }}>
         one record forever — lead is a state, not a thing
       </div>
+      {/* Everything captured, visible (QA delta 07-08 §1): est · owner · source */}
+      {(contact.estValueCents > 0 || contact.assignedToName || contact.source) && (
+        <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 8 }}>
+          {contact.estValueCents > 0 && (
+            <span className="tabular" style={{ fontWeight: 800, color: "var(--ink)" }}>${Math.round(contact.estValueCents / 100).toLocaleString("en-US")} est</span>
+          )}
+          {contact.estValueCents > 0 && (contact.assignedToName || contact.source) ? " · " : ""}
+          {contact.assignedToName ? `owner ${contact.assignedToName}` : ""}
+          {contact.assignedToName && contact.source ? " · " : ""}
+          {contact.source ? `via ${contact.source}` : ""}
+        </div>
+      )}
+      {contact.notes && (
+        <div style={{ background: "#fffdf5", border: "1px solid #f0e6c8", borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: "var(--ink-soft)", marginTop: 8, fontStyle: "italic" }}>
+          &ldquo;{contact.notes}&rdquo;
+        </div>
+      )}
       {contact.linkedDealId && (
         <Link href={`/dashboard/sales/deals/${contact.linkedDealId}`} style={{ display: "inline-block", marginTop: 8, fontSize: 13, fontWeight: 700 }}>
           View the deal →
@@ -87,7 +100,6 @@ export default async function ContactDrawerPage({ params }: { params: Promise<{ 
               overdue: false,
               createdAt: contact.createdAt,
             }}
-            orgs={orgs.map((o) => ({ id: o.id, name: o.name }))}
             staff={staff}
             canManage={canManage}
           />

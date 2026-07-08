@@ -293,3 +293,40 @@ Per Adam's screenshot review of the editor:
   have no share token, so this renders the exact public page with sign/decline
   inert) · ◆ Generate contract / SOW (now available in Draft; becomes View →)
   · Delete proposal (red, right).
+
+---
+
+# Update — 2026-07-08 (first-QA-pass delta SHIPPED)
+
+All five findings from `HANDOFF-DELTA-2026-07-08-first-qa-pass.md` are live:
+
+1. **Capture keeps everything.** The capture modal gained the Owner select
+   (Est. value · Owner two-up, defaults to the current user); est. value, the
+   intake note, and owner persist on the contact and carry onto the deal at
+   qualify AND bypass (`value`, `discoveryNote` — which now grounds the
+   proposal drafting — and `owner`). Triage cards show the mono estimate +
+   `est · {owner}` sub-line; the contact drawer shows est · owner · source and
+   the intake note verbatim.
+2. **Qualify never asks for an account.** Capture now REQUIRES an account
+   (Save-to-Triage disabled until one is picked or created inline; the API
+   rejects accountless contacts). The qualify strip's account picker is gone —
+   the deal opens on the contact's account (legacy accountless contacts get a
+   one-field create fallback).
+3. **Invite acceptance auto-links.** First login on an invite links the login
+   to the existing contact by email; if none exists on the account, a contact
+   is created ("one record forever" — verified zero duplicates through the
+   real invite→accept flow). No invite at capture, as decided.
+4. **Two axes, one row.** Account-page contact rows now show the sales chip
+   (`to qualify`, only while staff-relevant) AND the portal pill
+   (`invited · awaiting first login` grey / `portal · accepted` green) side by
+   side on the same record.
+5. **No dead client nav.** Files is a real client page (client-visible files
+   across projects, or the empty state with the account owner + "Message
+   {owner}"); the day-zero client home is the welcome hero with the named
+   owner + message action; the projects list's empty state carries the same
+   accountability pitch.
+
+Also shipped from the prototype-changes note: **entering Committed via the
+public signature now seeds the agreement/deposit checklist** (it previously
+only seeded via a manual stage move) — verified: sign → Committed with the
+full package + deposit gate, no Create-project dead end.

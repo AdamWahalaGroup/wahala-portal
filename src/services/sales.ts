@@ -147,6 +147,8 @@ export async function captureContact(
     source?: string;
     estValueCents?: number;
     notes?: string;
+    /** Who's working this contact — defaults to the capturer (QA delta 07-08 §1). */
+    ownerUserId?: string;
     qualifyNow?: boolean;
     /** Which quick-check chips were on — logged with the bypass, never a gate here. */
     checks?: string[];
@@ -161,6 +163,16 @@ export async function captureContact(
   const now = new Date();
   const contactId = crypto.randomUUID();
   const statements = [];
+
+  // Who owns the contact from day one — capture data is never lost or re-typed.
+  let ownerUserId = ctx.user.id;
+  if (input.ownerUserId?.trim() && input.ownerUserId.trim() !== ctx.user.id) {
+    const owner = await db.query.users.findFirst({ where: eq(schema.users.id, input.ownerUserId.trim()) });
+    if (!owner || owner.userType !== "wahala" || owner.status === "disabled") {
+      throw new StageError("VALIDATION", "That owner isn't an active staff member.");
+    }
+    ownerUserId = owner.id;
+  }
 
   let organizationId = input.organizationId?.trim() || null;
   if (organizationId) {
@@ -179,11 +191,12 @@ export async function captureContact(
     );
   }
 
+  // QA delta 07-08 §2: the account is created AT CAPTURE (combobox "+ create new")
+  // so qualify never has to ask. A contact without an account was the prod bug.
+  if (!organizationId) throw new StageError("VALIDATION", "Every contact needs an account — pick one or create it inline.");
+
   const qualifyNow = !!input.qualifyNow;
-  if (qualifyNow) {
-    assertSalesManager(ctx, "capture_contact_bypass");
-    if (!organizationId) throw new StageError("VALIDATION", "Starting a deal needs an account — pick one or create it inline.");
-  }
+  if (qualifyNow) assertSalesManager(ctx, "capture_contact_bypass");
 
   statements.push(
     db.insert(schema.contacts).values({
@@ -198,7 +211,7 @@ export async function captureContact(
       estValueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
       state: qualifyNow || (input.skipTriage && organizationId) ? "qualified" : "to_qualify",
       createdByUserId: ctx.user.id,
-      assignedToUserId: qualifyNow ? ctx.user.id : null,
+      assignedToUserId: ownerUserId,
     }),
   );
   if (organizationId) {
@@ -215,11 +228,13 @@ export async function captureContact(
         name: `${input.newAccountName?.trim() || name} — opportunity`,
         stage: "discovery",
         stageEnteredAt: now,
-        ownerUserId: ctx.user.id,
+        ownerUserId,
         primaryContactId: contactId,
         origin: "bypass",
         valueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
         notes: input.notes?.trim() || null,
+        // The intake note IS the first discovery note — it grounds the proposal.
+        discoveryNote: input.notes?.trim() || null,
       }),
       db.insert(schema.auditLog).values(
         buildAudit({
@@ -308,10 +323,14 @@ export async function qualifyContact(
       name: dealName,
       stage: "discovery",
       stageEnteredAt: now,
-      ownerUserId: ctx.user.id,
+      // Everything captured travels: the contact's owner works the deal, the
+      // intake note becomes the deal's discovery note (QA delta 07-08 §1).
+      ownerUserId: contact.assignedToUserId ?? ctx.user.id,
       primaryContactId: contactId,
       origin: "qualified_from_triage",
       valueCents,
+      notes: contact.notes?.trim() || null,
+      discoveryNote: contact.notes?.trim() || null,
     }),
     db.insert(schema.auditLog).values(
       buildAudit({

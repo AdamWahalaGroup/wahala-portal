@@ -62,6 +62,37 @@ export type FileView = {
 };
 
 /** Files on a project — visibility-scoped (clients never see internal files). */
+/**
+ * All client-visible files across the client's org, newest first — the client
+ * Files page (QA delta 07-08 §5: every nav item routes to a real page).
+ */
+export async function listClientFiles(ctx: AuthContext): Promise<(FileView & { projectName: string | null })[]> {
+  if (ctx.isStaff || !ctx.organizationId) return [];
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(schema.assets)
+    .where(and(eq(schema.assets.organizationId, ctx.organizationId), eq(schema.assets.visibility, "client_visible")))
+    .orderBy(desc(schema.assets.createdAt));
+  if (rows.length === 0) return [];
+  const projectIds = [...new Set(rows.map((r) => r.projectId).filter((v): v is string => !!v))];
+  const projects = projectIds.length
+    ? await db.select({ id: schema.projects.id, name: schema.projects.name }).from(schema.projects).where(inArray(schema.projects.id, projectIds))
+    : [];
+  const nameOf = new Map(projects.map((p) => [p.id, p.name]));
+  return rows.map((r) => ({
+    id: r.id,
+    fileName: r.fileName,
+    ext: extOf(r.fileName),
+    mimeType: r.mimeType,
+    sizeBytes: r.sizeBytes,
+    visibility: r.visibility,
+    createdAt: r.createdAt,
+    uploaderName: null,
+    projectName: r.projectId ? nameOf.get(r.projectId) ?? null : null,
+  }));
+}
+
 export async function listFilesForProject(ctx: AuthContext, projectId: string): Promise<FileView[]> {
   await loadProjectScoped(ctx, projectId);
   const db = getDb();

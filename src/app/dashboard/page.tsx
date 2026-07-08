@@ -13,6 +13,7 @@ import { WaitingOn } from "@/components/WaitingOn";
 import { Money } from "@/components/Money";
 import { CreateProjectForm } from "@/components/CreateProjectForm";
 import { ClientWelcome } from "@/components/ClientWelcome";
+import { PeopleCard } from "@/components/People";
 import { StaffHome } from "@/components/StaffHome";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { onYouCta, waitingParty } from "@/lib/stage-ui";
@@ -134,7 +135,24 @@ export default async function Dashboard() {
           Your projects ({projects.length})
         </div>
         {projects.length === 0 ? (
-          <p style={{ color: "var(--muted)" }}>No projects yet.</p>
+          /* QA delta 07-08 §5: the empty state IS the accountability pitch —
+             a named human, even on day zero. Never a dead end. */
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 13, padding: "22px 24px" }}>
+            <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+              No projects yet — when work begins it will appear here, phase by phase.
+            </p>
+            {accountOwner && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+                <PeopleCard name={accountOwner.name} role="Your account owner" variant="owner" />
+                <Link
+                  href="/dashboard/messages"
+                  style={{ background: "var(--ink)", color: "var(--white)", borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, textDecoration: "none", flex: "none" }}
+                >
+                  Message {accountOwner.name.split(" ")[0]}
+                </Link>
+              </div>
+            )}
+          </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {projects.map((p) => {

@@ -83,7 +83,13 @@ export function AppShell({
           {NAV.filter((item) => (!item.staffOnly || user.isStaff) && (!item.adminOnly || isAdmin)).map((item) => {
             const isActive = item.key === active || (item.key === "sales" && inSales) || (item.key === "settings" && inSettings);
             // Staff get the cross-client Projects index; clients keep their dashboard.
-            const href = item.key === "projects" && user.isStaff ? "/dashboard/projects" : item.href;
+            // Clients get a REAL Files page (QA delta 07-08 §5 — no dead nav); staff's stays "soon".
+            const href =
+              item.key === "projects" && user.isStaff
+                ? "/dashboard/projects"
+                : item.key === "files" && !user.isStaff
+                  ? "/dashboard/files"
+                  : item.href;
             const inner = (
               <span
                 style={{

@@ -43,6 +43,10 @@ export type AccountContact = {
   phone: string | null;
   title: string | null;
   isPrimary: boolean;
+  /** Sales axis — shown as a chip only while it's staff-relevant (to_qualify). */
+  salesState: "to_qualify" | "qualified" | "passed";
+  /** Portal-access axis — a DIFFERENT axis from qualification (QA delta 07-08 §4). */
+  portalStatus: "invited" | "accepted" | null;
 };
 
 export type AccountDeal = {
@@ -144,6 +148,12 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
     : [];
   const primaryIds = new Set(contactLinks.filter((l) => l.isPrimary).map((l) => l.contactId));
   const primaryDealContact = dealRows.find((d) => d.primaryContactId)?.primaryContactId ?? null;
+  // Portal access is its own axis: match client logins to contacts by email.
+  const portalUsers = await db
+    .select({ email: schema.users.email, status: schema.users.status })
+    .from(schema.users)
+    .where(and(eq(schema.users.organizationId, orgId), eq(schema.users.userType, "client")));
+  const portalByEmail = new Map(portalUsers.map((u) => [u.email.toLowerCase(), u.status === "active" ? ("accepted" as const) : u.status === "invited" ? ("invited" as const) : null]));
   const contacts: AccountContact[] = [...orgContacts, ...linkedContacts]
     .filter((c) => c.state !== "passed")
     .map((c) => ({
@@ -153,6 +163,8 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
       phone: c.phone,
       title: c.title,
       isPrimary: primaryIds.has(c.id) || c.id === primaryDealContact,
+      salesState: c.state,
+      portalStatus: c.email ? portalByEmail.get(c.email.toLowerCase()) ?? null : null,
     }))
     .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.name.localeCompare(b.name));
 

@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { consumeMagicToken } from "@/auth/magic-link";
+import { linkAcceptedInviteToContact } from "@/services/clients";
 import { createSession, sessionCookieOptions } from "@/auth/session";
 import {
   SESSION_COOKIE,
@@ -43,6 +44,13 @@ export async function GET(req: NextRequest) {
       .update(schema.users)
       .set({ status: "active" })
       .where(eq(schema.users.id, user.id));
+    // QA delta 07-08 §3: acceptance links the login to the contact record
+    // (matched by email; created if missing). Never blocks the login itself.
+    try {
+      await linkAcceptedInviteToContact(user);
+    } catch (e) {
+      console.error("[auth] invite→contact link failed", e);
+    }
   }
 
   const sessionId = await createSession(user.id);

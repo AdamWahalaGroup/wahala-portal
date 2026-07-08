@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       source?: string;
       estValueCents?: number;
       notes?: string;
+      ownerUserId?: string;
       qualifyNow?: boolean;
       checks?: string[];
       skipTriage?: boolean;

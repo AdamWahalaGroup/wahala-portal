@@ -759,9 +759,11 @@ async function applyResponse(
 
   // Approval = the client committed. The deal moves to Committed ("the Contract
   // room" — delta §3.3), where the agreement package + deposit gate the handoff.
+  let movedToCommitted = false;
   if (input.outcome === "approved") {
     const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) });
     if (deal && !["committed", "won", "lost"].includes(deal.stage)) {
+      movedToCommitted = true;
       statements.push(
         db.update(schema.deals).set({ stage: "committed", stageEnteredAt: now, subStatus: null }).where(eq(schema.deals.id, deal.id)),
         db.insert(schema.auditLog).values(
@@ -778,6 +780,14 @@ async function applyResponse(
     }
   }
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+
+  // QA delta 07-08 (prototype note): entering Committed via a signature must seed
+  // the agreement/deposit checklist too, or the drawer's Create-project path is a
+  // dead end for non-seeded deals. Same idempotent seeding setDealStage does.
+  if (movedToCommitted) {
+    const { seedDealPackage } = await import("@/services/agreements");
+    await seedDealPackage(p.organizationId, p.dealId);
+  }
 }
 
 /** Staff records a response received outside the app (call, email, meeting). */

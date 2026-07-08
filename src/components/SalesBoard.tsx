@@ -74,12 +74,10 @@ function fmtK(cents: number): string {
 
 export function ContactQualifyRow({
   contact,
-  orgs,
   staff,
   canManage,
 }: {
   contact: ContactItem;
-  orgs: { id: string; name: string }[];
   staff: StaffOption[];
   canManage: boolean;
 }) {
@@ -89,7 +87,9 @@ export function ContactQualifyRow({
   const [error, setError] = useState<string | null>(null);
   const [dealName, setDealName] = useState("");
   const [value, setValue] = useState("");
-  const [orgId, setOrgId] = useState(contact.organizationId ?? "");
+  // QA delta 07-08 §2: qualify NEVER asks for an account — the contact already
+  // has one from capture. Legacy accountless contacts get a one-field fallback.
+  const [newAccountName, setNewAccountName] = useState(contact.companyNote ?? "");
 
   async function act(body: Record<string, unknown>) {
     setBusy(true);
@@ -170,14 +170,19 @@ export function ContactQualifyRow({
       </div>
       {open && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-          <select style={{ ...inputStyle, flex: "1 1 170px" }} value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-            <option value="">{contact.companyNote ? `New account: ${contact.companyNote}` : "Pick an existing account…"}</option>
-            {orgs.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          {contact.organizationName ? (
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--muted)", flex: "1 1 150px" }}>
+              deal opens on <b style={{ color: "var(--ink)" }}>{contact.organizationName}</b>
+            </span>
+          ) : (
+            <input
+              style={{ ...inputStyle, flex: "1 1 170px" }}
+              placeholder="Account name (creates it)"
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value)}
+              title="Legacy contact without an account — name one and it's created"
+            />
+          )}
           <input
             style={{ ...inputStyle, flex: "2 1 180px" }}
             placeholder="Deal name (optional)"
@@ -186,7 +191,7 @@ export function ContactQualifyRow({
           />
           <input
             style={{ ...inputStyle, flex: "1 1 100px" }}
-            placeholder="Est. value $"
+            placeholder={contact.estValueCents > 0 ? `$${Math.round(contact.estValueCents / 100).toLocaleString("en-US")} (captured)` : "Est. value $"}
             inputMode="numeric"
             value={value}
             onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))}
@@ -195,7 +200,7 @@ export function ContactQualifyRow({
             onClick={() =>
               act({
                 action: "qualify",
-                organizationId: orgId || undefined,
+                newAccountName: !contact.organizationId ? newAccountName.trim() || undefined : undefined,
                 dealName: dealName || undefined,
                 valueCents: value ? Math.round(parseFloat(value) * 100) : undefined,
               })
@@ -723,6 +728,16 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
                 {c.overdue ? "⚠ overdue · " : ""}
                 {c.source ? `via ${c.source}` : (c.organizationName ?? c.companyNote ?? "—")}
               </div>
+              {c.estValueCents > 0 && (
+                <div style={{ marginTop: 5 }}>
+                  <span className="mono tabular" style={{ fontSize: 12.5, fontWeight: 800 }}>
+                    ${Math.round(c.estValueCents / 100).toLocaleString("en-US")}
+                  </span>
+                  <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)", marginLeft: 6 }}>
+                    est{c.assignedToName ? ` · ${c.assignedToName.split(" ")[0]}` : ""}
+                  </span>
+                </div>
+              )}
               <div style={{ marginTop: 8 }}>
                 {c.aiScore !== null ? (
                   <ScoreChip score={c.aiScore} verdict={c.aiVerdict} />
@@ -1054,7 +1069,7 @@ export function SalesBoard({
         </button>
       </div>
 
-      {capturing && <ContactCaptureModal canStartDeal={canManage} onClose={() => setCapturing(false)} />}
+      {capturing && <ContactCaptureModal canStartDeal={canManage} currentUserId={currentUserId} onClose={() => setCapturing(false)} />}
 
       {view === "board" ? (
         <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} onMoved={setMoment} />

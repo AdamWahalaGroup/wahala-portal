@@ -11,7 +11,17 @@ import { useState } from "react";
 import { Avatar } from "@/components/People";
 import { PortalInviteModal } from "@/components/PortalInviteModal";
 
-type RailContact = { id: string; name: string; email: string | null; phone: string | null; title: string | null; isPrimary: boolean };
+type RailContact = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  title: string | null;
+  isPrimary: boolean;
+  /** Two independent axes on ONE person (QA delta 07-08 §4): sales state + portal access. */
+  salesState?: "to_qualify" | "qualified" | "passed";
+  portalStatus?: "invited" | "accepted" | null;
+};
 
 const inputStyle: React.CSSProperties = {
   border: "1px solid #d7d9df",
@@ -60,10 +70,20 @@ function ContactRow({ contact, canManage }: { contact: RailContact; canManage: b
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <Avatar name={contact.name} size={32} variant={contact.isPrimary ? "owner" : "default"} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {contact.name}
-            {contact.isPrimary && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)", marginLeft: 6 }}>primary</span>}
-            {contact.title && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)", marginLeft: 6 }}>{contact.title}</span>}
+            {contact.isPrimary && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)" }}>primary</span>}
+            {contact.title && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)" }}>{contact.title}</span>}
+            {/* One row, one person, both facts — sales state and portal access are different axes */}
+            {contact.salesState === "to_qualify" && (
+              <span className="mono" style={{ fontSize: 8.5, fontWeight: 800, background: "#FFF7ED", color: "#B45309", borderRadius: 999, padding: "1px 7px" }}>to qualify</span>
+            )}
+            {contact.portalStatus === "invited" && (
+              <span className="mono" style={{ fontSize: 8.5, fontWeight: 800, background: "#F1F2F4", color: "#767B85", borderRadius: 999, padding: "1px 7px" }}>invited · awaiting first login</span>
+            )}
+            {contact.portalStatus === "accepted" && (
+              <span className="mono" style={{ fontSize: 8.5, fontWeight: 800, background: "#DCF5E3", color: "#15803D", borderRadius: 999, padding: "1px 7px" }}>portal · accepted</span>
+            )}
           </div>
           {contact.email ? (
             <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.email}</div>
