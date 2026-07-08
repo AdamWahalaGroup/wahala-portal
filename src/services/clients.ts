@@ -407,6 +407,9 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
   const taskIds = db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.organizationId, orgId));
   const stageIds = db.select({ id: schema.stages.id }).from(schema.stages).where(eq(schema.stages.organizationId, orgId));
   const lineItemIds = db.select({ id: schema.stageLineItems.id }).from(schema.stageLineItems).where(inArray(schema.stageLineItems.stageId, stageIds));
+  const dealIds = db.select({ id: schema.deals.id }).from(schema.deals).where(eq(schema.deals.organizationId, orgId));
+  const proposalIds = db.select({ id: schema.proposals.id }).from(schema.proposals).where(eq(schema.proposals.organizationId, orgId));
+  const contactIds = db.select({ id: schema.contacts.id }).from(schema.contacts).where(eq(schema.contacts.organizationId, orgId));
 
   await db.batch([
     // change_orders reference tasks + stages, so clear them first.
@@ -422,10 +425,46 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
     db.delete(schema.messages).where(eq(schema.messages.organizationId, orgId)),
     db.delete(schema.projectMembers).where(eq(schema.projectMembers.organizationId, orgId)),
     db.delete(schema.projects).where(eq(schema.projects.organizationId, orgId)),
+    // Sales side (post-CRM-restructure tables) — children before parents.
+    db.delete(schema.proposalOptions).where(inArray(schema.proposalOptions.proposalId, proposalIds)),
+    db.delete(schema.proposals).where(eq(schema.proposals.organizationId, orgId)),
+    db.delete(schema.discoveryPackages).where(inArray(schema.discoveryPackages.dealId, dealIds)),
+    db.delete(schema.dealCalls).where(inArray(schema.dealCalls.dealId, dealIds)),
+    db.delete(schema.processEvents).where(eq(schema.processEvents.organizationId, orgId)),
+    db.delete(schema.meetings).where(eq(schema.meetings.organizationId, orgId)),
+    db.delete(schema.agreements).where(eq(schema.agreements.organizationId, orgId)),
+    db.delete(schema.contractItems).where(eq(schema.contractItems.organizationId, orgId)),
+    db.delete(schema.deals).where(eq(schema.deals.organizationId, orgId)),
+    db.delete(schema.contactAssets).where(inArray(schema.contactAssets.contactId, contactIds)),
+    db.delete(schema.contactCompanies).where(eq(schema.contactCompanies.organizationId, orgId)),
+    db.delete(schema.contacts).where(eq(schema.contacts.organizationId, orgId)),
     db.delete(schema.auditLog).where(eq(schema.auditLog.organizationId, orgId)),
     db.delete(schema.users).where(eq(schema.users.organizationId, orgId)),
     db.delete(schema.organizations).where(eq(schema.organizations.id, orgId)),
   ]);
 
   securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_org", resource: `org:${orgId}`, reason: "admin_cascade_delete" });
+}
+
+/**
+ * DEV TOOL — hard-delete a contact (a "lead" is just a contact in to_qualify).
+ * Admin only. Deals keep their history but lose the contact link; the dump's
+ * R2 objects are left behind (dev cleanup, metadata rows go). Irreversible.
+ */
+export async function deleteContact(ctx: AuthContext, contactId: string): Promise<void> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_contact", resource: `contact:${contactId}`, reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can delete a contact.");
+  }
+  const db = getDb();
+  const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+  if (!contact) throw new StageError("NOT_FOUND", "Contact not found.");
+
+  await db.batch([
+    db.update(schema.deals).set({ primaryContactId: null }).where(eq(schema.deals.primaryContactId, contactId)),
+    db.delete(schema.contactAssets).where(eq(schema.contactAssets.contactId, contactId)),
+    db.delete(schema.contactCompanies).where(eq(schema.contactCompanies.contactId, contactId)),
+    db.delete(schema.contacts).where(eq(schema.contacts.id, contactId)),
+  ]);
+  securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_contact", resource: `contact:${contactId}`, reason: "admin_hard_delete" });
 }

@@ -11,6 +11,7 @@ import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { OnboardClientForm } from "@/components/OnboardClientForm";
 import { ArchiveAccountButton, RestoreAccountButton } from "@/components/ArchiveAccountButton";
+import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Avatar } from "@/components/People";
 
@@ -188,13 +189,21 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                   <div style={{ justifySelf: "start" }}>
                     <StatePill status={c.org.status} />
                   </div>
-                  <div style={{ justifySelf: "end" }}>
+                  <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 10 }}>
                     {ctx.isAdmin &&
                       (c.org.status === "archived" ? (
                         <RestoreAccountButton orgId={c.org.id} name={c.org.name} />
                       ) : (
                         <ArchiveAccountButton orgId={c.org.id} name={c.org.name} />
                       ))}
+                    {ctx.isAdmin && (
+                      <DangerDeleteButton
+                        endpoint={`/api/accounts/${c.org.id}`}
+                        title={`Delete ${c.org.name}?`}
+                        body="Hard-deletes the account and EVERYTHING under it — deals, proposals, projects, phases, contacts, portal users, files, messages, and history. The product path is Archive; this is dev cleanup only."
+                        redirectTo="/dashboard/accounts"
+                      />
+                    )}
                   </div>
                   <Link
                     href={`/dashboard/accounts/${c.org.id}`}

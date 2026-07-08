@@ -13,6 +13,7 @@ import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
 import { ContactQualifyRow } from "@/components/SalesBoard";
 import { ContactRecordEditor, ContactFilesPanel, ContactScoutPanel } from "@/components/ContactWorkspace";
+import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,14 @@ export default async function ContactDrawerPage({ params }: { params: Promise<{ 
           {chip.label}
           {contact.state === "to_qualify" && !contact.assignedToName ? " · unowned" : ""}
         </span>
+        {ctx.isAdmin && (
+          <DangerDeleteButton
+            endpoint={`/api/contacts/${contact.id}`}
+            title={`Delete ${contact.name}?`}
+            body="Removes the contact record, its files, and account links. Deals keep their history but lose the contact link. This can't be undone."
+            redirectTo="/dashboard/sales"
+          />
+        )}
       </div>
       <div className="mono" style={{ fontSize: 10.5, color: "var(--muted-line)", marginTop: 4 }}>
         one record forever — lead is a state, not a thing
