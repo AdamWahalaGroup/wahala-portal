@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
+import { defaultDepositCents } from "@/domain/proposal-math";
 import { assertSalesManager, assertStaff } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 
@@ -141,6 +142,14 @@ export async function seedDealPackage(organizationId: string, dealId: string): P
     values.push({ organizationId, dealId, kind: "professional_services", label: LABELS.professional_services!, status: "needed" });
   }
   if (values.length > 0) await db.insert(schema.agreements).values(values);
+
+  // The deposit is the package's blocking row — seed a sensible default (10% of the
+  // deal, min $500) so no deal parks in Committed behind an unset amount. Staff can
+  // still change it via the deposit API before marking it sent.
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (deal && deal.depositCents === 0 && !deal.depositPaidAt) {
+    await db.update(schema.deals).set({ depositCents: defaultDepositCents(deal.valueCents) }).where(eq(schema.deals.id, dealId));
+  }
 }
 
 /** Package completeness for the Won-drag warning: pending docs by label. */

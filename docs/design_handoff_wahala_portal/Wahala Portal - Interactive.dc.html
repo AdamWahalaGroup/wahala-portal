@@ -172,6 +172,12 @@
                 <div style="background:#fff; border:1px solid #e7e8ec; border-radius:10px; padding:11px 12px;">
                   <div style="font-size:13px; font-weight:700;">{{ c.name }}</div>
                   <div class="mono" style="font-size:10px; color:#9aa0aa; margin-top:2px;">{{ c.company }} · {{ c.source }}</div>
+                  <sc-if value="{{ c.estLabel }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
+                      <span class="mono tnum" style="font-size:11px; font-weight:600; color:#3a3f47;">{{ c.estLabel }}</span>
+                      <span class="mono" style="font-size:9px; color:#b4b9c1;">est · {{ c.ownerLabel }}</span>
+                    </div>
+                  </sc-if>
                   <div style="display:flex; gap:6px; margin-top:9px;">
                     <button onClick="{{ c.onQualify }}" style="flex:1; border:0; background:#16181d; color:#fff; font:600 11px 'Hanken Grotesk'; padding:6px 8px; border-radius:7px; cursor:pointer;">Qualify →</button>
                     <button onClick="{{ c.onPass }}" style="border:1px solid #e2e3e8; background:#fff; color:#5a6069; font:600 11px 'Hanken Grotesk'; padding:6px 9px; border-radius:7px; cursor:pointer;">Pass</button>
@@ -1337,8 +1343,18 @@
           <input value="{{ captureForm.accountNew }}" onInput="{{ onCaptureAccountNew }}" placeholder="New account name" style="width:100%; margin-top:8px; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:400 14px 'Hanken Grotesk';" />
         </sc-if>
 
-        <label class="mono" style="display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:12px 0 7px;">Est. value <span style="text-transform:none; font-weight:500; color:#b4b9c1;">gut call is fine</span></label>
-        <input value="{{ captureForm.estValue }}" onInput="{{ onCaptureEstValue }}" placeholder="$ 25,000" style="width:100%; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:500 14px 'IBM Plex Mono';" />
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label class="mono" style="display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:12px 0 7px;">Est. value <span style="text-transform:none; font-weight:500; color:#b4b9c1;">gut call is fine</span></label>
+            <input value="{{ captureForm.estValue }}" onInput="{{ onCaptureEstValue }}" placeholder="$ 25,000" style="width:100%; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:500 14px 'IBM Plex Mono'; color:#16181d; background:#fff;" />
+          </div>
+          <div>
+            <label class="mono" style="display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:12px 0 7px;">Owner</label>
+            <select value="{{ captureForm.owner }}" onChange="{{ onCaptureOwner }}" style="width:100%; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:400 14px 'Hanken Grotesk'; color:#16181d; background:#fff;">
+              <sc-for list="{{ ownerOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+            </select>
+          </div>
+        </div>
 
         <label class="mono" style="display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#9aa0aa; margin:12px 0 7px;">What they need</label>
         <textarea value="{{ captureForm.notes }}" onInput="{{ onCaptureNotes }}" placeholder="Intake notes…" style="width:100%; height:64px; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:400 13.5px 'Hanken Grotesk'; color:#16181d; background:#fff; resize:none;"></textarea>
@@ -1820,7 +1836,7 @@ class Component extends DCLogic {
     salesView: 'board', salesFilter: 'all',
     modal: null,
     dealDrawerDealId: null,
-    captureForm: { name: '', email: '', accountId: '', accountNew: '', source: 'inbound', estValue: '', notes: '', realNeed: false, budgetSignal: false, decisionMaker: false },
+    captureForm: { name: '', email: '', accountId: '', accountNew: '', source: 'inbound', estValue: '', notes: '', owner: 'Ada Obi', realNeed: false, budgetSignal: false, decisionMaker: false },
     quoteBuilder: { projectId: null, phaseId: null, epics: [] },
     settingsTab: 'agents',
     archiveAccountId: null, archiveInput: '',
@@ -1857,7 +1873,7 @@ class Component extends DCLogic {
   setListView() { this.setState({ salesView: 'list' }); }
   setSalesFilter(f) { this.setState({ salesFilter: f }); }
 
-  openCaptureModal() { this.setState({ modal: 'capture', captureForm: { name: '', email: '', accountId: '', accountNew: '', source: 'inbound', estValue: '', notes: '', realNeed: false, budgetSignal: false, decisionMaker: false } }); }
+  openCaptureModal() { this.setState({ modal: 'capture', captureForm: { name: '', email: '', accountId: '', accountNew: '', source: 'inbound', estValue: '', notes: '', owner: 'Ada Obi', realNeed: false, budgetSignal: false, decisionMaker: false } }); }
   cancelCapture() { this.setState({ modal: null }); }
   updateCapture(field, value) { this.setState(s => ({ captureForm: { ...s.captureForm, [field]: value } })); }
   toggleCaptureFlag(field) { this.setState(s => ({ captureForm: { ...s.captureForm, [field]: !s.captureForm[field] } })); }
@@ -1882,10 +1898,13 @@ class Component extends DCLogic {
         accounts = [...accounts, { id: accountId, name: f.accountNew.trim() || 'New account', initial: (f.accountNew.trim()[0] || '?').toUpperCase(), color: '#767b85', state: 'prospect', industry: '', owner: null, msaSignedAt: null }];
       }
       const contactId = uid('con');
-      const contact = { id: contactId, accountId, name: f.name.trim(), email: f.email.trim(), role: '', isPrimary: true, state: startAsDeal ? 'qualified' : 'to_qualify', score: null, verdict: null, source: f.source };
+      const estValue = Number(String(f.estValue).replace(/[^0-9.]/g, '')) || 0;
+      // est value, intake note, and owner live on the CONTACT so nothing is lost when
+      // the record parks in Triage — qualify carries all three onto the deal later.
+      const contact = { id: contactId, accountId, name: f.name.trim(), email: f.email.trim(), role: '', isPrimary: true, state: startAsDeal ? 'qualified' : 'to_qualify', score: null, verdict: null, source: f.source, estValue, notes: f.notes.trim(), owner: f.owner || 'Ada Obi' };
       let deals = s.deals;
       if (startAsDeal) {
-        deals = [...deals, { id: uid('deal'), accountId, contactId, name: (accounts.find(a => a.id === accountId) || {}).name + ' — new engagement', value: Number(String(f.estValue).replace(/[^0-9.]/g, '')) || 0, stage: 'discovery', owner: 'Ada Obi', daysInStage: 0, readiness: 3.0 }];
+        deals = [...deals, { id: uid('deal'), accountId, contactId, name: (accounts.find(a => a.id === accountId) || {}).name + ' — new engagement', value: estValue, stage: 'discovery', owner: f.owner || 'Ada Obi', daysInStage: 0, readiness: 3.0, discoveryNote: f.notes.trim() || undefined }];
       }
       return { accounts, contacts: [...s.contacts, contact], deals, modal: null };
     });
@@ -1897,7 +1916,7 @@ class Component extends DCLogic {
     if (!contact) return;
     this.setState(s => ({
       contacts: s.contacts.map(c => c.id === id ? { ...c, state: 'qualified' } : c),
-      deals: [...s.deals, { id: uid('deal'), accountId: contact.accountId, contactId: contact.id, name: (s.accounts.find(a => a.id === contact.accountId) || {}).name + ' — new engagement', value: 0, stage: 'discovery', owner: 'Ada Obi', daysInStage: 0, readiness: 3.0 }],
+      deals: [...s.deals, { id: uid('deal'), accountId: contact.accountId, contactId: contact.id, name: (s.accounts.find(a => a.id === contact.accountId) || {}).name + ' — new engagement', value: contact.estValue || 0, stage: 'discovery', owner: contact.owner || 'Ada Obi', daysInStage: 0, readiness: 3.0, discoveryNote: contact.notes || undefined }],
     }));
     this.showToast(contact.name + ' qualified → deal in Discovery');
   }
@@ -1909,6 +1928,44 @@ class Component extends DCLogic {
   openDealDrawer(id) { this.setState({ modal: 'deal', dealDrawerDealId: id }); }
   closeDealDrawer() { this.setState({ modal: null, dealDrawerDealId: null }); }
 
+  // A deal reaching Committed must always be able to finish the loop — derive its
+  // phase breakdown from whatever proposal data exists (phased option → its phases;
+  // lump-sum option → one phase; no proposal at all → one default phase) rather than
+  // relying on hand-seeded data, which only ever covered the demo Talden deal.
+  _deriveProposalPhases(deal, preferredOptionId) {
+    if (deal.proposalPhases && deal.proposalPhases.length) return deal.proposalPhases;
+    const proposal = deal.proposal;
+    const opt = proposal ? (
+      proposal.options.find(o => o.id === preferredOptionId) ||
+      proposal.options.find(o => o.id === proposal.selectedOptionId) ||
+      proposal.options.find(o => o.recommended) ||
+      proposal.options[0]
+    ) : null;
+    if (opt && opt.phases && opt.phases.length) {
+      return opt.phases.map(p => ({ name: p.name, amount: p.amount, weeks: p.weeks }));
+    }
+    if (opt) {
+      return [{ name: opt.name || 'Full engagement', amount: opt.price || deal.value, weeks: 6 }];
+    }
+    return [{ name: 'Full engagement', amount: deal.value, weeks: 6 }];
+  }
+  // Likewise, the agreement checklist (and the deposit row that unlocks "Create
+  // project") was only ever seeded for Talden/Meridian — any other account hit
+  // Committed with an empty, permanently-blocked checklist. Seed a sensible default
+  // the moment a deal first becomes Committed.
+  _ensureAgreementsForCommit(agreementsMap, account, deal) {
+    if (!account || agreementsMap[account.id]) return agreementsMap;
+    const deposit = Math.max(500, Math.round((deal.value * 0.1) / 100) * 100);
+    return {
+      ...agreementsMap,
+      [account.id]: [
+        { kind: 'MSA', status: account.msaSignedAt ? 'signed' : 'sent', note: account.msaSignedAt ? ('signed ' + account.msaSignedAt) : 'sent for signature' },
+        { kind: 'NDA', status: 'signed', note: 'signed with proposal' },
+        { kind: 'Commercial agreement', status: 'signed', note: 'terms signed' },
+        { kind: 'Deposit invoice — ' + fmtMoney(deposit), status: 'blocking', note: 'sent · waiting on client · nudge in 2d' },
+      ],
+    };
+  }
   advanceDeal(id) {
     const deal = this.state.deals.find(d => d.id === id);
     if (!deal) return;
@@ -1918,7 +1975,12 @@ class Component extends DCLogic {
       this.setState({ modal: 'nudge', nudgeDealId: id });
       return;
     }
-    this.setState(s => ({ deals: s.deals.map(d => d.id === id ? { ...d, stage: next.next, daysInStage: 0 } : d) }));
+    this.setState(s => {
+      const account = s.accounts.find(a => a.id === deal.accountId);
+      const patch = { deals: s.deals.map(d => d.id === id ? { ...d, stage: next.next, daysInStage: 0, proposalPhases: next.next === 'committed' ? this._deriveProposalPhases(d, d.proposal && d.proposal.selectedOptionId) : d.proposalPhases } : d) };
+      if (next.next === 'committed') patch.agreements = this._ensureAgreementsForCommit(s.agreements, account, deal);
+      return patch;
+    });
     this.showToast('Moved to "' + DEAL_STAGE_META[next.next].label + '"');
   }
   keepInDiscovery() { this.setState({ modal: 'deal' }); this.showToast('Stayed in Discovery — workshop scheduled'); }
@@ -1940,11 +2002,23 @@ class Component extends DCLogic {
   createProjectFromDeal() {
     const id = this.state.dealDrawerDealId;
     const deal = this.state.deals.find(d => d.id === id);
-    if (!deal || !deal.proposalPhases) return;
+    if (!deal) return;
+    const proposalPhases = this._deriveProposalPhases(deal, deal.proposal && deal.proposal.selectedOptionId);
     this.setState(s => {
       const projectId = uid('proj');
-      const phases = deal.proposalPhases.map((p, i) => ({ id: uid('ph'), name: p.name, status: i === 0 ? 'paid' : 'draft', amount: p.amount, deliverables: [] }));
-      const project = { id: projectId, accountId: deal.accountId, name: deal.name.split('—')[1] ? deal.name.split('—')[1].trim() : deal.name, type: 'New engagement', status: phases[0].status, phases };
+      const phases = proposalPhases.map((p, i) => ({ id: uid('ph'), name: p.name, status: i === 0 ? 'paid' : 'draft', amount: p.amount, deliverables: [] }));
+      const account = s.accounts.find(a => a.id === deal.accountId);
+      const splitName = (deal.name.split('—')[1] || '').trim();
+      const optName = (() => {
+        const opts = deal.proposal && deal.proposal.options;
+        if (!opts) return '';
+        const opt = opts.find(o => o.id === deal.proposal.selectedOptionId) || opts.find(o => o.recommended) || opts[0];
+        return opt && opt.name ? opt.name.trim() : '';
+      })();
+      const projectName = (splitName && splitName.toLowerCase() !== 'new engagement') ? splitName
+        : optName ? optName
+        : (account ? account.name + ' engagement' : 'New engagement');
+      const project = { id: projectId, accountId: deal.accountId, name: projectName, type: 'New engagement', status: phases[0].status, phases };
       return {
         projects: [...s.projects, project],
         accounts: s.accounts.map(a => a.id === deal.accountId ? { ...a, state: 'client' } : a),
@@ -2243,14 +2317,23 @@ class Component extends DCLogic {
     const st0 = this.state;
     if (!st0.signerName.trim()) return;
     const id = st0.selectedProposalDealId;
-    this.setState(st => ({
-      deals: st.deals.map(d => {
-        if (d.id !== id || !d.proposal) return d;
-        const nextStage = (d.stage === 'proposal_out' || d.stage === 'negotiating') ? 'committed' : d.stage;
-        return { ...d, stage: nextStage, daysInStage: 0, proposal: { ...d.proposal, status: 'approved', selectedOptionId: st.publicSelectedOptionId, respondedBy: st.signerName.trim(), respondedAt: 'just now' } };
-      }),
-      publicProposalStep: 'signed',
-    }));
+    this.setState(st => {
+      const deal = st.deals.find(d => d.id === id);
+      if (!deal || !deal.proposal) return { publicProposalStep: 'signed' };
+      const nextStage = (deal.stage === 'proposal_out' || deal.stage === 'negotiating') ? 'committed' : deal.stage;
+      const account = st.accounts.find(a => a.id === deal.accountId);
+      const patch = {
+        deals: st.deals.map(d => {
+          if (d.id !== id || !d.proposal) return d;
+          const updated = { ...d, stage: nextStage, daysInStage: 0, proposal: { ...d.proposal, status: 'approved', selectedOptionId: st.publicSelectedOptionId, respondedBy: st.signerName.trim(), respondedAt: 'just now' } };
+          if (nextStage === 'committed') updated.proposalPhases = this._deriveProposalPhases(updated, st.publicSelectedOptionId);
+          return updated;
+        }),
+        publicProposalStep: 'signed',
+      };
+      if (nextStage === 'committed') patch.agreements = this._ensureAgreementsForCommit(st.agreements, account, deal);
+      return patch;
+    });
   }
   declinePublicProposal() {
     const id = this.state.selectedProposalDealId;
@@ -2518,6 +2601,8 @@ class Component extends DCLogic {
     };
     const triageContacts = s.contacts.filter(c => c.state === 'to_qualify').map(c => ({
       ...c, company: (accById(c.accountId) || {}).name || 'Unknown',
+      estLabel: c.estValue ? fmtMoney(c.estValue) : '',
+      ownerLabel: c.owner || 'unassigned',
       onQualify: () => this.qualifyContact(c.id), onPass: () => this.passContact(c.id),
     }));
     const dealValueLabel = d => fmtMoney(d.value);
@@ -3188,6 +3273,8 @@ class Component extends DCLogic {
       onCaptureAccountNew: e => this.updateCapture('accountNew', e.target.value),
       onCaptureEstValue: e => this.updateCapture('estValue', e.target.value),
       onCaptureNotes: e => this.updateCapture('notes', e.target.value),
+      onCaptureOwner: e => this.updateCapture('owner', e.target.value),
+      ownerOptions: s.scorecard.map(r => r.name),
       accountOptions, isNewAccount: !cf.accountId,
       qualifyCounterLabel: checkedCount + ' of 3' + (checkedCount >= 2 ? ' — fast lane open' : ''),
       qualifyCounterStyle: 'font-weight:700; ' + (checkedCount >= 2 ? 'color:#15803d;' : 'color:#9aa0aa;'),

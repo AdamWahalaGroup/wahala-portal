@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
+import { chooseContractSourceOption, deriveProjectPhases, type DerivedPhase } from "@/domain/proposal-math";
 import { assertSalesManager, setDealStage } from "@/services/sales";
 import { listForDeal, type AgreementRow } from "@/services/agreements";
 import { draftProject } from "@/services/ai/draft-project";
@@ -38,6 +39,8 @@ export type ContractRoom = {
   contactEmail: string | null;
   contactName: string | null;
   project: { id: string; name: string } | null;
+  /** The phase skeleton the project will be born with — derived, never seeded. */
+  phases: DerivedPhase[];
 };
 
 async function loadDealScoped(ctx: AuthContext, dealId: string) {
@@ -66,7 +69,7 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
   const approved = await approvedProposalFor(dealId);
   const available = !!approved || ["committed", "won"].includes(deal.stage);
 
-  const [pkg, clientUsers, contact, project, selectedOption] = await Promise.all([
+  const [pkg, clientUsers, contact, project, options] = await Promise.all([
     listForDeal(ctx, deal.organizationId, dealId),
     db
       .select({ id: schema.users.id })
@@ -74,10 +77,11 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
       .where(and(eq(schema.users.organizationId, deal.organizationId), eq(schema.users.userType, "client"))),
     deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
     deal.projectId ? db.query.projects.findFirst({ where: eq(schema.projects.id, deal.projectId) }) : null,
-    approved?.selectedOptionId
-      ? db.query.proposalOptions.findFirst({ where: eq(schema.proposalOptions.id, approved.selectedOptionId) })
-      : null,
+    approved
+      ? db.select().from(schema.proposalOptions).where(eq(schema.proposalOptions.proposalId, approved.id))
+      : ([] as (typeof schema.proposalOptions.$inferSelect)[]),
   ]);
+  const selectedOption = approved?.selectedOptionId ? options.find((o) => o.id === approved.selectedOptionId) : null;
 
   return {
     available,
@@ -98,6 +102,7 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
     contactEmail: contact?.email ?? null,
     contactName: contact?.name ?? null,
     project: project ? { id: project.id, name: project.name } : null,
+    phases: deriveProjectPhases(options, approved?.selectedOptionId ?? null, deal.valueCents),
   };
 }
 
@@ -181,7 +186,12 @@ export async function executeContract(
   const deal = await loadDealScoped(ctx, dealId);
   if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
   const approved = await approvedProposalFor(dealId);
-  if (!approved) throw new StageError("INVALID_STATE", "Create project needs an approved proposal first.");
+  // A deal that reached Committed must always be able to finish the loop — an
+  // approved proposal makes the SOW richer, it isn't a precondition (prototype 07-08:
+  // no proposal means the project is born as one phase at the deal value).
+  if (!approved && !["committed", "won"].includes(deal.stage)) {
+    throw new StageError("INVALID_STATE", "Create project needs an approved proposal or a Committed deal.");
+  }
   // "Deposit clears → project": the one money-gate on the sales side. Admins may
   // force (logged via the normal audit trail); everyone else waits for the deposit.
   if (!deal.depositPaidAt && !(opts.force && ctx.isAdmin)) {
@@ -189,23 +199,25 @@ export async function executeContract(
   }
 
   const db = getDb();
-  const [option, options] = await Promise.all([
-    approved.selectedOptionId
-      ? db.query.proposalOptions.findFirst({ where: eq(schema.proposalOptions.id, approved.selectedOptionId) })
-      : null,
-    db.select().from(schema.proposalOptions).where(eq(schema.proposalOptions.proposalId, approved.id)),
-  ]);
-  const chosen = option ?? options[0];
+  const options = approved
+    ? await db.select().from(schema.proposalOptions).where(eq(schema.proposalOptions.proposalId, approved.id))
+    : [];
+  const chosen = approved ? chooseContractSourceOption(options, approved.selectedOptionId) : undefined;
+  // "Right names, right amounts": the phase skeleton comes from the signed proposal
+  // (or, without one, the deal itself). The AI writes scope + deliverables into it.
+  const phases = deriveProjectPhases(options, approved?.selectedOptionId ?? null, deal.valueCents);
 
   // The SOW sources: the approved commercial shape + everything discovery captured.
   const sources: string[] = [
-    `APPROVED PROPOSAL (v${approved.version}): ${approved.title}`,
-    approved.executiveSummaryMd ?? "",
+    approved ? `APPROVED PROPOSAL (v${approved.version}): ${approved.title}` : "",
+    approved?.executiveSummaryMd ?? "",
     chosen ? `CHOSEN OPTION ${chosen.label}: ${chosen.name}\n${chosen.summaryMd}${chosen.timelineNote ? `\nTimeline: ${chosen.timelineNote}` : ""}` : "",
-    approved.assumptionsMd ? `PROPOSAL ASSUMPTIONS\n${approved.assumptionsMd}` : "",
+    approved?.assumptionsMd ? `PROPOSAL ASSUMPTIONS\n${approved.assumptionsMd}` : "",
     deal.discoveryMd ? `DISCOVERY PACKAGE\n${deal.discoveryMd}` : "",
     deal.notes ? `DEAL NOTES\n${deal.notes}` : "",
-    "INSTRUCTION: Build the statement of work for the CHOSEN OPTION ONLY. Phases must reflect the chosen option's shape and timeline. Do not include work that only belongs to the option that was not chosen.",
+    `INSTRUCTION: The statement of work has exactly ${phases.length} phase${phases.length === 1 ? "" : "s"}, in this order: ${phases
+      .map((p, i) => `${i + 1}. ${p.name}`)
+      .join("; ")}. Write scope and deliverables for these named phases only — do not invent, rename, split, or merge phases, and do not include work that belongs to an option that was not chosen. Commercial amounts are handled elsewhere.`,
   ].filter(Boolean);
 
   const { draft, usage } = await draftProject(ctx, {
@@ -214,13 +226,25 @@ export async function executeContract(
     pastedText: sources.join("\n\n---\n\n"),
   });
 
+  // Force the skeleton: names + amounts from the proposal, deliverables from the AI
+  // (merged by position; a single-phase deal absorbs everything the AI drafted).
+  const stages = phases.map((ph, i) => {
+    const src = phases.length === 1 ? draft.stages : draft.stages[i] ? [draft.stages[i]] : [];
+    return {
+      name: ph.name,
+      scopeDescription: src.map((s) => s.scopeDescription).filter(Boolean).join("\n\n") || undefined,
+      deliverables: src.flatMap((s) => s.deliverables),
+      totalAmountCents: ph.amountCents,
+    };
+  });
+
   const { projectId } = await createDraftedProject(ctx, {
     organizationId: deal.organizationId,
     name: draft.name,
     description: draft.description,
     workType: draft.workType,
     aiContextMd: draft.projectContextMd,
-    stages: draft.stages,
+    stages,
     clientMessage: draft.clientMessage,
     postToThread: true,
   });
@@ -238,7 +262,8 @@ export async function executeContract(
           .update(schema.stages)
           .set({
             status: "paid",
-            totalAmountCents: deal.depositCents,
+            // The phase keeps its proposal amount; the deposit is its payment record.
+            ...(firstStage.totalAmountCents > 0 ? {} : { totalAmountCents: deal.depositCents }),
             quoteApprovedAt: deal.depositPaidAt,
             approvedByUserId: ctx.user.id,
             paidAt: deal.depositPaidAt,
@@ -267,7 +292,7 @@ export async function executeContract(
         action: "contract.executed",
         entityType: "deal",
         entityId: dealId,
-        metadata: { projectId, proposalId: approved.id, model: usage.model, costCents: usage.costCents },
+        metadata: { projectId, proposalId: approved?.id ?? null, model: usage.model, costCents: usage.costCents },
       }),
     ),
   ]);

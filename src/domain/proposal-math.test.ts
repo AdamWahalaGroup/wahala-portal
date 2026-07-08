@@ -12,6 +12,8 @@ import {
   phaseSignature,
   mergeContractPhases,
   paymentSchedule,
+  defaultDepositCents,
+  deriveProjectPhases,
 } from "./proposal-math";
 import type { ProposalPhase } from "./proposal-doc";
 
@@ -170,5 +172,34 @@ describe("contract snapshot", () => {
     expect(merged[0].objective).toBe("HAND-WRITTEN OBJECTIVE"); // survived
     expect(merged[1].objective).toBe("Deliver Renamed workflows as scoped in this engagement."); // boilerplate
     expect(merged[2].objective).toBe(edited[2].objective);
+  });
+});
+
+describe("committed → won derivation", () => {
+  it("deposit default: 10% rounded to $100, min $500 (prototype pin)", () => {
+    expect(defaultDepositCents(4_200_000)).toBe(420_000); // $42k deal → $4,200
+    expect(defaultDepositCents(22_500_000)).toBe(2_250_000); // Talden $225k → $22,500
+    expect(defaultDepositCents(123_456)).toBe(50_000); // $1,234.56 → 10% ≈ $123 → floor $500
+    expect(defaultDepositCents(0)).toBe(50_000); // even a $0 deal gets an actionable row
+  });
+
+  it("phased signed option → its phases, names and amounts intact", () => {
+    const opts = [
+      { id: "a", name: "Standard", priceCents: 15_000_000, recommended: false, phases: null },
+      { id: "b", name: "Phased", priceCents: 22_500_000, recommended: true, phases: [ph("Private beta", 6_500_000), ph("Legal workflows", 9_500_000)] },
+    ];
+    const out = deriveProjectPhases(opts, "b", 22_500_000);
+    expect(out.map((p) => p.name)).toEqual(["Private beta", "Legal workflows"]);
+    expect(out.map((p) => p.amountCents)).toEqual([6_500_000, 9_500_000]);
+  });
+
+  it("lump-sum option → one phase at the option price; falls back to recommended, then first", () => {
+    const opts = [{ id: "a", name: "Standard rollout", priceCents: 15_000_000, recommended: false, phases: null }];
+    const out = deriveProjectPhases(opts, null, 9_900_000);
+    expect(out).toEqual([{ name: "Standard rollout", amountCents: 15_000_000, weeks: null }]);
+  });
+
+  it("no proposal at all → one 'Full engagement' phase at the deal value", () => {
+    expect(deriveProjectPhases([], null, 4_200_000)).toEqual([{ name: "Full engagement", amountCents: 4_200_000, weeks: null }]);
   });
 });

@@ -226,3 +226,25 @@ export function paymentSchedule(contract: Pick<ProposalContract, "phases" | "dep
 export function acceptanceSentence(clientName: string, days: number): string {
   return `${clientName || "The client"} will review each delivered phase within ${days} business day${days === 1 ? "" : "s"}; unless written objections are raised in that window, the delivery is deemed accepted.`;
 }
+
+// ---------------------------------------------------------------- committed → won
+
+/** Deposit auto-seeded when a deal enters Committed: 10% of the deal, rounded to $100, min $500. */
+export function defaultDepositCents(dealValueCents: number): number {
+  return Math.max(50_000, Math.round((dealValueCents * 0.1) / 10_000) * 10_000);
+}
+
+export type DerivedPhase = { name: string; amountCents: number; weeks: number | null };
+
+/**
+ * The phase skeleton a Committed deal becomes as a project — derived from whatever
+ * proposal data exists (signed option → recommendation → first; lump-sum = one
+ * phase at the option price; no proposal at all = one phase at the deal value)
+ * rather than relying on seeded data, so any deal can finish the loop.
+ */
+export function deriveProjectPhases<T extends OptionLike>(options: T[], selectedOptionId: string | null, dealValueCents: number): DerivedPhase[] {
+  const opt = chooseContractSourceOption(options, selectedOptionId);
+  if (opt?.phases?.length) return opt.phases.map((p) => ({ name: p.name, amountCents: p.amountCents, weeks: p.weeks }));
+  if (opt) return [{ name: opt.name || "Full engagement", amountCents: opt.priceCents || dealValueCents, weeks: null }];
+  return [{ name: "Full engagement", amountCents: dealValueCents, weeks: null }];
+}

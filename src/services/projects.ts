@@ -143,7 +143,7 @@ export async function createDraftedProject(
     description?: string;
     workType?: string;
     aiContextMd?: string;
-    stages: { name: string; scopeDescription?: string; deliverables: { epic: string; description: string }[] }[];
+    stages: { name: string; scopeDescription?: string; deliverables: { epic: string; description: string }[]; totalAmountCents?: number }[];
     clientMessage?: string;
     postToThread?: boolean;
   },
@@ -168,7 +168,7 @@ export async function createDraftedProject(
       projectId: project.id,
       name: s.name,
       scopeDescription: s.scopeDescription,
-      totalAmountCents: 0,
+      totalAmountCents: s.totalAmountCents ?? 0,
       lineItems: s.deliverables.map((d) => ({ description: d.description, groupLabel: d.epic })),
     });
   }

@@ -32,6 +32,7 @@ export type Room = {
   contactEmail: string | null;
   contactName: string | null;
   project: { id: string; name: string } | null;
+  phases: { name: string; amountCents: number; weeks: number | null }[];
 };
 
 const btn = (tone: "ink" | "green" | "plain", disabled: boolean): React.CSSProperties => ({
@@ -275,6 +276,27 @@ export function ContractRoom({
                 {room.approvedProposal.timelineNote ? ` · ${room.approvedProposal.timelineNote}` : ""}
               </div>
             )}
+            {/* The phases the project is born with — derived from the signed option
+                (or the deal itself), so this list is never empty (prototype 07-08). */}
+            {room.phases.length > 0 && (
+              <div style={{ display: "grid", gap: 5, marginTop: 10 }}>
+                {room.phases.map((ph, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--white)", border: "1px solid #E3E7F8", borderRadius: 8, padding: "6px 10px" }}>
+                    <span className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--cobalt-text)", flex: "none" }}>{i + 1}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ph.name}</span>
+                    <span className="mono tabular" style={{ fontSize: 11, fontWeight: 700, flex: "none" }}>
+                      {fmt$(ph.amountCents)}
+                      {ph.weeks ? ` · ${ph.weeks}w` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!room.approvedProposal && (
+              <div className="mono" style={{ fontSize: 10, color: "#B45309", marginTop: 8 }}>
+                no signed proposal — the project starts as one phase at the deal value
+              </div>
+            )}
             <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 6 }}>
               SOW drafts after signature — the proposal scope carries over, nothing re-typed.
               <br />
@@ -284,17 +306,15 @@ export function ContractRoom({
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                 <button
                   onClick={() => setConfirm(depositPaid ? "execute" : "force")}
-                  disabled={busy !== null || !room.approvedProposal || (!depositPaid && !isAdmin)}
+                  disabled={busy !== null || (!depositPaid && !isAdmin)}
                   title={
-                    !room.approvedProposal
-                      ? "Needs an approved proposal first"
-                      : !depositPaid
-                        ? isAdmin
-                          ? "Deposit not cleared — admin force available"
-                          : "Unlocks when the deposit is marked paid"
-                        : undefined
+                    !depositPaid
+                      ? isAdmin
+                        ? "Deposit not cleared — admin force available"
+                        : "Unlocks when the deposit is marked paid"
+                      : undefined
                   }
-                  style={btn("ink", busy !== null || !room.approvedProposal || (!depositPaid && !isAdmin))}
+                  style={btn("ink", busy !== null || (!depositPaid && !isAdmin))}
                 >
                   {busy === "execute" ? "Writing SOW & creating project (~30s)…" : "Create project →"}
                 </button>
@@ -339,9 +359,8 @@ export function ContractRoom({
           <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: 16, padding: 24, maxWidth: 460, width: "100%", boxShadow: "var(--shadow-modal)" }}>
             <h3 style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800 }}>Create the project?</h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 14 }}>
-              The AI writes the statement of work from the approved option + discovery as a real project on the {orgName} account —
-              phases, focus areas, deliverables, no prices — and the deal is marked won. You&apos;ll land on the new project to review
-              and quote Phase 1.
+              The AI writes the statement of work from {room.approvedProposal ? "the approved option + discovery" : "discovery and the deal notes (no signed proposal — one phase at the deal value)"} as a real project on the {orgName} account —
+              the phases keep the signed names and amounts — and the deal is marked won. You&apos;ll land on the new project to review Phase 1.
               {confirm === "force" && <strong> The deposit hasn&apos;t cleared — this is an admin override.</strong>}
               {!complete && confirm === "execute" && " Some agreements are still open — that's on you to chase."}
             </p>

@@ -346,3 +346,37 @@ just met IS capturable with only a name — no account yet, they're a lead.
   fallback at qualify, and everything captured (est value, intake note, owner)
   still carries onto the deal.
 Please update the capture-modal spec (frame 32 / QA delta §1–2) to match.
+
+---
+
+# Update — 2026-07-08 (Committed → Won seam hardened, per the prototype update)
+
+Implements the interactive prototype's `_deriveProposalPhases` /
+`_ensureAgreementsForCommit` changes and the intent of "Production Walkthrough —
+Lead to Won" step 6 ("the single riskiest spot"). Verified end-to-end in
+production code with the walkthrough's own ZZ Test script (both windows,
+public sign, brand-new account):
+
+- **Deposit auto-seeds on entering Committed** (both paths — manual move and
+  public signature): 10% of the deal value, rounded to $100, min $500. No deal
+  parks behind an unset "set the amount to start the clock" row anymore; staff
+  can still change the amount via the deposit API before marking it sent.
+- **"When the deposit clears" card now lists the actual phases** the project
+  will be born with — derived live (signed option → recommendation → first
+  option; lump-sum = one phase at the option price; no proposal = one "Full
+  engagement" phase at the deal value), so the list is never empty. A deal with
+  no signed proposal shows an amber mono note and Create project stays enabled.
+- **Create project no longer requires an approved proposal** — any Committed
+  deal can finish the loop. The AI still writes the SOW (scope + deliverables),
+  but the phase skeleton is now forced from the signed option: **right names,
+  right amounts** land on the project's phases (walkthrough step 7 check 1).
+- **Phase 1 opens paid at its full proposal amount** when the deposit cleared
+  (the deposit is its payment record — step 7 check 2); later phases are born
+  priced from the proposal and follow the normal quote/pay gates. Without a
+  cleared deposit (admin force), phases are born draft — no phantom payments.
+
+Walkthrough results on the remaining checks: deal lands in Won and leaves the
+pipeline columns (it shows in the Won strip by design), account flips to
+Client, and the portal-invite prompt appears after Create project. The two new
+canvas files (Production Walkthrough, Proposal Focus — Options) are now
+committed alongside the handoff folder for reference.
