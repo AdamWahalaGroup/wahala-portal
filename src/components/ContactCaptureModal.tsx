@@ -82,10 +82,11 @@ export function ContactCaptureModal({ canStartDeal, currentUserId, onClose }: { 
 
   const checkedN = CHECKS.filter((c) => checks[c]).length;
   const fastLane = checkedN >= 2;
-  // The account is created AT CAPTURE (QA delta 07-08 §2) — qualify never asks.
   const hasAccount = !!picked || (createNew && accountQuery.trim().length > 0);
-  const canSave = !!form.name.trim() && hasAccount;
-  const canSubmitDeal = canStartDeal && fastLane && canSave;
+  // A bare lead saves to Triage with no account (Adam, 2026-07-08); the account
+  // gets created at qualify. Starting a deal still requires one.
+  const canSave = !!form.name.trim();
+  const canSubmitDeal = canStartDeal && fastLane && hasAccount && canSave;
 
   async function submit(qualifyNow: boolean) {
     setBusy(true);
@@ -99,6 +100,7 @@ export function ContactCaptureModal({ canStartDeal, currentUserId, onClose }: { 
           email: form.email || undefined,
           organizationId: picked?.id,
           newAccountName: !picked && createNew ? accountQuery.trim() : undefined,
+          companyNote: !picked && !createNew && accountQuery.trim() ? accountQuery.trim() : undefined,
           source: form.source || undefined,
           estValueCents: form.value ? Math.round(parseFloat(form.value) * 100) : undefined,
           notes: form.notes || undefined,
@@ -165,7 +167,9 @@ export function ContactCaptureModal({ canStartDeal, currentUserId, onClose }: { 
 
         {/* Account combobox */}
         <div style={{ marginTop: 12, position: "relative" }}>
-          <div className="kicker" style={labelStyle}>Account</div>
+          <div className="kicker" style={labelStyle}>
+            Account <span style={{ textTransform: "none", letterSpacing: 0 }}>— optional for a lead; typed text is kept as a note</span>
+          </div>
           {picked ? (
             <div style={{ display: "flex", alignItems: "center", gap: 9, border: "2px solid var(--cobalt)", borderRadius: 9, padding: "7px 10px" }}>
               <span style={{ width: 22, height: 22, borderRadius: 6, background: "#F1F2F4", color: "var(--ink-soft)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 9.5, flex: "none" }}>
@@ -321,7 +325,7 @@ export function ContactCaptureModal({ canStartDeal, currentUserId, onClose }: { 
           <button
             onClick={() => submit(false)}
             disabled={busy || !canSave}
-            title={!hasAccount ? "Pick or create an account first — every contact has one" : undefined}
+            title={!hasAccount ? "No account yet is fine — they're a lead; you'll name one at qualify" : undefined}
             style={{ background: "var(--white)", color: canSave ? "var(--ink)" : "#B4B9C1", border: "1px solid #d7d9df", borderRadius: 9, padding: "10px 16px", fontSize: 13.5, fontWeight: 700, cursor: canSave && !busy ? "pointer" : "default", flex: "1 1 30%" }}
           >
             {busy ? "Saving…" : "Save to Triage"}

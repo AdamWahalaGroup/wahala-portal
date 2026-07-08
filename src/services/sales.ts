@@ -144,6 +144,8 @@ export async function captureContact(
     phone?: string;
     organizationId?: string;
     newAccountName?: string;
+    /** Free-text company scribble when no account was picked or created. */
+    companyNote?: string;
     source?: string;
     estValueCents?: number;
     notes?: string;
@@ -191,12 +193,15 @@ export async function captureContact(
     );
   }
 
-  // QA delta 07-08 §2: the account is created AT CAPTURE (combobox "+ create new")
-  // so qualify never has to ask. A contact without an account was the prod bug.
-  if (!organizationId) throw new StageError("VALIDATION", "Every contact needs an account — pick one or create it inline.");
-
+  // Adam's call (2026-07-08, relaxing QA delta §2's strictest reading): a bare
+  // LEAD may be captured without an account — the account is created at qualify
+  // (one-field fallback) instead. Qualify still never *asks* when one exists.
+  // Starting a deal (bypass) always needs an account.
   const qualifyNow = !!input.qualifyNow;
-  if (qualifyNow) assertSalesManager(ctx, "capture_contact_bypass");
+  if (qualifyNow) {
+    assertSalesManager(ctx, "capture_contact_bypass");
+    if (!organizationId) throw new StageError("VALIDATION", "Starting a deal needs an account — pick one or create it inline.");
+  }
 
   statements.push(
     db.insert(schema.contacts).values({
@@ -207,7 +212,7 @@ export async function captureContact(
       phone: input.phone?.trim() || null,
       source: input.source?.trim() || null,
       notes: input.notes?.trim() || null,
-      companyNote: input.newAccountName?.trim() || null,
+      companyNote: input.newAccountName?.trim() || input.companyNote?.trim() || null,
       estValueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
       state: qualifyNow || (input.skipTriage && organizationId) ? "qualified" : "to_qualify",
       createdByUserId: ctx.user.id,

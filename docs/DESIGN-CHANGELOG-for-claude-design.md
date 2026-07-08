@@ -330,3 +330,19 @@ Also shipped from the prototype-changes note: **entering Committed via the
 public signature now seeds the agreement/deposit checklist** (it previously
 only seeded via a manual stage move) — verified: sign → Committed with the
 full package + deposit gate, no Create-project dead end.
+
+---
+
+# Update — 2026-07-08 (founder decision: bare leads capture without an account)
+
+Relaxes the strictest reading of the QA delta's §2. Adam's call: a person you
+just met IS capturable with only a name — no account yet, they're a lead.
+- **Capture**: the Account combobox is optional for "Save to Triage" (label
+  now says so). Typed-but-not-created account text is kept as the free-text
+  company note, never discarded. "Start deal → Discovery" (bypass) still
+  requires an account.
+- **Qualify**: unchanged from §2's core — it never *asks* when the contact has
+  an account; a bare lead gets the one-field "Account name (creates it)"
+  fallback at qualify, and everything captured (est value, intake note, owner)
+  still carries onto the deal.
+Please update the capture-modal spec (frame 32 / QA delta §1–2) to match.

@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       phone?: string;
       organizationId?: string;
       newAccountName?: string;
+      companyNote?: string;
       source?: string;
       estValueCents?: number;
       notes?: string;
