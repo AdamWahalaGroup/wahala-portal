@@ -31,7 +31,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       user={{ name: ctx.user.name, role: ctx.user.role, isStaff: ctx.isStaff }}
       orgName="Wahala Group"
       accountOwner={null}
-      leadCount={overview.triage.length}
+      leadCount={overview.newOppCount}
       proposalCount={proposalCount}
       trainingMode={trainingMode}
     >

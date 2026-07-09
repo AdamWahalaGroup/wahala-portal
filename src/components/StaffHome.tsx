@@ -32,7 +32,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
   ]);
   const openDealsForLink = sales.columns.flatMap((c) => c.deals).map((d) => ({ id: d.id, name: d.name, orgName: d.organizationName }));
   const openDealCount = sales.columns.reduce((n, c) => n + c.deals.length, 0);
-  const triageCount = sales.triage.length;
+  const newOppCount = sales.newOppCount;
   const now = new Date();
   const firstName = (ctx.user.name.split(/\s+/)[0] || ctx.user.name).replace(/[^A-Za-z].*$/, "");
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -102,7 +102,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         </span>
         <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
           {openDealCount} open deal{openDealCount === 1 ? "" : "s"}
-          {triageCount > 0 ? ` · ${triageCount} contact${triageCount === 1 ? "" : "s"} to qualify` : ""}
+          {newOppCount > 0 ? ` · ${newOppCount} new opportunit${newOppCount === 1 ? "y" : "ies"} to accept` : ""}
         </span>
         {sales.stuckCount > 0 && (
           <span className="kicker" style={{ fontSize: 10, background: "#fff7ed", color: "#b45309", padding: "3px 8px", borderRadius: 6 }}>

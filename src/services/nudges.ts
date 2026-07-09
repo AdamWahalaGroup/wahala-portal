@@ -41,7 +41,6 @@ export type Nudge = {
 
 type DealRow = { id: string; name: string; stage: DealStage; stageEnteredAt: Date; ownerUserId: string | null };
 type ProposalRow = { id: string; version: number; dealId: string; status: string; sentAt: Date | null; respondedAt: Date | null };
-type TriageContactRow = { id: string; name: string; state: string; createdAt: Date; assignedToUserId: string | null };
 
 export function selectStuckDeals(deals: DealRow[], sla: SlaSettings, now: Date): Nudge[] {
   return deals
@@ -83,21 +82,22 @@ export function selectFollowupProposals(
     });
 }
 
-/** "Lead" is the to_qualify STATE on a contact; the notification kind keeps its
- * stored name (lead_overdue) for continuity with existing rows. */
-export function selectOverdueLeads(contacts: TriageContactRow[], sla: SlaSettings, now: Date): Nudge[] {
-  return contacts
-    .filter((c) => c.state === "to_qualify" && isLeadOverdue(c.createdAt, now, sla))
-    .map((c) => {
-      const days = daysInStage(c.createdAt, now);
+/** OPPORTUNITIES RESTRUCTURE: the old "lead overdue" check now watches deals
+ * sitting unaccepted at stage 'new' past the same triage window. The stored
+ * notification kind keeps its name (lead_overdue) for continuity. */
+export function selectOverdueLeads(deals: DealRow[], sla: SlaSettings, now: Date): Nudge[] {
+  return deals
+    .filter((d) => d.stage === "new" && isLeadOverdue(d.stageEnteredAt, now, sla))
+    .map((d) => {
+      const days = daysInStage(d.stageEnteredAt, now);
       return {
         kind: "lead_overdue" as const,
-        entityType: "contact" as const,
-        entityId: c.id,
-        userId: c.assignedToUserId,
-        href: `${APP_BASE}/dashboard/sales/contacts/${c.id}`,
-        title: `Contact awaiting triage: ${c.name}`,
-        body: `Captured ${days} days ago (window ${sla.leadTriageDays}d) and still unqualified.`,
+        entityType: "deal" as const,
+        entityId: d.id,
+        userId: d.ownerUserId,
+        href: `${APP_BASE}/dashboard/sales/deals/${d.id}`,
+        title: `Opportunity awaiting acceptance: ${d.name}`,
+        body: `Created ${days} days ago (window ${sla.leadTriageDays}d) and not yet accepted into Discovery.`,
         overdueDays: days - sla.leadTriageDays,
       };
     });
@@ -122,10 +122,9 @@ export async function runNudges(db: Db, env: EmailEnv, now: Date): Promise<{ nud
   const sla = resolveSla((await db.select().from(schema.appSettings).where(eq(schema.appSettings.key, "sla")).get())?.value ?? null);
 
   // Load the source rows.
-  const [deals, sentProposals, triageContacts] = await Promise.all([
+  const [deals, sentProposals] = await Promise.all([
     db.select().from(schema.deals).all(),
     db.select().from(schema.proposals).where(eq(schema.proposals.status, "sent")).all(),
-    db.select().from(schema.contacts).where(eq(schema.contacts.state, "to_qualify")).all(),
   ]);
 
   // Join proposals → their deal (name + owner).
@@ -144,7 +143,7 @@ export async function runNudges(db: Db, env: EmailEnv, now: Date): Promise<{ nud
   const nudges: Nudge[] = [
     ...selectStuckDeals(deals as DealRow[], sla, now),
     ...selectFollowupProposals(propInputs, sla, now),
-    ...selectOverdueLeads(triageContacts as TriageContactRow[], sla, now),
+    ...selectOverdueLeads(deals as DealRow[], sla, now),
   ];
 
   let notified = 0;

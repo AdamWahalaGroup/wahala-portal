@@ -11,7 +11,7 @@ import { listWahalaStaff } from "@/services/clients";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { SalesDrawer } from "@/components/SalesDrawer";
-import { ContactQualifyRow } from "@/components/SalesBoard";
+import { StartOpportunityButton } from "@/components/OpportunityModals";
 import { ContactRecordEditor, ContactFilesPanel, ContactScoutPanel } from "@/components/ContactWorkspace";
 import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 
@@ -85,32 +85,12 @@ export default async function ContactDrawerPage({ params }: { params: Promise<{ 
         </Link>
       )}
 
-      {/* Qualify / pass / assign while the contact is still in triage */}
-      {contact.state === "to_qualify" && (
+      {/* People first: a contact stands alone — start an opportunity from it any time. */}
+      {!contact.linkedDealId && (
         <div style={{ marginTop: 16 }}>
-          <ContactQualifyRow
-            contact={{
-              id: contact.id,
-              name: contact.name,
-              companyNote: contact.companyNote,
-              organizationId: contact.organizationId,
-              organizationName: contact.organizationName,
-              email: contact.email,
-              phone: contact.phone,
-              source: contact.source,
-              notes: contact.notes,
-              state: contact.state,
-              estValueCents: contact.estValueCents,
-              assignedToUserId: contact.assignedToUserId,
-              assignedToName: contact.assignedToName,
-              aiScore: contact.aiScore,
-              aiVerdict: contact.aiVerdict,
-              aiAnalysisMd: contact.aiAnalysisMd,
-              overdue: false,
-              createdAt: contact.createdAt,
-            }}
-            staff={staff}
-            canManage={canManage}
+          <StartOpportunityButton
+            contact={{ id: contact.id, name: contact.name, organizationId: contact.organizationId, organizationName: contact.organizationName }}
+            currentUserId={ctx.user.id}
           />
         </div>
       )}

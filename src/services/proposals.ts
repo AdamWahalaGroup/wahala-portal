@@ -56,7 +56,7 @@ export type ProposalDetail = {
   dealName: string;
   dealValueCents: number;
   discoveryNote: string | null;
-  organizationId: string;
+  organizationId: string | null;
   organizationName: string;
   version: number;
   status: ProposalStatus;
@@ -91,13 +91,14 @@ export type ProposalSummary = {
   selectedLabel: string | null;
 };
 
-function assertStaffScoped(ctx: AuthContext, organizationId: string, action: string): void {
+function assertStaffScoped(ctx: AuthContext, organizationId: string | null, action: string): void {
   if (!ctx.isStaff) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_staff" });
     throw new StageError("FORBIDDEN", "Wahala staff only.");
   }
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(organizationId)) {
+  // Account-less deals belong to no account — visible to all staff.
+  if (scope.kind !== "all" && organizationId !== null && !scope.orgIds.includes(organizationId)) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "out_of_scope" });
     throw new StageError("NOT_FOUND", "Not found.");
   }
@@ -201,7 +202,7 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
   const db = getDb();
   let rows = await db.select().from(schema.proposals).orderBy(desc(schema.proposals.updatedAt));
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((p) => scope.orgIds.includes(p.organizationId));
+  if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
   rows = rows.filter((p) => p.status !== "superseded");
   // One live proposal per deal — keep the highest version.
   const byDeal = new Map<string, (typeof rows)[number]>();
@@ -213,11 +214,13 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
   if (live.length === 0) return [];
 
   const dealIds = [...new Set(live.map((p) => p.dealId))];
-  const orgIds = [...new Set(live.map((p) => p.organizationId))];
+  const orgIds = [...new Set(live.map((p) => p.organizationId).filter((v): v is string => !!v))];
   const proposalIds = live.map((p) => p.id);
   const [dealRows, orgRows, optionRows] = await Promise.all([
     db.select({ id: schema.deals.id, name: schema.deals.name }).from(schema.deals).where(inArray(schema.deals.id, dealIds)),
-    db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds)),
+    orgIds.length > 0
+      ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
+      : Promise.resolve([] as { id: string; name: string }[]),
     db.select().from(schema.proposalOptions).where(inArray(schema.proposalOptions.proposalId, proposalIds)).orderBy(schema.proposalOptions.sortOrder),
   ]);
   const dealName = new Map(dealRows.map((d) => [d.id, d.name]));
@@ -248,7 +251,7 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
         id: p.id,
         dealId: p.dealId,
         dealName: dealName.get(p.dealId) ?? "Deal",
-        organizationName: orgName.get(p.organizationId) ?? "—",
+        organizationName: (p.organizationId ? orgName.get(p.organizationId) : null) ?? "—",
         version: p.version,
         status: p.status,
         complexityScore: p.complexityScore,
@@ -269,7 +272,7 @@ export async function countSentProposals(ctx: AuthContext): Promise<number> {
     .from(schema.proposals)
     .where(eq(schema.proposals.status, "sent"));
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((p) => scope.orgIds.includes(p.organizationId));
+  if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
   return rows.length;
 }
 
@@ -279,9 +282,13 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
   assertStaffScoped(ctx, p.organizationId, "get_proposal");
   const [deal, org, options] = await Promise.all([
     db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) }),
-    db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }),
+    p.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }) : null,
     loadOptions(proposalId),
   ]);
+  // Account-less deal: the header/public page carry the CONTACT's name instead.
+  const headerContact = !org && deal?.primaryContactId
+    ? await db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) })
+    : null;
   const contract = (p.contract as ProposalContract | null) ?? null;
   return {
     id: p.id,
@@ -290,7 +297,7 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     dealValueCents: deal?.valueCents ?? 0,
     discoveryNote: deal?.discoveryNote ?? null,
     organizationId: p.organizationId,
-    organizationName: org?.name ?? "Unknown",
+    organizationName: org?.name ?? headerContact?.name ?? "Unknown",
     version: p.version,
     status: p.status,
     title: p.title,
@@ -392,7 +399,7 @@ export async function roughDraftProposal(
 ): Promise<{ proposalId: string; usage: DraftUsage | null }> {
   const deal = await loadDealForCreate(ctx, dealId, "rough_draft_proposal");
   const db = getDb();
-  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) });
+  const org = deal.organizationId ? await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null;
   const [version, approvers] = await Promise.all([nextVersionFor(dealId), approversSnapshot(deal)]);
 
   const shapes = buildOptionShapes(input.pathCount, deal.valueCents);
@@ -1053,11 +1060,18 @@ export async function getProposalByToken(token: string): Promise<PublicProposal 
   const p = await db.query.proposals.findFirst({ where: eq(schema.proposals.shareToken, token) });
   if (!p || p.status === "draft" || p.status === "superseded") return null;
   const [org, options] = await Promise.all([
-    db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }),
+    p.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }) : null,
     loadOptions(p.id),
   ]);
+  // Account-less deal: "prepared for" carries the CONTACT's name (the person IS the record).
+  let contactName: string | null = null;
+  if (!org) {
+    const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) });
+    const contact = deal?.primaryContactId ? await db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null;
+    contactName = contact?.name ?? null;
+  }
   return {
-    organizationName: org?.name ?? "your team",
+    organizationName: org?.name ?? contactName ?? "your team",
     version: p.version,
     status: p.status,
     title: p.title,

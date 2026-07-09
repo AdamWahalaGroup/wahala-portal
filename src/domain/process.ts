@@ -124,13 +124,15 @@ export const JOURNEY: { key: string; label: string }[] = [
 ];
 
 export function journeyIndex(stage: DealStage): number {
-  const map: Record<DealStage, number> = { discovery: 1, proposal_out: 2, negotiating: 3, committed: 4, won: 5, lost: 1 };
+  const map: Record<DealStage, number> = { new: 0, discovery: 1, proposal_out: 2, negotiating: 3, committed: 4, won: 5, lost: 1 };
   return map[stage];
 }
 
 /** The current goal sentence — the next expected milestone, derived, never hand-set. */
 export function goalFor(stage: DealStage, readiness: number | null, daysInStage: number): string {
   switch (stage) {
+    case "new":
+      return "Accept the opportunity into Discovery to start the deal — or decline it.";
     case "discovery":
       return readiness !== null && readiness >= PROPOSAL_READY_AT
         ? "The package is proposal-ready — draft Option A / Option B."

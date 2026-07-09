@@ -380,3 +380,42 @@ pipeline columns (it shows in the Won strip by design), account flips to
 Client, and the portal-invite prompt appears after Create project. The two new
 canvas files (Production Walkthrough, Proposal Focus — Options) are now
 committed alongside the handoff folder for reference.
+
+---
+
+# Update — 2026-07-09 (Opportunities restructure, Round 1 — the model)
+
+Implements HANDOFF-DELTA-2026-07-09 §§1–3, 6, and the §5-adjacent plumbing. The
+reference build is v3; Round 2 (Contacts nav page, dossier chips, training
+strip, spine polish) follows separately.
+
+- **One pipeline, lead/Triage retired.** Board columns are New → Discovery →
+  Proposal out → Negotiating → Committed; an opportunity is the deal record at
+  stage `new` with the blue ◔ OPPORTUNITY badge (◭ DEAL purple after). Cards in
+  New carry "Accept → start Discovery" (same record, stage flips, badge flips);
+  the drawer shows a 5-step stepper ("stage 1 of 5") and gates proposal work
+  until acceptance. Nav says **Opportunities** with a new-opportunity badge;
+  the staff Home pipeline card counts "N new opportunities to accept".
+- **People-first model.** `deals.organization_id` is now nullable (as are
+  proposals / process events / audit rows): every opportunity attaches to a
+  contact from day one, account optional. **Account-less deals run the whole
+  loop** — proposals send (public page says "prepared for {contact}"), signature
+  lands them in Committed with the deposit auto-seeded (account-level agreement
+  docs wait), and **Create project → births the account** from the contact's
+  name: contact linked as primary, deal + proposals + history re-linked,
+  agreement package seeded on the newborn account. Verified end-to-end.
+- **Entry points.** "+ New opportunity" (contact picked or created inline,
+  account existing/new/none, "What do they need" seeds the name + discovery
+  note, est value / source / owner) and "+ New contact + account" (no
+  opportunity; **portal invitation goes out on create** when there's an email
+  and an account — §3's deliberate reversal of the 08 Jul invite timing; the
+  acceptance automation is unchanged and verified). Contact pages get
+  "+ Start opportunity". The capture modal is deleted.
+- **Data migration:** every existing to_qualify contact converted into an
+  opportunity at `new` (name, est value, owner, intake note travel); the
+  unaccepted-opportunity SLA nudge replaces the triage-overdue one.
+- **Probabilities note:** the delta lists 10/25/55/75/90 but no v3 surface
+  renders them. We anchored `new` at 10% in the same admin-tunable
+  probability-anchor system the board columns already show (≈N% close in each
+  column header + the weighted pipeline stat). If design draws a dedicated
+  weighted treatment, we'll match it.

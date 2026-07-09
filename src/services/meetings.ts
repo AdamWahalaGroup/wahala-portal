@@ -309,11 +309,11 @@ export async function scheduleCall(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) throw new StageError("VALIDATION", "Pick a valid start time.");
   const durationMin = Math.max(15, Math.min(480, Math.round(input.durationMin ?? 45)));
-  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) });
+  const org = deal.organizationId ? await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null;
   const title = input.title?.trim() || `${deal.name} — ${org?.name ?? "Client"} × Wahala`;
 
   // Attendees: the chosen account contacts (must have emails).

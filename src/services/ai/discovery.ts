@@ -43,26 +43,26 @@ export async function generateDiscovery(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) {
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) {
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
   const [org, lead] = await Promise.all([
-    db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }),
+    deal.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null,
     deal.sourceLeadId ? db.query.leads.findFirst({ where: eq(schema.leads.id, deal.sourceLeadId) }) : null,
   ]);
-  if (!org) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (deal.organizationId && !org) throw new StageError("NOT_FOUND", "Deal not found.");
 
   // Ground the model with everything the platform already knows about this deal.
   const context: string[] = [
-    `Company: ${org.name}`,
+    `Company: ${org?.name ?? "(no account yet — opportunity on a contact)"}`,
     `Deal: ${deal.name} (sales stage: ${STAGE_META[deal.stage].label})`,
   ];
   if (deal.notes) context.push(`Deal notes:\n${deal.notes}`);
   if (lead?.notes || lead?.source) {
     context.push(`Original lead: ${[lead.source && `via ${lead.source}`, lead.notes].filter(Boolean).join(" — ")}`);
   }
-  if (org.intakeNotes) context.push(`Intake notes:\n${org.intakeNotes}`);
-  if (org.aiContextMd) context.push(`Client memory (client-memory.md):\n${org.aiContextMd}`);
+  if (org?.intakeNotes) context.push(`Intake notes:\n${org.intakeNotes}`);
+  if (org?.aiContextMd) context.push(`Client memory (client-memory.md):\n${org.aiContextMd}`);
 
   const parts: DraftPart[] = [{ kind: "text", text: `PLATFORM CONTEXT\n\n${context.join("\n\n")}` }];
   if (deal.discoveryMd?.trim()) {

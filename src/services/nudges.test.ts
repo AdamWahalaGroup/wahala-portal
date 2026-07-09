@@ -43,17 +43,17 @@ describe("selectFollowupProposals", () => {
 });
 
 describe("selectOverdueLeads", () => {
-  it("flags to_qualify contacts older than triage days, carrying the assignee", () => {
-    const contacts = [
-      { id: "c1", name: "Dale", state: "to_qualify", createdAt: daysAgo(5), assignedToUserId: "u2" },
-      { id: "c2", name: "Fresh", state: "to_qualify", createdAt: daysAgo(1), assignedToUserId: null },
-      { id: "c3", name: "Qualified", state: "qualified", createdAt: daysAgo(9), assignedToUserId: "u2" },
+  it("flags stage-new opportunities older than the triage window, carrying the owner", () => {
+    const deals = [
+      { id: "d1", name: "Dale — opportunity", stage: "new" as const, stageEnteredAt: daysAgo(5), ownerUserId: "u2" },
+      { id: "d2", name: "Fresh — opportunity", stage: "new" as const, stageEnteredAt: daysAgo(1), ownerUserId: null },
+      { id: "d3", name: "Accepted", stage: "discovery" as const, stageEnteredAt: daysAgo(9), ownerUserId: "u2" },
     ];
-    const out = selectOverdueLeads(contacts, sla, NOW);
-    expect(out.map((n) => n.entityId)).toEqual(["c1"]);
+    const out = selectOverdueLeads(deals, sla, NOW);
+    expect(out.map((n) => n.entityId)).toEqual(["d1"]);
     expect(out[0].userId).toBe("u2");
-    expect(out[0].entityType).toBe("contact");
-    expect(out[0].href).toContain("/dashboard/sales/contacts/c1");
+    expect(out[0].entityType).toBe("deal");
+    expect(out[0].href).toContain("/dashboard/sales/deals/d1");
   });
 });
 

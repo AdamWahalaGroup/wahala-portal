@@ -47,7 +47,12 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
-  const proposalCtaNode = (
+  // v3: no proposal work on an unaccepted opportunity — accept into Discovery first.
+  const proposalCtaNode = deal.stage === "new" ? (
+    <div className="mono" style={{ fontSize: 10.5, color: "var(--muted-line)", background: "var(--surface)", border: "1px dashed #D7D9DF", borderRadius: 10, padding: "10px 12px" }}>
+      ◔ accept this opportunity into Discovery to start proposal work
+    </div>
+  ) : (
     <ProposalsSection
       dealId={deal.id}
       proposals={proposals.map((p) => ({
@@ -65,7 +70,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   );
   const discoveryNode = <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />;
   const agreementsNode = room.available ? (
-    <ContractRoom dealId={deal.id} orgId={org.id} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org.name} />
+    <ContractRoom dealId={deal.id} orgId={org?.id ?? ""} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org?.name ?? contact?.name ?? "the new account"} />
   ) : null;
   const fieldsNode = canManage ? (
     <DealFieldsForm dealId={deal.id} name={deal.name} valueCents={deal.valueCents} notes={deal.notes} />
@@ -77,7 +82,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     <SalesDrawer routeEcho={`sales / deal / ${deal.name}`}>
       <DealDrawer
         deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck, origin: deal.origin, subStatus: deal.subStatus }}
-        org={{ id: org.id, name: org.name, status: org.status }}
+        org={org ? { id: org.id, name: org.name, status: org.status } : null}
         owner={owner ? { name: owner.name } : null}
         contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
         provenance={provenance ? { source: provenance.source, notes: provenance.notes, createdAt: provenance.createdAt.toISOString() } : null}

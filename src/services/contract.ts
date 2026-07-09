@@ -48,7 +48,7 @@ async function loadDealScoped(ctx: AuthContext, dealId: string) {
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (!ctx.isStaff || (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId))) {
+  if (!ctx.isStaff || (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId))) {
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
   return deal;
@@ -70,11 +70,13 @@ export async function getContractRoom(ctx: AuthContext, dealId: string): Promise
   const available = !!approved || ["committed", "won"].includes(deal.stage);
 
   const [pkg, clientUsers, contact, project, options] = await Promise.all([
-    listForDeal(ctx, deal.organizationId, dealId),
-    db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(and(eq(schema.users.organizationId, deal.organizationId), eq(schema.users.userType, "client"))),
+    deal.organizationId ? listForDeal(ctx, deal.organizationId, dealId) : Promise.resolve({ rows: [] as AgreementRow[], msaOnFile: false }),
+    deal.organizationId
+      ? db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(and(eq(schema.users.organizationId, deal.organizationId), eq(schema.users.userType, "client")))
+      : Promise.resolve([] as { id: string }[]),
     deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
     deal.projectId ? db.query.projects.findFirst({ where: eq(schema.projects.id, deal.projectId) }) : null,
     approved
@@ -118,6 +120,9 @@ export async function inviteContactToOrg(
 ): Promise<{ userId: string; inviteLink?: string }> {
   assertSalesManager(ctx, "invite_contact");
   const deal = await loadDealScoped(ctx, dealId);
+  if (!deal.organizationId) {
+    throw new StageError("VALIDATION", "This deal has no account yet — it's created at Create project →, and the invite follows it.");
+  }
   const db = getDb();
   const contact = deal.primaryContactId
     ? await db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) })
@@ -183,7 +188,7 @@ export async function executeContract(
   opts: { force?: boolean } = {},
 ): Promise<{ projectId: string; stagesCreated: number; usage: DraftUsage }> {
   assertSalesManager(ctx, "execute_contract");
-  const deal = await loadDealScoped(ctx, dealId);
+  let deal = await loadDealScoped(ctx, dealId);
   if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
   const approved = await approvedProposalFor(dealId);
   // A deal that reached Committed must always be able to finish the loop — an
@@ -199,6 +204,50 @@ export async function executeContract(
   }
 
   const db = getDb();
+
+  // Account-less opportunity won (HANDOFF-DELTA-2026-07-09 §2): the account is born
+  // NOW — created from the contact's name, the contact linked as primary, the deal
+  // and its proposals re-linked. Nothing entered earlier is ever re-typed.
+  let organizationId = deal.organizationId;
+  if (!organizationId) {
+    const contact = deal.primaryContactId
+      ? await db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) })
+      : null;
+    organizationId = crypto.randomUUID();
+    const accountName = contact?.name ?? (deal.name.split("—")[0].trim() || "New client");
+    const statements: unknown[] = [
+      db.insert(schema.organizations).values({
+        id: organizationId,
+        name: accountName,
+        status: "prospect",
+        accountOwnerUserId: deal.ownerUserId ?? ctx.user.id,
+        ownerAssignedAt: new Date(),
+      }),
+      db.update(schema.deals).set({ organizationId }).where(eq(schema.deals.id, dealId)),
+      db.update(schema.proposals).set({ organizationId }).where(eq(schema.proposals.dealId, dealId)),
+      // Backfill the deal's account-less history so org-scoped queries see it whole.
+      db.update(schema.processEvents).set({ organizationId }).where(eq(schema.processEvents.dealId, dealId)),
+      db.insert(schema.auditLog).values(
+        buildAudit({
+          organizationId,
+          actorUserId: ctx.user.id,
+          action: "account.born_at_win",
+          entityType: "deal",
+          entityId: dealId,
+          metadata: { accountName, contactId: contact?.id ?? null },
+        }),
+      ),
+    ];
+    if (contact) {
+      statements.push(db.update(schema.contacts).set({ organizationId }).where(eq(schema.contacts.id, contact.id)));
+      statements.push(db.insert(schema.contactCompanies).values({ contactId: contact.id, organizationId, isPrimary: true }));
+    }
+    await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+    deal = { ...deal, organizationId };
+    // The account exists now — give it the agreement package its deal already earned.
+    const { seedDealPackage } = await import("@/services/agreements");
+    await seedDealPackage(organizationId, dealId);
+  }
   const options = approved
     ? await db.select().from(schema.proposalOptions).where(eq(schema.proposalOptions.proposalId, approved.id))
     : [];
@@ -221,7 +270,7 @@ export async function executeContract(
   ].filter(Boolean);
 
   const { draft, usage } = await draftProject(ctx, {
-    organizationId: deal.organizationId,
+    organizationId,
     files: [],
     pastedText: sources.join("\n\n---\n\n"),
   });
@@ -239,7 +288,7 @@ export async function executeContract(
   });
 
   const { projectId } = await createDraftedProject(ctx, {
-    organizationId: deal.organizationId,
+    organizationId,
     name: draft.name,
     description: draft.description,
     workType: draft.workType,

@@ -66,7 +66,7 @@ export function DealDrawer({
   canManage,
 }: {
   deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null };
-  org: { id: string; name: string; status: string };
+  org: { id: string; name: string; status: string } | null;
   owner: { name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   provenance: { source: string | null; notes: string | null; createdAt: string } | null;
@@ -92,7 +92,7 @@ export function DealDrawer({
   const [rescheduleWhen, setRescheduleWhen] = useState("");
   // Achievement moment (Jason feedback) — fired by the stage select + Done→next.
   const [moment, setMoment] = useState<StageMoment | null>(null);
-  const fireMoment = (to: string) => setMoment(stageMomentFor(deal.stage, to, { id: deal.id, name: deal.name, organizationName: org.name }));
+  const fireMoment = (to: string) => setMoment(stageMomentFor(deal.stage, to, { id: deal.id, name: deal.name, organizationName: org?.name ?? deal.name }));
   const meta = STAGE_META[deal.stage];
   // The deal's next step, upgraded to a real event when one exists (frame 42).
   const nextMeeting = process.meetings
@@ -118,7 +118,7 @@ export function DealDrawer({
   const terminal = deal.stage === "won" || deal.stage === "lost";
   const committed = deal.stage === "committed";
   // 4-step stepper over the funnel stages; won = all done, lost = closed out.
-  const stepIdx = deal.stage === "won" ? 4 : (FUNNEL_STAGES as readonly DealStage[]).indexOf(deal.stage);
+  const stepIdx = deal.stage === "won" ? FUNNEL_STAGES.length : (FUNNEL_STAGES as readonly DealStage[]).indexOf(deal.stage);
   const next = nextStageOf(deal.stage);
 
   async function patchDeal(body: { stage?: string; subStatus?: string | null; reason?: string; override?: boolean }) {
@@ -159,15 +159,37 @@ export function DealDrawer({
 
   return (
     <div>
-      {/* Header: name + value, meta, provenance chip, 5-segment stage bar */}
+      {/* Header: badge, name + value, meta, provenance chip, stage bar */}
+      <span
+        className="mono"
+        style={{
+          display: "inline-block",
+          fontSize: 8.5,
+          fontWeight: 700,
+          letterSpacing: ".06em",
+          padding: "2px 7px",
+          borderRadius: 5,
+          marginBottom: 6,
+          background: deal.stage === "new" ? "#EEF0FE" : "#F1ECFD",
+          color: deal.stage === "new" ? "#2536C4" : "#6D28D9",
+        }}
+      >
+        {deal.stage === "new" ? "◔ OPPORTUNITY" : "◭ DEAL"}
+      </span>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, letterSpacing: "-.02em", flex: 1, minWidth: 0 }}>{deal.name}</h1>
         <Money cents={deal.valueCents} style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-.02em" }} />
       </div>
       <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
-        <Link href={`/dashboard/accounts/${org.id}`}>{org.name}</Link>
-        {" · "}
-        {org.status === "prospect" ? "prospect" : org.status === "active" ? "client" : org.status}
+        {org ? (
+          <>
+            <Link href={`/dashboard/accounts/${org.id}`}>{org.name}</Link>
+            {" · "}
+            {org.status === "prospect" ? "prospect" : org.status === "active" ? "client" : org.status}
+          </>
+        ) : (
+          <span>no account yet — born at Create project →</span>
+        )}
         {contact ? ` · ${contact.name}` : ""}
         {owner ? ` · ${owner.name}` : ""}
         {" · "}
@@ -182,7 +204,7 @@ export function DealDrawer({
       {/* Proposal CTA — directly under the value (prototype layout) */}
       <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
 
-      {/* 4-step stage stepper */}
+      {/* Stage stepper over the open funnel */}
       <div style={{ display: "flex", marginTop: 18 }}>
         {(FUNNEL_STAGES as readonly DealStage[]).map((k, i) => {
           const done = i < stepIdx || deal.stage === "won";
@@ -215,7 +237,7 @@ export function DealDrawer({
         })}
       </div>
       <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 7, textAlign: "center" }}>
-        {deal.stage === "won" ? "won 🎉" : deal.stage === "lost" ? "closed lost" : `stage ${stepIdx + 1} of 4 — ${meta.label}`}
+        {deal.stage === "won" ? "won 🎉" : deal.stage === "lost" ? "closed lost" : `stage ${stepIdx + 1} of ${FUNNEL_STAGES.length} — ${meta.label}`}
       </div>
       {canManage && deal.stage === "negotiating" && (
         <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
@@ -266,7 +288,7 @@ export function DealDrawer({
               disabled={busy}
               style={{ flex: 1, background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
             >
-              {busy ? "Moving…" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
+              {busy ? "Moving…" : deal.stage === "new" ? "Accept → start Discovery" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
             </button>
             <button
               onClick={markLost}
@@ -402,7 +424,7 @@ export function DealDrawer({
 
             {/* Contact — shared, editable from here (edits apply everywhere) */}
             {contact && (
-              <ContactBlock contactId={contact.id} name={contact.name} orgName={org.name} email={contact.email} phone={contact.phone} canManage={canManage} />
+              <ContactBlock contactId={contact.id} name={contact.name} orgName={org?.name ?? "no account yet"} email={contact.email} phone={contact.phone} canManage={canManage} />
             )}
 
             {/* Deal owner */}
@@ -457,8 +479,8 @@ export function DealDrawer({
         <ScheduleCallModal
           dealId={deal.id}
           dealName={deal.name}
-          accountName={org.name}
-          orgId={org.id}
+          accountName={org?.name ?? deal.name}
+          orgId={org?.id ?? ""}
           memberEmail={process.memberEmail}
           zoomReady={process.zoomReady}
           calendarConnected={process.calendarConnected}

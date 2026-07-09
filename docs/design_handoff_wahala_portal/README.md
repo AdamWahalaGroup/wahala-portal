@@ -19,6 +19,11 @@ covers the brand/design-system and the priority screens for the first build pass
 > say "stage" for a project phase — that's the pre-06-Jul name; the canvas
 > (`Wahala Portal.dc.html`) hasn't been relabeled yet either.
 
+> **Naming (09 Jul 2026):** "lead" and "Triage" are retired. An **Opportunity** is a deal
+> at stage `new`; accepting it into Discovery starts the deal. See
+> [`HANDOFF-DELTA-2026-07-09-opportunities-restructure.md`](HANDOFF-DELTA-2026-07-09-opportunities-restructure.md)
+> — it supersedes the lead/Triage vocabulary in every older doc below.
+
 ## About the Design Files
 The file in this bundle (`Wahala Portal.dc.html`) is a **design reference created
 in HTML** — a prototype showing intended look and behavior, **not production code
@@ -60,7 +65,9 @@ relevant `.md` to see exactly what moved.
 - [`CRM-RESTRUCTURE.md`](CRM-RESTRUCTURE.md) — **(read before any sales/CRM work):** Contact/Account object model, 5-stage pipeline (frames 30–34), triage bypass, agreement checklist, deal→project loop. Supersedes the 7-column board in `BOARD-REDESIGN.md` and the lead/client vocabulary everywhere.
 - [`TRAINING-AND-SCORECARD.md`](TRAINING-AND-SCORECARD.md) — training mode, readiness scoring, nudge-on-advance, deal post-mortem, admin scorecard (frames 38–41). One process model → guide / nudge / score.
 - [`CALENDAR-AND-MEETINGS.md`](CALENDAR-AND-MEETINGS.md) — Google Calendar / Zoom integration UI (frames 42–48). MeetingCard states, schedule modal, today strip + meeting inbox, client call card, integrations settings, guarded disconnect. Zoom is not connected yet — the degraded states are the launch reality.
-- [`HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md`](HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md) — **NEWEST, read before any Proposals work:** full phased-sign-off proposal rebuild + the new linked Contract/SOW document (Draft→Sent→Executed lock, amendment log, staleness/resync). **Supersedes `sales/proposals.md` entirely.** Reference is a real interactive prototype (`Wahala Portal - Interactive.dc.html` in this folder), not the static canvas — open it in a browser and click through it.
+- [`HANDOFF-DELTA-2026-07-09-opportunities-restructure.md`](HANDOFF-DELTA-2026-07-09-opportunities-restructure.md) — **NEWEST, read before any sales/CRM/proposals work:** one-pipeline Opportunities model (lead/Triage retired), people-first Contact/Account rules, new entry modals, Contacts nav page, proposals-belong-to-deals, Signed-Spine proposal editor. Reference prototype: `Wahala Portal - Interactive v3 (Opportunities).dc.html`. **Where it conflicts with `CRM-RESTRUCTURE.md` or older deltas, it wins.**
+- [`HANDOFF-DELTA-2026-07-08-first-qa-pass.md`](HANDOFF-DELTA-2026-07-08-first-qa-pass.md) — first production QA pass: capture data carry-through, qualify/account rules, portal-invite placement (§3 partially reversed on 09 Jul), invite-state vs sales-state chips, no dead client nav.
+- [`HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md`](HANDOFF-DELTA-2026-07-07-proposals-and-contracts.md) — read before any Proposals work: full phased-sign-off proposal rebuild + the new linked Contract/SOW document (Draft→Sent→Executed lock, amendment log, staleness/resync). **Supersedes `sales/proposals.md` entirely.** Behavior carries forward; the current build of the proposal editor/public page is in the v3 prototype (see the 09 Jul delta).
 
 **Screens**
 - [`design-system.md`](design-system.md) — Design system — tokens & core components
@@ -96,10 +103,14 @@ relevant `.md` to see exactly what moved.
 | **30–34 CRM restructure (canonical)** | `CRM-RESTRUCTURE.md` |
 | 35 Invite · 36 Quote approval · 37 Closeout→next deal | `HANDOFF-DELTA-2026-07-04.md` |
 | **38–41 Training mode, nudge, post-mortem, scorecard** | `TRAINING-AND-SCORECARD.md` |
-| **42–48 Calendar, meetings & integrations (NEW)** | `CALENDAR-AND-MEETINGS.md` |
+| **42–48 Calendar, meetings & integrations** | `CALENDAR-AND-MEETINGS.md` |
+| **Opportunities restructure (no frames — interactive v3 prototype)** | `HANDOFF-DELTA-2026-07-09-opportunities-restructure.md` |
 
 ## Files in this folder
-- `Wahala Portal.dc.html` — the full design canvas (all frames). Open in a browser.
-- `Wahala Portal - Interactive.dc.html` — **real interactive prototype** for the Proposals + Contract/SOW feature (see the 07 Jul delta above). Click through it, don't just read about it.
-- `support.js` — runtime both canvases need to render.
+- `Wahala Portal.dc.html` — the full design canvas (all frames). Open in a browser. **Not yet updated for the 09 Jul Opportunities restructure** — frames 30–32 show the old Triage model.
+- `Wahala Portal - Interactive v3 (Opportunities).dc.html` — **the current interactive prototype** (09 Jul): whole staff app + client portal under the Opportunities model, incl. the Signed-Spine proposal editor. Primary reference for all sales/CRM/proposals work.
+- `Wahala Portal - Interactive.dc.html` — earlier interactive prototype (Proposals + Contract/SOW, 07–08 Jul). Historical for sales/CRM — use v3.
+- `Production Walkthrough - Lead to Won.dc.html` — printable QA script the founder ran against production (08 Jul). Written against the pre-restructure flow; re-script after the 09 Jul model ships.
+- `Demo Script.dc.html` — demo walkthrough script.
+- `support.js` / `doc-page.js` — runtime the prototypes and printable docs need to render.
 - `*.md` — the written spec, split as mapped above.

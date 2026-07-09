@@ -118,30 +118,35 @@ const LABELS: Partial<Record<AgreementKind, string>> = {
  * move). Account docs (MSA, NDA) are created once per account; with a signed MSA the
  * deal package is SOW-only (commercial agreement) — the fast lane.
  */
-export async function seedDealPackage(organizationId: string, dealId: string): Promise<void> {
+export async function seedDealPackage(organizationId: string | null, dealId: string): Promise<void> {
   const db = getDb();
-  const existing = await db.select().from(schema.agreements).where(eq(schema.agreements.organizationId, organizationId));
-  const msaOnFile = existing.some((a) => a.kind === "msa" && a.status === "signed");
-  const hasAccountKind = (k: AgreementKind) => existing.some((a) => a.kind === k);
-  const hasDealKind = (k: AgreementKind) => existing.some((a) => a.dealId === dealId && a.kind === k);
+  // Agreements are account-level docs — an account-less opportunity that reaches
+  // Committed skips them until its account is born at Create project →. The deposit
+  // below is deal-level and seeds regardless.
+  if (organizationId) {
+    const existing = await db.select().from(schema.agreements).where(eq(schema.agreements.organizationId, organizationId));
+    const msaOnFile = existing.some((a) => a.kind === "msa" && a.status === "signed");
+    const hasAccountKind = (k: AgreementKind) => existing.some((a) => a.kind === k);
+    const hasDealKind = (k: AgreementKind) => existing.some((a) => a.dealId === dealId && a.kind === k);
 
-  const values: (typeof schema.agreements.$inferInsert)[] = [];
-  if (!hasAccountKind("msa")) values.push({ organizationId, dealId, kind: "msa", label: LABELS.msa!, status: "needed" });
-  if (!hasAccountKind("nda")) values.push({ organizationId, dealId, kind: "nda", label: LABELS.nda!, status: "needed" });
-  if (!hasDealKind("commercial_agreement")) {
-    values.push({
-      organizationId,
-      dealId,
-      kind: "commercial_agreement",
-      label: msaOnFile ? "Statement of work" : LABELS.commercial_agreement!,
-      status: "needed",
-      note: msaOnFile ? "MSA on file — SOW only" : null,
-    });
+    const values: (typeof schema.agreements.$inferInsert)[] = [];
+    if (!hasAccountKind("msa")) values.push({ organizationId, dealId, kind: "msa", label: LABELS.msa!, status: "needed" });
+    if (!hasAccountKind("nda")) values.push({ organizationId, dealId, kind: "nda", label: LABELS.nda!, status: "needed" });
+    if (!hasDealKind("commercial_agreement")) {
+      values.push({
+        organizationId,
+        dealId,
+        kind: "commercial_agreement",
+        label: msaOnFile ? "Statement of work" : LABELS.commercial_agreement!,
+        status: "needed",
+        note: msaOnFile ? "MSA on file — SOW only" : null,
+      });
+    }
+    if (!msaOnFile && !hasDealKind("professional_services")) {
+      values.push({ organizationId, dealId, kind: "professional_services", label: LABELS.professional_services!, status: "needed" });
+    }
+    if (values.length > 0) await db.insert(schema.agreements).values(values);
   }
-  if (!msaOnFile && !hasDealKind("professional_services")) {
-    values.push({ organizationId, dealId, kind: "professional_services", label: LABELS.professional_services!, status: "needed" });
-  }
-  if (values.length > 0) await db.insert(schema.agreements).values(values);
 
   // The deposit is the package's blocking row — seed a sensible default (10% of the
   // deal, min $500) so no deal parks in Committed behind an unset amount. Staff can

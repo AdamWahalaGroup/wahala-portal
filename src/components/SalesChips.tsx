@@ -120,6 +120,7 @@ export const stageSelectStyle: React.CSSProperties = {
 /** Stage identity colors — section headers, spine nodes. Triage (contacts) is cobalt. */
 export const TRIAGE_COLOR = "#2B3EE6";
 export const STAGE_COLORS: Record<DealStage, string> = {
+  new: "#2B3EE6",
   discovery: "#2563EB",
   proposal_out: "#0891B2",
   negotiating: "#D97706",

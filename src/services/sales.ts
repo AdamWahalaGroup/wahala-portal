@@ -1,15 +1,16 @@
 /**
- * Sales pipeline service (CRM front half, R1 — docs/brain_storming/synthesis.md).
+ * Opportunities pipeline service (HANDOFF-DELTA-2026-07-09 restructure).
  *
- * Leads are an UNOWNED trap: any staff member can capture one. Qualifying a lead
- * converts it into an organization (status 'prospect'), a contact (+ company link),
- * and a deal at 'discovery'. Deals move freely between stages — dispositions, not a
- * state machine — and every move is audited so the funnel history is reconstructable.
- * Winning a deal flips the org to 'active': the prospect became a customer, and the
- * existing contract→project seam takes over from there.
+ * "Lead" and "Triage" are retired: an OPPORTUNITY is not a new object — it is the
+ * deal record at stage 'new', attached to a contact from day one. The account is
+ * optional at creation and is born at Create project → if still missing. Accepting
+ * an opportunity flips it into Discovery (same record, badge flips). Deals move
+ * freely between stages — dispositions, not a state machine — and every move is
+ * audited so the funnel history is reconstructable. Winning a deal flips the org
+ * to 'active': the prospect became a customer.
  *
- * RBAC: any staff can view and capture leads; qualifying, deal edits, and stage
- * moves need admin or account_owner (same tier as quoting).
+ * RBAC: any staff can view and start opportunities; deal edits and stage moves
+ * need admin or account_owner (same tier as quoting).
  */
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
@@ -36,74 +37,35 @@ export function assertSalesManager(ctx: AuthContext, action: string): void {
   }
 }
 
-// ---------------------------------------------------------------- triage contacts
-// "Lead" is a STATE on a contact (to_qualify), not a thing. The Triage column
-// renders these rows; qualifying flips state and creates a deal referencing the
-// SAME contact — nothing is converted, so an email edit anywhere lands everywhere.
+// ---------------------------------------------------------------- contacts (people first)
+// A contact can stand alone; an account only exists once at least one contact
+// hangs off it. Nothing here is a pipeline — the pipeline is deals.
 
-export type ContactItem = {
+export type ContactLite = {
   id: string;
   name: string;
-  /** Free-text company until an account exists; the account name once linked. */
-  companyNote: string | null;
+  email: string | null;
   organizationId: string | null;
   organizationName: string | null;
-  email: string | null;
-  phone: string | null;
-  source: string | null;
-  notes: string | null;
-  state: "to_qualify" | "qualified" | "passed";
-  estValueCents: number;
-  assignedToUserId: string | null;
-  assignedToName: string | null;
-  aiScore: number | null;
-  aiVerdict: "pursue" | "probe" | "pass" | null;
-  /** The scout's full opinion (markdown), shown in the triage card drawer. */
-  aiAnalysisMd: string | null;
-  /** Still to_qualify past the triage SLA — flags ⚠ on its Triage card. */
-  overdue: boolean;
-  createdAt: Date;
 };
 
-export async function listTriageContacts(ctx: AuthContext): Promise<ContactItem[]> {
-  assertStaff(ctx, "list_triage_contacts");
+/** Every contact, for pickers (New-opportunity modal) and the Contacts page. */
+export async function listContactsLite(ctx: AuthContext): Promise<ContactLite[]> {
+  assertStaff(ctx, "list_contacts");
   const db = getDb();
-  const [rows, sla] = await Promise.all([
-    db.select().from(schema.contacts).where(eq(schema.contacts.state, "to_qualify")).orderBy(desc(schema.contacts.createdAt)),
-    getSlaSettings(),
-  ]);
-  const now = new Date();
-  const userIds = [...new Set(rows.map((c) => c.assignedToUserId).filter((v): v is string => !!v))];
+  const rows = await db.select().from(schema.contacts).orderBy(schema.contacts.name);
   const orgIds = [...new Set(rows.map((c) => c.organizationId).filter((v): v is string => !!v))];
-  const [staff, orgs] = await Promise.all([
-    userIds.length > 0
-      ? db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
-      : Promise.resolve([]),
+  const orgs =
     orgIds.length > 0
-      ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
-      : Promise.resolve([]),
-  ]);
-  const names = new Map(staff.map((s) => [s.id, s.name]));
+      ? await db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
+      : [];
   const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
   return rows.map((c) => ({
     id: c.id,
     name: c.name,
-    companyNote: c.companyNote,
+    email: c.email,
     organizationId: c.organizationId,
     organizationName: c.organizationId ? orgNames.get(c.organizationId) ?? null : null,
-    email: c.email,
-    phone: c.phone,
-    source: c.source,
-    notes: c.notes,
-    state: c.state,
-    estValueCents: c.estValueCents,
-    assignedToUserId: c.assignedToUserId,
-    assignedToName: c.assignedToUserId ? names.get(c.assignedToUserId) ?? null : null,
-    aiScore: c.aiScore,
-    aiVerdict: c.aiVerdict,
-    aiAnalysisMd: c.aiAnalysisMd,
-    overdue: isLeadOverdue(c.createdAt, now, sla),
-    createdAt: c.createdAt,
   }));
 }
 
@@ -129,231 +91,254 @@ export async function assignContact(ctx: AuthContext, contactId: string, userId:
   if (!row) throw new StageError("NOT_FOUND", "Contact not found.");
 }
 
+/** Resolve/validate the deal owner — defaults to the acting user. */
+async function resolveOwner(ctx: AuthContext, ownerUserId?: string): Promise<string> {
+  if (!ownerUserId?.trim() || ownerUserId.trim() === ctx.user.id) return ctx.user.id;
+  const db = getDb();
+  const owner = await db.query.users.findFirst({ where: eq(schema.users.id, ownerUserId.trim()) });
+  if (!owner || owner.userType !== "wahala" || owner.status === "disabled") {
+    throw new StageError("VALIDATION", "That owner isn't an active staff member.");
+  }
+  return owner.id;
+}
+
+/** Resolve/validate/create the (optional) account. Returns [orgId | null, insert stmts]. */
+async function resolveAccount(
+  ctx: AuthContext,
+  input: { organizationId?: string; newAccountName?: string },
+): Promise<{ organizationId: string | null; accountName: string | null; statements: unknown[] }> {
+  const db = getDb();
+  const organizationId = input.organizationId?.trim() || null;
+  if (organizationId) {
+    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
+    if (!org) throw new StageError("VALIDATION", "That account does not exist.");
+    return { organizationId, accountName: org.name, statements: [] };
+  }
+  if (input.newAccountName?.trim()) {
+    const id = crypto.randomUUID();
+    return {
+      organizationId: id,
+      accountName: input.newAccountName.trim(),
+      statements: [
+        db.insert(schema.organizations).values({
+          id,
+          name: input.newAccountName.trim(),
+          status: "prospect",
+          accountOwnerUserId: ctx.user.id,
+          ownerAssignedAt: new Date(),
+        }),
+      ],
+    };
+  }
+  return { organizationId: null, accountName: null, statements: [] };
+}
+
 /**
- * Capture a contact (frame 32). Any staff can save to Triage. With qualifyNow
- * (the "Start deal → Discovery" bypass, ≥2 quick-check chips in the UI) it also
- * creates the deal — that needs the sales-manager tier, same as qualifying.
- * The account is optional for triage saves; the bypass requires one (existing id
- * or a new name created inline as a prospect).
+ * Start an OPPORTUNITY (HANDOFF-DELTA-2026-07-09 §3): a deal at stage 'new' on a
+ * contact — existing or created inline — with the account optional (existing /
+ * created inline / none). "What do they need" seeds the deal name and the
+ * discovery note; est value and source travel like they always did. Any staff.
  */
-export async function captureContact(
+export async function createOpportunity(
+  ctx: AuthContext,
+  input: {
+    contactId?: string;
+    contactName?: string;
+    contactEmail?: string;
+    organizationId?: string;
+    newAccountName?: string;
+    /** "What do they need" — seeds the opportunity name + discovery note. */
+    need?: string;
+    estValueCents?: number;
+    source?: string;
+    ownerUserId?: string;
+  },
+): Promise<{ dealId: string; contactId: string; organizationId?: string }> {
+  assertStaff(ctx, "create_opportunity");
+  const db = getDb();
+  const now = new Date();
+  const ownerUserId = await resolveOwner(ctx, input.ownerUserId);
+  const { organizationId, accountName, statements } = await resolveAccount(ctx, input);
+
+  // The contact: pick an existing one, or create it inline (name is enough).
+  let contactId = input.contactId?.trim() || null;
+  let contactName: string;
+  if (contactId) {
+    const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+    if (!contact) throw new StageError("VALIDATION", "That contact does not exist.");
+    contactName = contact.name;
+    // A contact without an account adopts the one chosen here (never overwrites).
+    if (organizationId && !contact.organizationId) {
+      statements.push(db.update(schema.contacts).set({ organizationId }).where(eq(schema.contacts.id, contactId)));
+    }
+  } else {
+    contactName = input.contactName?.trim() ?? "";
+    if (!contactName) throw new StageError("VALIDATION", "An opportunity needs a contact — pick one or give a name.");
+    contactId = crypto.randomUUID();
+    statements.push(
+      db.insert(schema.contacts).values({
+        id: contactId,
+        organizationId,
+        name: contactName,
+        email: input.contactEmail?.trim().toLowerCase() || null,
+        source: input.source?.trim() || null,
+        estValueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
+        state: "qualified",
+        createdByUserId: ctx.user.id,
+        assignedToUserId: ownerUserId,
+      }),
+    );
+  }
+  if (organizationId && contactId) {
+    const existingLink = await db.query.contactCompanies.findFirst({
+      where: and(eq(schema.contactCompanies.contactId, contactId), eq(schema.contactCompanies.organizationId, organizationId)),
+    });
+    if (!existingLink) statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
+  }
+
+  // "{account-or-contact name} — {first ~36 chars of the need}" (prototype).
+  const need = input.need?.trim() || null;
+  const shortNeed = need ? (need.length > 36 ? `${need.slice(0, 36).trimEnd()}…` : need) : "opportunity";
+  const dealId = crypto.randomUUID();
+  statements.push(
+    db.insert(schema.deals).values({
+      id: dealId,
+      organizationId,
+      name: `${accountName ?? contactName} — ${shortNeed}`,
+      stage: "new",
+      stageEnteredAt: now,
+      ownerUserId,
+      primaryContactId: contactId,
+      origin: "captured",
+      valueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
+      notes: need,
+      discoveryNote: need,
+    }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId,
+        actorUserId: ctx.user.id,
+        action: "opportunity.created",
+        entityType: "deal",
+        entityId: dealId,
+        metadata: { contactId, contactName, source: input.source ?? null },
+      }),
+    ),
+  );
+
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+  return { dealId, contactId, organizationId: organizationId ?? undefined };
+}
+
+/**
+ * "New contact + account" (HANDOFF-DELTA-2026-07-09 §3): a deliberate person(+company)
+ * record with NO opportunity — due diligence first, start an opportunity later. If
+ * there's an email AND an account, a portal invitation goes out on create (this
+ * knowingly reverses the 08 Jul §3 invite timing for this deliberate path; the
+ * acceptance automation — login links to this contact by email — is unchanged).
+ */
+export async function createContactWithAccount(
   ctx: AuthContext,
   input: {
     name: string;
     email?: string;
     phone?: string;
+    title?: string;
     organizationId?: string;
     newAccountName?: string;
-    /** Free-text company scribble when no account was picked or created. */
-    companyNote?: string;
-    source?: string;
-    estValueCents?: number;
     notes?: string;
-    /** Who's working this contact — defaults to the capturer (QA delta 07-08 §1). */
-    ownerUserId?: string;
-    qualifyNow?: boolean;
-    /** Which quick-check chips were on — logged with the bypass, never a gate here. */
-    checks?: string[];
-    /** Account-page adds: a known person on an existing account — not a lead, no deal. */
-    skipTriage?: boolean;
+    source?: string;
   },
-): Promise<{ contactId: string; dealId?: string; organizationId?: string }> {
-  assertStaff(ctx, "capture_contact");
+  origin?: string,
+): Promise<{ contactId: string; organizationId?: string; invited: boolean; inviteLink?: string }> {
+  assertStaff(ctx, "create_contact");
   const name = input.name?.trim();
   if (!name) throw new StageError("VALIDATION", "A contact needs at least a name.");
   const db = getDb();
-  const now = new Date();
+  const { organizationId, statements } = await resolveAccount(ctx, input);
   const contactId = crypto.randomUUID();
-  const statements = [];
-
-  // Who owns the contact from day one — capture data is never lost or re-typed.
-  let ownerUserId = ctx.user.id;
-  if (input.ownerUserId?.trim() && input.ownerUserId.trim() !== ctx.user.id) {
-    const owner = await db.query.users.findFirst({ where: eq(schema.users.id, input.ownerUserId.trim()) });
-    if (!owner || owner.userType !== "wahala" || owner.status === "disabled") {
-      throw new StageError("VALIDATION", "That owner isn't an active staff member.");
-    }
-    ownerUserId = owner.id;
-  }
-
-  let organizationId = input.organizationId?.trim() || null;
-  if (organizationId) {
-    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
-    if (!org) throw new StageError("VALIDATION", "That account does not exist.");
-  } else if (input.newAccountName?.trim()) {
-    organizationId = crypto.randomUUID();
-    statements.push(
-      db.insert(schema.organizations).values({
-        id: organizationId,
-        name: input.newAccountName.trim(),
-        status: "prospect",
-        accountOwnerUserId: ctx.user.id,
-        ownerAssignedAt: now,
-      }),
-    );
-  }
-
-  // Adam's call (2026-07-08, relaxing QA delta §2's strictest reading): a bare
-  // LEAD may be captured without an account — the account is created at qualify
-  // (one-field fallback) instead. Qualify still never *asks* when one exists.
-  // Starting a deal (bypass) always needs an account.
-  const qualifyNow = !!input.qualifyNow;
-  if (qualifyNow) {
-    assertSalesManager(ctx, "capture_contact_bypass");
-    if (!organizationId) throw new StageError("VALIDATION", "Starting a deal needs an account — pick one or create it inline.");
-  }
+  const email = input.email?.trim().toLowerCase() || null;
 
   statements.push(
     db.insert(schema.contacts).values({
       id: contactId,
       organizationId,
       name,
-      email: input.email?.trim().toLowerCase() || null,
+      email,
       phone: input.phone?.trim() || null,
+      title: input.title?.trim() || null,
       source: input.source?.trim() || null,
       notes: input.notes?.trim() || null,
-      companyNote: input.newAccountName?.trim() || input.companyNote?.trim() || null,
-      estValueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
-      state: qualifyNow || (input.skipTriage && organizationId) ? "qualified" : "to_qualify",
+      state: "qualified",
       createdByUserId: ctx.user.id,
-      assignedToUserId: ownerUserId,
-    }),
-  );
-  if (organizationId) {
-    statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
-  }
-
-  let dealId: string | undefined;
-  if (qualifyNow && organizationId) {
-    dealId = crypto.randomUUID();
-    statements.push(
-      db.insert(schema.deals).values({
-        id: dealId,
-        organizationId,
-        name: `${input.newAccountName?.trim() || name} — opportunity`,
-        stage: "discovery",
-        stageEnteredAt: now,
-        ownerUserId,
-        primaryContactId: contactId,
-        origin: "bypass",
-        valueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
-        notes: input.notes?.trim() || null,
-        // The intake note IS the first discovery note — it grounds the proposal.
-        discoveryNote: input.notes?.trim() || null,
-      }),
-      db.insert(schema.auditLog).values(
-        buildAudit({
-          organizationId,
-          actorUserId: ctx.user.id,
-          action: "contact.bypassed_triage",
-          entityType: "deal",
-          entityId: dealId,
-          metadata: { contactId, contactName: name, checks: input.checks ?? [] },
-        }),
-      ),
-    );
-  }
-
-  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-  return { contactId, dealId, organizationId: organizationId ?? undefined };
-}
-
-/** Pass on a triage contact — kept and searchable, never deleted. */
-export async function passContact(ctx: AuthContext, contactId: string): Promise<void> {
-  assertSalesManager(ctx, "pass_contact");
-  const db = getDb();
-  const [row] = await db
-    .update(schema.contacts)
-    .set({ state: "passed" })
-    .where(and(eq(schema.contacts.id, contactId), eq(schema.contacts.state, "to_qualify")))
-    .returning({ id: schema.contacts.id });
-  if (!row) throw new StageError("NOT_FOUND", "Triage contact not found.");
-}
-
-/**
- * Qualify a triage contact → deal at Discovery on an account (existing, the
- * contact's own, or a new prospect created from a name). The contact row is the
- * SAME record — state flips to qualified, nothing is copied or frozen.
- */
-export async function qualifyContact(
-  ctx: AuthContext,
-  contactId: string,
-  input: { organizationId?: string; newAccountName?: string; dealName?: string; valueCents?: number },
-): Promise<{ dealId: string; organizationId: string; contactId: string }> {
-  assertSalesManager(ctx, "qualify_contact");
-  const db = getDb();
-  const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
-  if (!contact) throw new StageError("NOT_FOUND", "Contact not found.");
-  if (contact.state !== "to_qualify") throw new StageError("INVALID_STATE", `Contact is already ${contact.state}.`);
-
-  let organizationId = input.organizationId?.trim() || contact.organizationId || null;
-  const now = new Date();
-  const dealId = crypto.randomUUID();
-  const newAccountName = input.newAccountName?.trim() || contact.companyNote?.trim() || null;
-  const dealName = input.dealName?.trim() || `${newAccountName || contact.name} — opportunity`;
-  const valueCents = Math.max(0, Math.round(input.valueCents ?? contact.estValueCents ?? 0));
-
-  const statements = [];
-  if (organizationId) {
-    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
-    if (!org) throw new StageError("VALIDATION", "That account does not exist.");
-  } else {
-    if (!newAccountName) {
-      throw new StageError("VALIDATION", "Add an account (pick one or give a company name) before qualifying.");
-    }
-    organizationId = crypto.randomUUID();
-    statements.push(
-      db.insert(schema.organizations).values({
-        id: organizationId,
-        name: newAccountName,
-        status: "prospect",
-        accountOwnerUserId: ctx.user.id,
-        ownerAssignedAt: now,
-      }),
-    );
-  }
-
-  const existingLink = await db.query.contactCompanies.findFirst({
-    where: and(eq(schema.contactCompanies.contactId, contactId), eq(schema.contactCompanies.organizationId, organizationId)),
-  });
-
-  statements.push(
-    db
-      .update(schema.contacts)
-      .set({ state: "qualified", organizationId, assignedToUserId: contact.assignedToUserId ?? ctx.user.id })
-      .where(eq(schema.contacts.id, contactId)),
-    db.insert(schema.deals).values({
-      id: dealId,
-      organizationId,
-      name: dealName,
-      stage: "discovery",
-      stageEnteredAt: now,
-      // Everything captured travels: the contact's owner works the deal, the
-      // intake note becomes the deal's discovery note (QA delta 07-08 §1).
-      ownerUserId: contact.assignedToUserId ?? ctx.user.id,
-      primaryContactId: contactId,
-      origin: "qualified_from_triage",
-      valueCents,
-      notes: contact.notes?.trim() || null,
-      discoveryNote: contact.notes?.trim() || null,
+      assignedToUserId: ctx.user.id,
     }),
     db.insert(schema.auditLog).values(
       buildAudit({
         organizationId,
         actorUserId: ctx.user.id,
-        action: "contact.qualified",
-        entityType: "deal",
-        entityId: dealId,
-        metadata: { contactId, contactName: contact.name, dealName },
+        action: "contact.created",
+        entityType: "contact",
+        entityId: contactId,
+        metadata: { name, email },
       }),
     ),
   );
-  if (!existingLink) {
+  if (organizationId) {
     statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
   }
-
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-  return { dealId, organizationId, contactId };
+
+  // Portal invite on create — needs both an email and an account to hang the login
+  // on; skipped silently otherwise (an account-less person has nothing to log into).
+  let invited = false;
+  let inviteLink: string | undefined;
+  if (email && organizationId) {
+    const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
+    if (!existing) {
+      try {
+        const { createMagicToken } = await import("@/auth/magic-link");
+        const { sendInviteEmail } = await import("@/auth/email");
+        const { isDevAuth } = await import("@/auth/server-env");
+        const userId = crypto.randomUUID();
+        await db.batch([
+          db.insert(schema.users).values({
+            id: userId,
+            organizationId,
+            userType: "client",
+            role: "client_admin",
+            name,
+            email,
+            status: "invited",
+          }),
+          db.insert(schema.auditLog).values(
+            buildAudit({
+              organizationId,
+              actorUserId: ctx.user.id,
+              action: "contact.invited_on_create",
+              entityType: "contact",
+              entityId: contactId,
+              metadata: { email },
+            }),
+          ),
+        ]);
+        const token = await createMagicToken({ userId, email });
+        const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
+        const url = new URL(`/api/auth/verify?token=${token}`, origin || "https://portal.wahala-services.com").toString();
+        if (isDevAuth()) {
+          inviteLink = url;
+          console.log(`[invite] ${email}: ${url}`);
+        } else {
+          await sendInviteEmail(email, url, org?.name ?? "Wahala Group");
+        }
+        invited = true;
+      } catch (err) {
+        // The invite is a courtesy — its failure never blocks the record.
+        console.error("[contact.invite_on_create] failed:", err);
+      }
+    }
+  }
+  return { contactId, organizationId: organizationId ?? undefined, invited, inviteLink };
 }
 
 // ---------------------------------------------------------------- deals
@@ -362,7 +347,8 @@ export type DealItem = {
   id: string;
   name: string;
   stage: DealStage;
-  organizationId: string;
+  /** Null until the account exists — born at Create project → for account-less deals. */
+  organizationId: string | null;
   organizationName: string;
   ownerUserId: string | null;
   ownerName: string | null;
@@ -401,18 +387,21 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const db = getDb();
   let rows = await db.select().from(schema.deals).orderBy(desc(schema.deals.createdAt));
   // Non-admin staff see deals only for orgs in their access scope, matching listClients.
+  // Account-less deals belong to no account, so account-scoping doesn't apply — all staff see them.
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((d) => scope.orgIds.includes(d.organizationId));
+  if (scope.kind !== "all") rows = rows.filter((d) => !d.organizationId || scope.orgIds.includes(d.organizationId));
   if (rows.length === 0) return [];
 
-  const orgIds = [...new Set(rows.map((d) => d.organizationId))];
+  const orgIds = [...new Set(rows.map((d) => d.organizationId).filter((v): v is string => !!v))];
   const userIds = [...new Set(rows.map((d) => d.ownerUserId).filter((v): v is string => !!v))];
   const contactIds = [...new Set(rows.map((d) => d.primaryContactId).filter((v): v is string => !!v))];
   const dealIds = rows.map((d) => d.id);
   const projectIds = [...new Set(rows.map((d) => d.projectId).filter((v): v is string => !!v))];
 
   const [orgs, owners, people, sentProposals, agRows, projects] = await Promise.all([
-    db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds)),
+    orgIds.length > 0
+      ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
+      : Promise.resolve([] as { id: string; name: string }[]),
     userIds.length > 0
       ? db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, userIds))
       : Promise.resolve([]),
@@ -426,10 +415,12 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       .select({ dealId: schema.proposals.dealId, sentAt: schema.proposals.sentAt })
       .from(schema.proposals)
       .where(and(inArray(schema.proposals.dealId, dealIds), eq(schema.proposals.status, "sent"))),
-    db
-      .select({ organizationId: schema.agreements.organizationId, dealId: schema.agreements.dealId, kind: schema.agreements.kind, status: schema.agreements.status })
-      .from(schema.agreements)
-      .where(inArray(schema.agreements.organizationId, orgIds)),
+    orgIds.length > 0
+      ? db
+          .select({ organizationId: schema.agreements.organizationId, dealId: schema.agreements.dealId, kind: schema.agreements.kind, status: schema.agreements.status })
+          .from(schema.agreements)
+          .where(inArray(schema.agreements.organizationId, orgIds))
+      : Promise.resolve([] as { organizationId: string; dealId: string | null; kind: string; status: string }[]),
     projectIds.length > 0
       ? db.select({ id: schema.projects.id, kind: schema.projects.kind }).from(schema.projects).where(inArray(schema.projects.id, projectIds))
       : Promise.resolve([]),
@@ -470,7 +461,8 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       name: d.name,
       stage: d.stage,
       organizationId: d.organizationId,
-      organizationName: orgName.get(d.organizationId) ?? "Unknown",
+      // Account-less deals surface the contact's name — the person IS the record.
+      organizationName: (d.organizationId ? orgName.get(d.organizationId) : null) ?? contact?.name ?? "No account yet",
       ownerUserId: d.ownerUserId,
       ownerName: d.ownerUserId ? ownerName.get(d.ownerUserId) ?? null : null,
       contactName: contact?.name ?? null,
@@ -490,7 +482,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       docsDone,
       docsTotal,
       depositDue: d.stage === "committed" && !d.depositPaidAt,
-      msaOnFile: msaOrgs.has(d.organizationId),
+      msaOnFile: !!d.organizationId && msaOrgs.has(d.organizationId),
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
       readinessScore: d.readinessScore,
     };
@@ -528,10 +520,12 @@ export async function setDealStage(
       metadata: reason?.trim() ? { from: deal.stage, to: stage, reason: reason.trim() } : { from: deal.stage, to: stage },
     }),
   );
-  if (stage === "won") {
+  if (stage === "won" && deal.organizationId) {
     // The prospect became a customer — the contract→project seam takes over from here.
     // The Discovery Package graduates into the client's durable AI memory so every
     // later AI feature (project drafts, proposals) is grounded in what sales learned.
+    // (An account-less deal reaches Won only via Create project →, which births the
+    // account and re-links the deal before calling here.)
     const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) });
     let aiContextMd = org?.aiContextMd ?? null;
     if (deal.discoveryMd?.trim() && !(aiContextMd ?? "").includes(deal.discoveryMd.trim())) {
@@ -676,7 +670,8 @@ export type DealDetail = {
     readinessScore: number | null;
     postMortemMd: string | null;
   };
-  org: { id: string; name: string; status: string };
+  /** Null until the account exists (account-less opportunity). */
+  org: { id: string; name: string; status: string } | null;
   owner: { id: string; name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
   /** Where this came from — capture data + scout opinion on the (shared) contact. */
@@ -693,13 +688,13 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) {
+  if (scope.kind !== "all" && deal.organizationId && !scope.orgIds.includes(deal.organizationId)) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "get_deal_detail", resource: `deal:${dealId}`, reason: "out_of_scope" });
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
 
   const [org, owner, contact, auditRows] = await Promise.all([
-    db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }),
+    deal.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null,
     deal.ownerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, deal.ownerUserId) }) : null,
     deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
     db
@@ -708,7 +703,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       .where(and(eq(schema.auditLog.entityType, "deal"), eq(schema.auditLog.entityId, dealId)))
       .orderBy(desc(schema.auditLog.createdAt)),
   ]);
-  if (!org) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (deal.organizationId && !org) throw new StageError("NOT_FOUND", "Deal not found.");
 
   const actorIds = [...new Set(auditRows.map((a) => a.actorUserId).filter((v): v is string => !!v))];
   const actorName = new Map<string, string>();
@@ -776,7 +771,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       readinessScore: deal.readinessScore,
       postMortemMd: deal.postMortemMd,
     },
-    org: { id: org.id, name: org.name, status: org.status },
+    org: org ? { id: org.id, name: org.name, status: org.status } : null,
     owner: owner ? { id: owner.id, name: owner.name } : null,
     contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null,
     provenance: contact
@@ -798,9 +793,9 @@ export type FunnelColumn = {
 };
 
 export type SalesOverview = {
-  /** Contacts still to qualify — the Triage column. */
-  triage: ContactItem[];
   columns: FunnelColumn[];
+  /** Opportunities waiting to be accepted (stage 'new') — badge + Home strip. */
+  newOppCount: number;
   wonDeals: DealItem[];
   lostDeals: DealItem[];
   lostCount: number;
@@ -817,11 +812,11 @@ export type SalesOverview = {
   winRatePct: number | null;
 };
 
-/** Everything the Sales page needs: triage contacts + stage-grouped open pipeline. */
+/** Everything the Opportunities page needs: the stage-grouped open pipeline. */
 export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   assertStaff(ctx, "sales_overview");
   const sla = await getSlaSettings();
-  const [triage, deals] = await Promise.all([listTriageContacts(ctx), loadDealItems(ctx, sla)]);
+  const deals = await loadDealItems(ctx, sla);
 
   // Effective anchors come from SLA settings (admin-tunable); STAGE_META supplies the label/toward.
   const anchorFor = (stage: DealStage): number | null =>
@@ -846,8 +841,8 @@ export async function salesOverview(ctx: AuthContext): Promise<SalesOverview> {
   const closedThisQ = wonThisQ.length + lostThisQCount;
 
   return {
-    triage,
     columns,
+    newOppCount: deals.filter((d) => d.stage === "new").length,
     wonDeals,
     lostDeals,
     lostCount: lostDeals.length,

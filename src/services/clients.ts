@@ -430,7 +430,8 @@ export async function deleteOrganization(ctx: AuthContext, orgId: string): Promi
     db.delete(schema.proposals).where(eq(schema.proposals.organizationId, orgId)),
     db.delete(schema.discoveryPackages).where(inArray(schema.discoveryPackages.dealId, dealIds)),
     db.delete(schema.dealCalls).where(inArray(schema.dealCalls.dealId, dealIds)),
-    db.delete(schema.processEvents).where(eq(schema.processEvents.organizationId, orgId)),
+    // By dealId, not orgId: events logged while the deal was account-less carry a NULL org.
+    db.delete(schema.processEvents).where(inArray(schema.processEvents.dealId, dealIds)),
     db.delete(schema.meetings).where(eq(schema.meetings.organizationId, orgId)),
     db.delete(schema.agreements).where(eq(schema.agreements.organizationId, orgId)),
     db.delete(schema.contractItems).where(eq(schema.contractItems.organizationId, orgId)),

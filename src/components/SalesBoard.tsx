@@ -1,27 +1,28 @@
 "use client";
 
 /**
- * Sales Board (frame 31 — 5-stage kanban, canonical) — a true kanban: unknown
- * CONTACTS enter on the left (Triage renders contacts, not deals; dragging one into
- * Discovery is the qualify action), money exits on the right (Won/Lost drop zones).
- * Deal stages stay dispositions: drag any card anywhere, every move logged, never
- * enforced. The old stacked layout survives as the ☰ List view.
+ * Opportunities Board (HANDOFF-DELTA-2026-07-09) — one pipeline: New → Discovery →
+ * Proposal out → Negotiating → Committed. An OPPORTUNITY is the deal record at
+ * stage 'new' (◔ badge); accepting it starts Discovery (◭ DEAL). Money exits on the
+ * right (Won/Lost drop zones). Stages stay dispositions: drag any card anywhere,
+ * every move logged, never enforced. The stacked layout survives as the ☰ List view.
  */
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
-import { ScoreChip, DaysTag, STAGE_COLORS, TRIAGE_COLOR, stageSelectStyle } from "@/components/SalesChips";
-import { ContactCaptureModal } from "@/components/ContactCaptureModal";
+import { DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
+import { NewOpportunityModal, NewContactModal } from "@/components/OpportunityModals";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { PROPOSAL_READY_AT } from "@/domain/process";
-import type { SalesOverview, DealItem, ContactItem, FunnelColumn } from "@/services/sales";
+import type { SalesOverview, DealItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
 type StaffOption = { id: string; name: string };
 
 const STAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: "new", label: "New (opportunity)" },
   { value: "discovery", label: "Discovery" },
   { value: "proposal_out", label: "Proposal out" },
   { value: "negotiating", label: "Negotiating" },
@@ -32,6 +33,7 @@ const STAGE_OPTIONS: { value: string; label: string }[] = [
 
 /** The spec's column meta hints (frame 31). */
 const COLUMN_HINTS: Record<string, string> = {
+  new: "accept → Discovery",
   discovery: "incl. requirements",
   proposal_out: "the at-risk clock",
   negotiating: "client engaged",
@@ -70,161 +72,6 @@ function fmtK(cents: number): string {
   return d >= 1000 ? `$${Math.round(d / 1000)}k` : `$${d}`;
 }
 
-// ---------------------------------------------------------------- contact row (qualify / pass / assign — the workspace drawer)
-
-export function ContactQualifyRow({
-  contact,
-  staff,
-  canManage,
-}: {
-  contact: ContactItem;
-  staff: StaffOption[];
-  canManage: boolean;
-}) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [dealName, setDealName] = useState("");
-  const [value, setValue] = useState("");
-  // QA delta 07-08 §2: qualify NEVER asks for an account — the contact already
-  // has one from capture. Legacy accountless contacts get a one-field fallback.
-  const [newAccountName, setNewAccountName] = useState(contact.companyNote ?? "");
-
-  async function act(body: Record<string, unknown>) {
-    setBusy(true);
-    setError(null);
-    const err = await patch(`/api/contacts/${contact.id}`, body);
-    if (err) setError(err);
-    else router.refresh();
-    setBusy(false);
-  }
-
-  const detail = [contact.organizationName ?? contact.companyNote, contact.phone, contact.email, contact.source && `via ${contact.source}`]
-    .filter(Boolean)
-    .join(" · ");
-
-  return (
-    <div style={{ background: "var(--white)", border: "1px solid #f0e6c8", borderLeft: "3px solid #FADCB4", borderRadius: 11, padding: "11px 14px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <ScoreChip score={contact.aiScore} verdict={contact.aiVerdict} />
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <span style={{ fontWeight: 700, fontSize: 14.5 }}>{contact.name}</span>
-          {detail && (
-            <span className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginLeft: 10 }}>
-              {detail}
-            </span>
-          )}
-        </div>
-        <select
-          value={contact.assignedToUserId ?? ""}
-          disabled={busy}
-          onChange={(e) => act({ action: "assign", assignedToUserId: e.target.value || null })}
-          style={{ ...stageSelectStyle, flex: "none", fontSize: 12, padding: "6px 8px", fontWeight: 500 }}
-          title="Who's working this contact"
-        >
-          <option value="">Unowned</option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        {canManage && (
-          <div style={{ display: "flex", gap: 8, flex: "none" }}>
-            <button
-              onClick={() => setOpen((v) => !v)}
-              disabled={busy}
-              style={{
-                background: open ? "var(--surface-soft)" : "var(--ink)",
-                color: open ? "var(--ink)" : "var(--white)",
-                border: "1px solid transparent",
-                borderRadius: 8,
-                padding: "7px 13px",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {open ? "Cancel" : "Qualify"}
-            </button>
-            <button
-              onClick={() => act({ action: "pass" })}
-              disabled={busy}
-              style={{
-                background: "var(--white)",
-                color: "#b91c1c",
-                border: "1px solid #f0caca",
-                borderRadius: 8,
-                padding: "7px 13px",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-              title="Kept + searchable — never deleted"
-            >
-              Pass
-            </button>
-          </div>
-        )}
-      </div>
-      {open && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-          {contact.organizationName ? (
-            <span className="mono" style={{ fontSize: 10.5, color: "var(--muted)", flex: "1 1 150px" }}>
-              deal opens on <b style={{ color: "var(--ink)" }}>{contact.organizationName}</b>
-            </span>
-          ) : (
-            <input
-              style={{ ...inputStyle, flex: "1 1 170px" }}
-              placeholder="Account name (creates it)"
-              value={newAccountName}
-              onChange={(e) => setNewAccountName(e.target.value)}
-              title="Legacy contact without an account — name one and it's created"
-            />
-          )}
-          <input
-            style={{ ...inputStyle, flex: "2 1 180px" }}
-            placeholder="Deal name (optional)"
-            value={dealName}
-            onChange={(e) => setDealName(e.target.value)}
-          />
-          <input
-            style={{ ...inputStyle, flex: "1 1 100px" }}
-            placeholder={contact.estValueCents > 0 ? `$${Math.round(contact.estValueCents / 100).toLocaleString("en-US")} (captured)` : "Est. value $"}
-            inputMode="numeric"
-            value={value}
-            onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ""))}
-          />
-          <button
-            onClick={() =>
-              act({
-                action: "qualify",
-                newAccountName: !contact.organizationId ? newAccountName.trim() || undefined : undefined,
-                dealName: dealName || undefined,
-                valueCents: value ? Math.round(parseFloat(value) * 100) : undefined,
-              })
-            }
-            disabled={busy}
-            style={{
-              background: "#16a34a",
-              color: "var(--white)",
-              border: "none",
-              borderRadius: 8,
-              padding: "8px 15px",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {busy ? "Working…" : "Start deal →"}
-          </button>
-        </div>
-      )}
-      {error && <p style={{ color: "#b00020", fontSize: 13, margin: "8px 0 0" }}>{error}</p>}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------- deal row (List view)
 
@@ -321,13 +168,9 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
     if (filter === "mine") return d.ownerUserId === currentUserId;
     if (filter === "stuck") return d.stuck;
     if (filter === "proposals_out") return d.stage === "proposal_out";
-    if (filter === "to_qualify") return false; // triage-only lens
+    if (filter === "new") return d.stage === "new";
     return true;
   };
-  const showTriage = filter === "all" || filter === "to_qualify" || filter === "mine";
-  const triage = overview.triage.filter(
-    (c) => showTriage && (filter !== "mine" || c.assignedToUserId === currentUserId),
-  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -361,17 +204,6 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
     setOver(null);
     const p = dragPayload(e);
     if (!p || !canManage || busy) return;
-    if (p.kind === "contact") {
-      // Dragging a triage contact into Discovery IS the qualify action.
-      if (target !== "discovery") {
-        setError("To qualify a contact, drag it into Discovery. (Deals can move anywhere.)");
-        return;
-      }
-      const c = triage.find((t) => t.id === p.id);
-      const err = await run(`/api/contacts/${p.id}`, { action: "qualify" });
-      if (!err && c) onMoved(stageMomentFor(null, "discovery", { id: null, name: c.name, organizationName: c.organizationName }));
-      return;
-    }
     const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === p.id);
     if (target === "lost") {
       const reason = window.prompt("Why did we lose it? (goes in the log)");
@@ -407,11 +239,6 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
     }
     const err = await run(`/api/deals/${p.id}`, { stage: target });
     if (!err && deal) onMoved(stageMomentFor(deal.stage, target, deal));
-  }
-
-  async function passContact(c: ContactItem) {
-    if (!window.confirm(`Pass on ${c.name}? (kept + searchable, never deleted)`)) return;
-    await run(`/api/contacts/${c.id}`, { action: "pass" });
   }
 
   const dealCard = (d: DealItem) => {
@@ -459,6 +286,23 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
           cursor: canManage ? "grab" : "pointer",
         }}
       >
+        {/* ◔ opportunity (blue) while stage is new; ◭ deal (purple) after — the badge flips, the record doesn't. */}
+        <span
+          className="mono"
+          style={{
+            display: "inline-block",
+            fontSize: 8.5,
+            fontWeight: 700,
+            letterSpacing: ".06em",
+            padding: "2px 6px",
+            borderRadius: 5,
+            marginBottom: 5,
+            background: d.stage === "new" ? "#EEF0FE" : "#F1ECFD",
+            color: d.stage === "new" ? "#2536C4" : "#6D28D9",
+          }}
+        >
+          {d.stage === "new" ? "◔ OPPORTUNITY" : "◭ DEAL"}
+        </span>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--cobalt)", lineHeight: 1.3 }}>{d.name}</div>
         <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {d.organizationName}
@@ -469,6 +313,19 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
           <span className="tabular" style={{ fontSize: 12, fontWeight: 600 }}>{d.valueCents > 0 ? fmtK(d.valueCents) : ""}</span>
           {clock}
         </div>
+        {d.stage === "new" && canManage && (
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              const err = await run(`/api/deals/${d.id}`, { stage: "discovery" });
+              if (!err) onMoved(stageMomentFor("new", "discovery", d));
+            }}
+            disabled={busy}
+            style={{ width: "100%", marginTop: 9, border: 0, borderRadius: 8, padding: "7px 0", fontSize: 12, fontWeight: 700, background: "var(--cobalt)", color: "var(--white)", cursor: busy ? "default" : "pointer" }}
+          >
+            Accept → start Discovery
+          </button>
+        )}
       </div>
     );
   };
@@ -663,95 +520,8 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
         />
       )}
 
-      {/* Columns: Triage (contacts) + the four deal stages */}
+      {/* Columns: New (opportunities) + the four deal stages */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, alignItems: "start" }}>
-        {/* Triage — contacts, not deals yet */}
-        <div
-          style={{
-            background: "var(--surface)",
-            border: "1.5px dashed #D7D9DF",
-            borderRadius: 12,
-            padding: 10,
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            minHeight: 120,
-          }}
-        >
-          <div style={{ padding: "4px 4px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 2, background: TRIAGE_COLOR, flex: "none" }} />
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Triage</span>
-              <span className="tabular" style={{ fontSize: 10.5, fontWeight: 600, color: "var(--cobalt)", background: "#EEF0FE", padding: "1px 7px", borderRadius: 999, marginLeft: "auto" }}>
-                {triage.length}
-              </span>
-            </div>
-            <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 3 }}>
-              unknowns only — known-enough contacts bypass this column
-            </div>
-          </div>
-          {triage.map((c) => (
-            <div
-              key={c.id}
-              draggable={canManage}
-              onDragStart={(e) => {
-                e.dataTransfer.setData("text/plain", `contact:${c.id}`);
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              onClick={() => openDrawer(`/dashboard/sales/contacts/${c.id}`)}
-              style={{
-                background: "var(--white)",
-                border: `1px solid ${c.overdue ? "#FADCB4" : "#E7E8EC"}`,
-                borderRadius: 10,
-                padding: "11px 12px",
-                cursor: canManage ? "grab" : "pointer",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: "inherit", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
-                  {c.name}
-                </span>
-                {canManage && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      passContact(c);
-                    }}
-                    title="Pass on this contact"
-                    style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, lineHeight: 1, cursor: "pointer", padding: 0, flex: "none" }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <div className="mono" style={{ fontSize: 10, color: c.overdue ? "#B45309" : "var(--muted-line)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {c.overdue ? "⚠ overdue · " : ""}
-                {c.source ? `via ${c.source}` : (c.organizationName ?? c.companyNote ?? "—")}
-              </div>
-              {c.estValueCents > 0 && (
-                <div style={{ marginTop: 5 }}>
-                  <span className="mono tabular" style={{ fontSize: 12.5, fontWeight: 800 }}>
-                    ${Math.round(c.estValueCents / 100).toLocaleString("en-US")}
-                  </span>
-                  <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)", marginLeft: 6 }}>
-                    est{c.assignedToName ? ` · ${c.assignedToName.split(" ")[0]}` : ""}
-                  </span>
-                </div>
-              )}
-              <div style={{ marginTop: 8 }}>
-                {c.aiScore !== null ? (
-                  <ScoreChip score={c.aiScore} verdict={c.aiVerdict} />
-                ) : (
-                  <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>not scored</span>
-                )}
-              </div>
-            </div>
-          ))}
-          <div className="mono" style={{ fontSize: 9.5, color: "#B4B9C1", textAlign: "center", padding: "2px 0" }}>
-            {triage.length > 0 ? "drag right to qualify →" : "inbox zero"}
-          </div>
-        </div>
-
         {overview.columns.map(column)}
       </div>
 
@@ -767,8 +537,7 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
 // ---------------------------------------------------------------- list view (the old layout, kept as ☰)
 
 function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; canManage: boolean; onMoved: (m: StageMoment | null) => void }) {
-  const triage = overview.triage;
-  const pursueCount = triage.filter((c) => c.aiVerdict === "pursue").length;
+  const newOppN = overview.newOppCount;
   const openDealCount = overview.columns.reduce((n, c) => n + c.deals.length, 0);
   const wonCents = overview.wonDeals.reduce((n, d) => n + d.valueCents, 0);
 
@@ -783,8 +552,8 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
 
   return (
     <div>
-      {/* Triage nudge bar — the Board's Triage column holds the actual inbox */}
-      {triage.length > 0 && (
+      {/* New-opportunities nudge bar — the Board's New column holds the actual queue */}
+      {newOppN > 0 && (
         <div
           style={{
             display: "flex",
@@ -799,11 +568,10 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
         >
           <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
           <span style={{ fontSize: 13 }}>
-            <b>{triage.length} contact{triage.length === 1 ? "" : "s"}</b> waiting to qualify
-            {pursueCount > 0 ? <> — {pursueCount} scored <b>pursue</b></> : null}
+            <b>{newOppN} new opportunit{newOppN === 1 ? "y" : "ies"}</b> to accept
           </span>
-          <Link href="/dashboard/sales?filter=to_qualify" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
-            Review triage →
+          <Link href="/dashboard/sales?filter=new" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+            Review new →
           </Link>
         </div>
       )}
@@ -821,7 +589,7 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
           <div className="kicker">Open deals</div>
           <div className="tabular" style={{ fontSize: 22, fontWeight: 800, marginTop: 3 }}>{openDealCount}</div>
           <div className="mono" style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-            {triage.length} contact{triage.length === 1 ? "" : "s"} to qualify
+            {newOppN} new opportunit{newOppN === 1 ? "y" : "ies"} to accept
           </div>
         </div>
         <div style={{ ...cardBase, background: "#FFF7ED", border: "1px solid #FADCB4", borderLeft: "4px solid #D97706" }}>
@@ -925,7 +693,7 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
 
 const VIEW_KEY = "wahala.sales-view";
 
-export type SalesFilter = "all" | "mine" | "to_qualify" | "proposals_out" | "stuck";
+export type SalesFilter = "all" | "mine" | "new" | "proposals_out" | "stuck";
 
 export function SalesBoard({
   overview,
@@ -946,12 +714,12 @@ export function SalesBoard({
   const search = useSearchParams();
   const filter = (search.get("filter") as SalesFilter) || "all";
   const [view, setView] = useState<"board" | "list">("board");
-  const [capturing, setCapturing] = useState(false);
+  const [creating, setCreating] = useState<"opportunity" | "contact" | null>(null);
   // Achievement moment (Jason feedback) — survives router.refresh, one per move.
   const [moment, setMoment] = useState<StageMoment | null>(null);
 
   // Chip counts come from the FULL overview (they're lenses into the whole board).
-  const toQualifyN = overview.triage.length;
+  const newOppN = overview.newOppCount;
   const proposalsOutN = overview.columns.reduce((n, c) => n + (c.stage === "proposal_out" ? c.deals.length : 0), 0);
   const stuckN = overview.stuckCount;
 
@@ -1027,13 +795,13 @@ export function SalesBoard({
     <div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="kicker">Sales</div>
+          <div className="kicker">Opportunities</div>
           <h1 style={{ margin: "6px 0 8px", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Pipeline</h1>
           {/* Filter chips — lenses over the one board (frame 29) */}
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {chip("all", "All")}
             {currentUserId && chip("mine", "Mine")}
-            {chip("to_qualify", "To qualify", toQualifyN, "var(--cobalt-text)")}
+            {chip("new", "◔ New", newOppN, "var(--cobalt-text)")}
             {chip("proposals_out", "Proposals out", proposalsOutN, "#0891B2")}
             {chip("stuck", "⚠ Stuck", stuckN)}
           </div>
@@ -1052,7 +820,23 @@ export function SalesBoard({
           </Link>
         )}
         <button
-          onClick={() => setCapturing(true)}
+          onClick={() => setCreating("contact")}
+          style={{
+            background: "var(--white)",
+            color: "var(--ink)",
+            border: "1px solid #d7d9df",
+            borderRadius: 9,
+            padding: "9px 15px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            flex: "none",
+          }}
+        >
+          + New contact
+        </button>
+        <button
+          onClick={() => setCreating("opportunity")}
           style={{
             background: "var(--ink)",
             color: "var(--white)",
@@ -1065,11 +849,12 @@ export function SalesBoard({
             flex: "none",
           }}
         >
-          + Capture contact
+          + New opportunity
         </button>
       </div>
 
-      {capturing && <ContactCaptureModal canStartDeal={canManage} currentUserId={currentUserId} onClose={() => setCapturing(false)} />}
+      {creating === "opportunity" && <NewOpportunityModal currentUserId={currentUserId} onClose={() => setCreating(null)} />}
+      {creating === "contact" && <NewContactModal onClose={() => setCreating(null)} />}
 
       {view === "board" ? (
         <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} onMoved={setMoment} />

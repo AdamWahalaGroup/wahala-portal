@@ -6,7 +6,7 @@ import { TrainingCard } from "@/components/TrainingToggle";
 
 const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
-  { key: "sales", label: "Sales", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
+  { key: "sales", label: "Opportunities", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
   { key: "proposals", label: "◆ Proposals", href: "/dashboard/proposals" as string | null, staffOnly: true, adminOnly: false },
   { key: "accounts", label: "Accounts", href: "/dashboard/accounts" as string | null, staffOnly: true, adminOnly: false },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
@@ -41,7 +41,7 @@ export function AppShell({
   user: { name: string; role: string; isStaff: boolean };
   orgName?: string | null;
   accountOwner?: { name: string } | null;
-  /** "To qualify" triage-contact count for the Sales badge (pass from pages that know it). */
+  /** New-opportunity count (stage 'new') for the Opportunities badge. */
   leadCount?: number | null;
   /** Sent-awaiting-response count for the Proposals badge (same pattern as leadCount). */
   proposalCount?: number | null;

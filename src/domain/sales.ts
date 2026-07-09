@@ -16,10 +16,11 @@ import { DEAL_STAGES } from "../db/schema";
 export type DealStage = (typeof DEAL_STAGES)[number];
 
 /** Funnel stages in display order — the open pipeline (won/lost are terminal).
- * 4 deal stages (CRM-RESTRUCTURE.md): Triage is a board COLUMN of contacts, not a
- * deal stage. Business requirements folded into Discovery; solution design deleted
- * (it was the work of writing the proposal, not a client-facing state). */
+ * OPPORTUNITIES RESTRUCTURE (HANDOFF-DELTA-2026-07-09): 'new' opens the pipeline —
+ * an opportunity is the deal record at stage new; accepting it starts Discovery.
+ * Triage-as-a-column-of-contacts is retired. */
 export const FUNNEL_STAGES = [
+  "new",
   "discovery",
   "proposal_out",
   "negotiating",
@@ -37,6 +38,7 @@ export type StageMeta = {
 };
 
 export const STAGE_META: Record<DealStage, StageMeta> = {
+  new: { label: "New", probabilityPct: 10, toward: "close" },
   discovery: { label: "Discovery", probabilityPct: 25, toward: "close" },
   proposal_out: { label: "Proposal out", probabilityPct: 55, toward: "close" },
   negotiating: { label: "Negotiating", probabilityPct: 75, toward: "close" },
@@ -78,6 +80,8 @@ export function needsEngineeringReview(score: number | null): boolean {
 /** One-line "what to do next" for a deal in this stage — used by the board card peek. */
 export function nextStepFor(stage: DealStage): string {
   switch (stage) {
+    case "new":
+      return "Accept the opportunity into Discovery to start the deal.";
     case "discovery":
       return "Capture the discovery call — requirements included — then draft the proposal.";
     case "proposal_out":

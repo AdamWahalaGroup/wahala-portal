@@ -2,16 +2,15 @@
  * PATCH /api/contacts/[id] — act on a contact:
  *   (no action)                — update the shared record (name/email/phone/title);
  *                                sales manager; edits propagate to every surface.
- *   { action: "qualify", organizationId?, newAccountName?, dealName?, valueCents? }
- *                              — triage → deal at Discovery (sales manager)
- *   { action: "pass" }         — kept + searchable, never deleted (sales manager)
  *   { action: "assign", assignedToUserId } — handoff (any staff)
  *   { action: "update", name?, companyNote?, email?, phone?, source?, notes? }
- *                              — enrich the triage record (any staff)
+ *                              — enrich the record (any staff)
+ * Qualify/pass are RETIRED (HANDOFF-DELTA-2026-07-09) — the pipeline is deals;
+ * start an opportunity via POST /api/opportunities instead.
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
-import { qualifyContact, passContact, assignContact } from "@/services/sales";
+import { assignContact } from "@/services/sales";
 import { deleteContact } from "@/services/clients";
 import { updateContactFields } from "@/services/contact-workspace";
 import { updateContact } from "@/services/contacts";
@@ -38,19 +37,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       notes?: string;
     }>(req);
 
-    if (body.action === "qualify") {
-      const result = await qualifyContact(ctx, id, {
-        organizationId: body.organizationId,
-        newAccountName: body.newAccountName,
-        dealName: body.dealName,
-        valueCents: body.valueCents,
-      });
-      return NextResponse.json({ ok: true, ...result });
-    }
-    if (body.action === "pass") {
-      await passContact(ctx, id);
-      return NextResponse.json({ ok: true });
-    }
     if (body.action === "assign") {
       await assignContact(ctx, id, body.assignedToUserId ?? null);
       return NextResponse.json({ ok: true });

@@ -57,8 +57,11 @@ export const CONTACT_STATES = ["to_qualify", "qualified", "passed"] as const;
 // Sales STAGES are dispositions, not a state machine: free to skip, free to move,
 // never enforced (see docs/brain_storming/synthesis.md — "enforce gates, report on
 // stages"). won/lost are terminal dispositions kept out of the funnel columns.
-// 5-column board: Triage renders contacts (not deals), so deals have 4 open stages.
+// OPPORTUNITIES RESTRUCTURE (2026-07-09): an opportunity is not a new object — it
+// is the deal record at stage 'new'. Triage (contacts-as-column) is retired; the
+// board is New → Discovery → Proposal out → Negotiating → Committed.
 export const DEAL_STAGES = [
+  "new",
   "discovery",
   "proposal_out",
   "negotiating",
@@ -296,7 +299,9 @@ export const deals = sqliteTable(
   "deals",
   {
     id: pk(),
-    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    // NULLABLE since the opportunities restructure: every deal hangs on a CONTACT
+    // from day one; the account is optional until Create project → (born at win).
+    organizationId: text("organization_id").references(() => organizations.id),
     name: text("name").notNull(),
     stage: text("stage", { enum: DEAL_STAGES }).notNull().default("discovery"),
     stageEnteredAt: integer("stage_entered_at", { mode: "timestamp" })
@@ -385,7 +390,7 @@ export const processEvents = sqliteTable(
   "process_events",
   {
     id: pk(),
-    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    organizationId: text("organization_id").references(() => organizations.id), // null on account-less opportunities
     dealId: text("deal_id").notNull().references(() => deals.id),
     ownerUserId: text("owner_user_id").references(() => users.id),
     actorUserId: text("actor_user_id").references(() => users.id),
@@ -543,7 +548,7 @@ export const proposals = sqliteTable(
   "proposals",
   {
     id: pk(),
-    organizationId: text("organization_id").notNull().references(() => organizations.id),
+    organizationId: text("organization_id").references(() => organizations.id), // null until the deal's account is born
     dealId: text("deal_id").notNull().references(() => deals.id),
     version: integer("version").notNull().default(1),
     status: text("status", { enum: PROPOSAL_STATUSES }).notNull().default("draft"),
@@ -850,7 +855,8 @@ export const messages = sqliteTable(
 // ---- Audit log (accountability trail: who did what, when) ----
 export const auditLog = sqliteTable("audit_log", {
   id: pk(),
-  organizationId: text("organization_id").notNull().references(() => organizations.id),
+  organizationId: text("organization_id").references(() => organizations.id), // null on account-less opportunities
+
   actorUserId: text("actor_user_id").references(() => users.id),
   action: text("action").notNull(), // e.g. 'quote.approved', 'stage.paid', 'stage.accepted'
   entityType: text("entity_type"),

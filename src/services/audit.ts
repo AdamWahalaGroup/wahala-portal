@@ -8,7 +8,7 @@
 import { schema } from "@/db";
 
 export type AuditInput = {
-  organizationId: string;
+  organizationId: string | null; // null on account-less opportunities
   actorUserId: string | null;
   action: string; // e.g. "stage.paid", "stage.accepted"
   entityType?: string;

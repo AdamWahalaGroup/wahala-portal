@@ -42,7 +42,7 @@ type ProcessEventKind = (typeof schema.PROCESS_EVENT_KINDS)[number];
 
 /** Low-level append — call from services after their own auth checks. */
 export async function recordProcessEvent(input: {
-  organizationId: string;
+  organizationId: string | null; // null on account-less opportunities
   dealId: string;
   ownerUserId: string | null;
   actorUserId: string | null;
@@ -251,7 +251,7 @@ export async function ingestCall(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   return ingestCallCore(deal, input, ctx.user.id);
 }
 
@@ -276,7 +276,7 @@ export async function setPackageField(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (scope.kind !== "all" && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
 
   const previous = await loadPackage(dealId);
   const fieldKey = key as PackageFieldKey;
