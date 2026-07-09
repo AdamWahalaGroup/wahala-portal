@@ -608,3 +608,13 @@ prototype screenshot:
   master signature and phases are gone (the rail is the connective tissue);
   **Eligible approvers** keeps a 1px rule above it. Single-delivery proposals
   (no phases) render no rail.
+
+# Update — 2026-07-09 (fix: "Mark recommended" card never turned green)
+
+Founder QA: clicking Mark recommended saved correctly (the spine updated) but the
+option card's green treatment never changed. Cause: the cards render from a local
+editing snapshot (for autosaved typing) that was initialized once and never
+reconciled after PATCH + refresh. Fixed: after any structural change (recommended
+flag, option add/remove, rename) the server truth is merged back into the local
+copies — in-flight typed prices/notes are preserved. Toggling now flips the green
+card, the RECOMMENDED label, and the letter tile immediately, on the right option.

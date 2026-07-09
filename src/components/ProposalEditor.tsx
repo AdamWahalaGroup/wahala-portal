@@ -108,13 +108,27 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
   // Local editable copies (draft only) — source of truth while typing; autosaved.
   const [summary, setSummary] = useState(proposal.executiveSummaryMd ?? "");
-  const [opts, setOpts] = useState(
-    proposal.options.map((o) => ({
-      ...o,
-      priceDollars: o.priceCents > 0 ? String(o.priceCents / 100) : "",
-      phases: o.phases ? o.phases.map((p) => ({ ...p, amountDollars: p.amountCents > 0 ? String(p.amountCents / 100) : "" })) : null,
-    })),
-  );
+  const fromServer = (o: Option) => ({
+    ...o,
+    priceDollars: o.priceCents > 0 ? String(o.priceCents / 100) : "",
+    phases: o.phases ? o.phases.map((p) => ({ ...p, amountDollars: p.amountCents > 0 ? String(p.amountCents / 100) : "" })) : null,
+  });
+  const [opts, setOpts] = useState(proposal.options.map(fromServer));
+
+  // Structural server truth (recommended flag, option membership, names) changes via
+  // PATCH + router.refresh — merge it back into the local copies or the cards render
+  // stale (e.g. "Mark recommended" never turning the card green). Locally-typed fields
+  // (price, timeline, phases) are preserved for options that already exist.
+  const structuralSig = proposal.options.map((o) => `${o.id}:${o.recommended ? 1 : 0}:${o.name}`).join("|");
+  useEffect(() => {
+    setOpts((prev) =>
+      proposal.options.map((o) => {
+        const local = prev.find((x) => x.id === o.id);
+        return local ? { ...local, recommended: o.recommended, name: o.name, label: o.label } : fromServer(o);
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structuralSig]);
 
   const chosen =
     proposal.options.find((o) => o.id === proposal.selectedOptionId) ??
