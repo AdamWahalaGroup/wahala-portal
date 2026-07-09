@@ -505,3 +505,24 @@ Two founder-directed rounds, shipped together:
      "Open {account} →" link; detach = "no account yet".
    - **Opportunities** card: every deal starting from this contact — stage dot
      (green won / red lost / cobalt open), name → deal drawer, stage · value.
+
+# Update — 2026-07-09 (founder call: no auto-invite on contact create)
+
+Reverses the delta §3 invite-on-create decision (restoring the 08 Jul timing —
+the invite is deliberate, not automatic):
+
+- **Creating a contact never sends a portal invitation.** The `contact.invited_on_create`
+  path is deleted from the service; the New-contact modal's cobalt note now reads
+  "✉ No invitation goes out yet — you'll land on the contact's page, where sending
+  the portal invite is the suggested next step."
+- **Create lands on the contact page.** The modal's done-state confirmation is gone;
+  a successful create navigates straight to `/dashboard/contacts/[id]`.
+- **Portal access = the emphasized next step.** While the contact isn't on the
+  portal, the Portal access card takes a cobalt-washed treatment (#FAFBFF bg,
+  1.5px #C9D0FB border), a cobalt **NEXT STEP** chip beside the kicker, and a
+  cobalt **✉ Invite to portal** button; the mono caption spells out what's missing
+  ("no invite went out on create — add an email above / attach an account below /
+  send it when you're ready"). Once invited, the card returns to the quiet white
+  treatment with the amber "Invited — no login yet" pill + Resend invite.
+- Acceptance automation is unchanged — when they do accept, the login links to the
+  contact by email.

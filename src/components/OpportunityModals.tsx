@@ -7,7 +7,8 @@
  *  · NewOpportunityModal — a deal at stage 'new' on a contact (picked or created
  *    inline), account optional, "What do they need" seeds the name + discovery note.
  *  · NewContactModal — a deliberate person(+company) record with NO opportunity;
- *    with an email + account, a portal invitation goes out on create.
+ *    no auto-invite — create lands on the contact page, where Portal access is
+ *    the emphasized next step.
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -433,7 +434,6 @@ export function NewContactModal({ onClose }: { onClose: () => void }) {
   const [accountQuery, setAccountQuery] = useState("");
   const [pickedAccount, setPickedAccount] = useState<AccountOption | null>(null);
   const [createAccount, setCreateAccount] = useState(false);
-  const [done, setDone] = useState<{ invited: boolean; inviteLink?: string } | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -466,48 +466,22 @@ export function NewContactModal({ onClose }: { onClose: () => void }) {
           newAccountName: !pickedAccount && createAccount && accountQuery.trim() ? accountQuery.trim() : undefined,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { message?: string; invited?: boolean; inviteLink?: string };
+      const data = (await res.json().catch(() => ({}))) as { message?: string; contactId?: string };
       if (!res.ok) {
         setError(data.message ?? `Failed (${res.status}).`);
         setBusy(false);
         return;
       }
-      setDone({ invited: !!data.invited, inviteLink: data.inviteLink });
-      setBusy(false);
+      // Creation never ends on a surface where the record can't be seen
+      // (HANDOFF-FIX-2026-07-09 §3) — land on the new contact's own page,
+      // where Portal access is the emphasized next step.
+      onClose();
+      router.push(data.contactId ? `/dashboard/contacts/${data.contactId}` : "/dashboard/contacts");
       router.refresh();
     } catch {
       setError("Network error — please try again.");
       setBusy(false);
     }
-  }
-
-  if (done) {
-    return (
-      <ModalShell title={`${form.name.trim()} is on record`} kicker="contact created" onClose={onClose}>
-        <p style={{ margin: "10px 0 0", fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.6 }}>
-          {done.invited
-            ? "A portal invitation went out to their email — their login links to this contact when they accept."
-            : "No portal invitation was sent (that needs both an email and an account). You can invite them any time."}
-        </p>
-        {done.inviteLink && (
-          <p className="mono" style={{ fontSize: 10.5, color: "var(--muted)", wordBreak: "break-all", margin: "10px 0 0" }}>dev invite: {done.inviteLink}</p>
-        )}
-        <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 18 }}>
-          <button
-            onClick={() => {
-              onClose();
-              // Creation never ends on a surface where the record can't be seen
-              // (HANDOFF-FIX-2026-07-09 §3) — land on the Contacts list.
-              router.push("/dashboard/contacts");
-              router.refresh();
-            }}
-            style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-          >
-            Done → Contacts
-          </button>
-        </div>
-      </ModalShell>
-    );
   }
 
   return (
@@ -549,9 +523,9 @@ export function NewContactModal({ onClose }: { onClose: () => void }) {
       <label style={labelStyle}>Notes <span style={{ textTransform: "none", fontWeight: 500, color: "#b4b9c1" }}>optional</span></label>
       <textarea value={form.notes} onChange={set("notes")} rows={2} placeholder="Anything worth remembering" style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
 
-      {/* Exact copy from the delta (§3). */}
+      {/* No auto-invite (founder call, 09 Jul) — the invite is the next step, on the contact page. */}
       <div style={{ marginTop: 14, padding: "11px 14px", background: "#fafbff", border: "1px solid #dde1fb", borderRadius: 11, fontSize: 12.5, color: "#2536c4", lineHeight: 1.5 }}>
-        ✉ If there&rsquo;s an email, a portal invitation goes out on create. Next: due diligence on the account page, then start an opportunity when you know enough.
+        ✉ No invitation goes out yet — you&rsquo;ll land on the contact&rsquo;s page, where sending the portal invite is the suggested next step.
       </div>
 
       {error && <p style={{ color: "#b00020", fontSize: 12.5, margin: "12px 0 0" }}>{error}</p>}

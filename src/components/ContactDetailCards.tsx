@@ -107,6 +107,8 @@ export function PortalAccessCard({
     disabled: { bg: "#FBE3E3", border: "#F4CFCF", color: "#B91C1C", label: "Access disabled" },
   };
   const pill = PILL[portal];
+  // No invite yet → the card itself nudges: this is the next step (no auto-invite on create).
+  const nudge = portal === "none" && canManage;
 
   async function resend() {
     if (!email) return;
@@ -147,8 +149,15 @@ export function PortalAccessCard({
   }
 
   return (
-    <section style={cardStyle}>
-      <div className="kicker" style={{ marginBottom: 12 }}>Portal access</div>
+    <section style={nudge ? { ...cardStyle, background: "#FAFBFF", border: "1.5px solid #C9D0FB" } : cardStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+        <span className="kicker" style={nudge ? { color: "#5A6BD8" } : undefined}>Portal access</span>
+        {nudge && (
+          <span className="mono" style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".06em", background: "var(--cobalt)", color: "var(--white)", borderRadius: 5, padding: "2px 7px" }}>
+            NEXT STEP
+          </span>
+        )}
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: pill.color, background: pill.bg, border: `1px solid ${pill.border}`, padding: "5px 12px", borderRadius: 999 }}>
           {pill.label}
@@ -160,21 +169,21 @@ export function PortalAccessCard({
           </button>
         )}
         {canManage && portal === "none" && email && organizationId && (
-          <button onClick={() => void invite()} disabled={busy} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-            {busy ? "Inviting…" : "Invite to portal"}
+          <button onClick={() => void invite()} disabled={busy} style={{ background: "var(--cobalt)", color: "var(--white)", border: 0, borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            {busy ? "Inviting…" : "✉ Invite to portal"}
           </button>
         )}
       </div>
-      <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 10 }}>
+      <div className="mono" style={{ fontSize: 10, color: nudge ? "#5A6BD8" : "var(--muted-line)", marginTop: 10 }}>
         {portal === "invited" && email
           ? `sent to ${email} — not accepted yet`
           : portal === "active" && email
             ? `signs in as ${email}`
             : !email
-              ? "add an email to invite them to the portal"
-              : !organizationId && portal === "none"
-                ? "attach an account first — portal access is per account"
-                : "magic-link sign-in — no passwords"}
+              ? "no invite went out on create — add an email above, then invite them"
+              : !organizationId
+                ? "no invite went out on create — attach an account below, then invite them"
+                : "no invite went out on create — send it when you're ready"}
       </div>
       {note && <div className="mono" style={{ fontSize: 10.5, color: note.includes("✓") ? "#15803D" : "#b00020", marginTop: 8 }}>{note}</div>}
     </section>

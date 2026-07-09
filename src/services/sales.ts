@@ -246,10 +246,10 @@ export async function createOpportunity(
 
 /**
  * "New contact + account" (HANDOFF-DELTA-2026-07-09 §3): a deliberate person(+company)
- * record with NO opportunity — due diligence first, start an opportunity later. If
- * there's an email AND an account, a portal invitation goes out on create (this
- * knowingly reverses the 08 Jul §3 invite timing for this deliberate path; the
- * acceptance automation — login links to this contact by email — is unchanged).
+ * record with NO opportunity — due diligence first, start an opportunity later. NO
+ * portal invite goes out on create (founder call, 09 Jul — restores the 08 Jul §3
+ * timing): the invite is a deliberate step from the contact page's Portal access
+ * card, which the creator lands on next.
  */
 export async function createContactWithAccount(
   ctx: AuthContext,
@@ -263,8 +263,7 @@ export async function createContactWithAccount(
     notes?: string;
     source?: string;
   },
-  origin?: string,
-): Promise<{ contactId: string; organizationId?: string; invited: boolean; inviteLink?: string }> {
+): Promise<{ contactId: string; organizationId?: string }> {
   assertStaff(ctx, "create_contact");
   const name = input.name?.trim();
   if (!name) throw new StageError("VALIDATION", "A contact needs at least a name.");
@@ -302,57 +301,7 @@ export async function createContactWithAccount(
     statements.push(db.insert(schema.contactCompanies).values({ contactId, organizationId, isPrimary: true }));
   }
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-
-  // Portal invite on create — needs both an email and an account to hang the login
-  // on; skipped silently otherwise (an account-less person has nothing to log into).
-  let invited = false;
-  let inviteLink: string | undefined;
-  if (email && organizationId) {
-    const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
-    if (!existing) {
-      try {
-        const { createMagicToken } = await import("@/auth/magic-link");
-        const { sendInviteEmail } = await import("@/auth/email");
-        const { isDevAuth } = await import("@/auth/server-env");
-        const userId = crypto.randomUUID();
-        await db.batch([
-          db.insert(schema.users).values({
-            id: userId,
-            organizationId,
-            userType: "client",
-            role: "client_admin",
-            name,
-            email,
-            status: "invited",
-          }),
-          db.insert(schema.auditLog).values(
-            buildAudit({
-              organizationId,
-              actorUserId: ctx.user.id,
-              action: "contact.invited_on_create",
-              entityType: "contact",
-              entityId: contactId,
-              metadata: { email },
-            }),
-          ),
-        ]);
-        const token = await createMagicToken({ userId, email });
-        const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
-        const url = new URL(`/api/auth/verify?token=${token}`, origin || "https://portal.wahala-services.com").toString();
-        if (isDevAuth()) {
-          inviteLink = url;
-          console.log(`[invite] ${email}: ${url}`);
-        } else {
-          await sendInviteEmail(email, url, org?.name ?? "Wahala Group");
-        }
-        invited = true;
-      } catch (err) {
-        // The invite is a courtesy — its failure never blocks the record.
-        console.error("[contact.invite_on_create] failed:", err);
-      }
-    }
-  }
-  return { contactId, organizationId: organizationId ?? undefined, invited, inviteLink };
+  return { contactId, organizationId: organizationId ?? undefined };
 }
 
 // ---------------------------------------------------------------- deals

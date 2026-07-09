@@ -1,8 +1,8 @@
 /**
  * GET  /api/contacts — every contact, lite (pickers + the Contacts page).
  * POST /api/contacts — "New contact + account" (HANDOFF-DELTA-2026-07-09 §3): a
- *   deliberate person(+company) record with NO opportunity. If there's an email
- *   and an account, a portal invitation goes out on create.
+ *   deliberate person(+company) record with NO opportunity. NO portal invite on
+ *   create — the invite is a deliberate next step from the contact page.
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       source?: string;
     }>(req);
     if (!body.name?.trim()) throw new ApiError(400, "validation", "A contact needs at least a name.");
-    const result = await createContactWithAccount(ctx, { ...body, name: body.name }, new URL(req.url).origin);
+    const result = await createContactWithAccount(ctx, { ...body, name: body.name });
     return NextResponse.json({ ok: true, ...result }, { status: 201 });
   } catch (e) {
     return handleApiError(e);
