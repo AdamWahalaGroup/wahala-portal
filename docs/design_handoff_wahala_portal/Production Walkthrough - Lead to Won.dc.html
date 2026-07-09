@@ -21,66 +21,65 @@
 
   <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
     <div style="width:26px; height:26px; border-radius:7px; background:#16181d; display:flex; align-items:center; justify-content:center;"><div style="width:9px; height:9px; background:#2b3ee6; transform:rotate(45deg); border-radius:2px;"></div></div>
-    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">wahala portal · production QA</span>
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">wahala portal · production QA · rev 2 — opportunities pipeline</span>
   </div>
-  <h1 style="margin:0; font-size:28px; font-weight:800; letter-spacing:-.025em;">Lead → Won: a script to type into production</h1>
+  <h1 style="margin:0; font-size:28px; font-weight:800; letter-spacing:-.025em;">Opportunity → Won: a script to type into production</h1>
   <p style="margin:10px 0 0; font-size:14px; line-height:1.6; color:#3a3f47; max-width:640px;">Do these steps yourself, in order, in the real app. Each step names the exact screen, the exact button, and what you should type. After each step there's a <strong>✓ Expect</strong> line — if what you see doesn't match, that's a disconnect: write down the step number and what actually happened.</p>
 
   <div style="margin:16px 0 0; padding:12px 14px; background:#fbfbfc; border:1px solid #ededf1; border-radius:10px; font-size:12.5px; line-height:1.6; color:#3a3f47;">
-    <strong>Before you start</strong> — use an obviously fake test name so you can find/delete it after (this script uses <strong>"ZZ Test — Fenwick Labs"</strong> and contact <strong>"Jordan Blake"</strong>, throughout — swap in your own if you like, just stay consistent). You'll need two browser windows: one signed in as staff, one incognito/private (to view the client-facing proposal link with no session).
-  </div>
+    <strong>Before you start</strong> — this rev matches the single-pipeline model: <em>there is no separate leads inbox or Triage column anymore</em>. Everything is an <strong>opportunity attached to a contact from day one</strong>; accepting it into Discovery starts the deal. Use an obviously fake test name so you can find/delete it after (this script uses <strong>"ZZ Test — Fenwick Labs"</strong> and contact <strong>"Jordan Blake"</strong> throughout — swap in your own if you like, just stay consistent). You'll need two browser windows: one signed in as staff, one incognito/private (to view the client-facing proposal link with no session). In the staff sidebar, make sure <strong>Training mode</strong> is ON — this test deliberately exercises its nudges.</div>
 
-  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; letter-spacing:-.01em; color:#2b3ee6; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em;">1 · Get the lead — capture the contact</h2>
+  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">1 · Create the opportunity</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;"><strong>Screen:</strong> Sales board (<code>/dashboard/sales</code>) → <strong>"+ Capture contact"</strong> button.</p>
-    <p style="margin:0 0 8px;">Type in:</p>
+    <p style="margin:0 0 8px;"><strong>Screen:</strong> Opportunities board (<code>/dashboard/sales</code>) → <strong>"+ New opportunity"</strong>.</p>
+    <p style="margin:0 0 8px;">In the modal:</p>
     <ul style="margin:0 0 8px; padding-left:20px;">
-      <li>Name: <code>Jordan Blake</code></li>
-      <li>Email: <code>jordan@fenwicklabs.com</code></li>
-      <li>Account: type <code>ZZ Test — Fenwick Labs</code>, use "+ create new" (this is a brand-new account, not an existing one)</li>
-      <li>Source: pick anything (e.g. "Referral")</li>
+      <li>Contact: create new — Name: <code>Jordan Blake</code>, Email: <code>jordan@fenwicklabs.com</code>, Company: <code>ZZ Test — Fenwick Labs</code></li>
+      <li>"What do they need": <code>Needs a scheduling tool for a 12-person field crew, paper-based today.</code> (this seeds the opportunity name and the account dossier — don't skip it)</li>
       <li>Est. value: <code>42000</code></li>
-      <li>"What they need": a sentence or two — e.g. <code>Needs a scheduling tool for a 12-person field crew, paper-based today.</code></li>
+      <li>Source: pick anything (e.g. "Referral")</li>
     </ul>
-    <p style="margin:0 0 8px;"><strong>Leave the three qualification chips unchecked</strong> — you haven't talked to them yet. Click <strong>Save to Triage</strong>.</p>
-    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> the modal closes, and a new card for Jordan Blake appears in the <strong>Triage</strong> column of the board. No deal exists yet — Triage holds contacts, not deals.</p>
+    <p style="margin:0 0 8px;">Click <strong>Create opportunity →</strong>.</p>
+    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> a new card lands in the <strong>New</strong> stage of the pipeline, named from the account + your need sentence, value $42,000. Check <strong>Contacts</strong>: Jordan Blake exists with 1 opportunity. No deal is "started" yet — New holds opportunities you haven't accepted.</p>
+    <p style="margin:8px 0 0; font-size:12px; color:#767b85;">It's also valid to create the opportunity with a contact only and <em>no company</em> — the account is born automatically when the deal is Won. If you want to test that path too, run this script a second time leaving Company blank.</p>
   </div>
 
-  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">2 · The phone call — qualify into a deal</h2>
+  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">2 · Accept it — start the deal</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;">Have the call (role-play it, or actually call a colleague). On the call you learn: they have a real need, and a budget signal, but no confirmed decision-maker yet — 2 of 3.</p>
-    <p style="margin:0 0 8px;"><strong>Screen:</strong> back on the board, find Jordan Blake's card in Triage → click <strong>Qualify</strong> (not Pass).</p>
-    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> the contact leaves Triage, and a new <strong>deal</strong> appears in the <strong>Discovery</strong> column, named after the account, owned by you, value $42,000. This is the moment "lead" stops being a separate thing — Jordan is now a qualified Contact, ZZ Test — Fenwick Labs is an Account, and there's an open Deal. Nothing converts or gets deleted; the same contact record just changed state.</p>
-    <p style="margin:8px 0 0; font-size:12px; color:#767b85;">Faster alternative for a warm lead: at capture, check 2+ of the qualification chips right away and click <strong>"Start deal → Discovery"</strong> instead of Save to Triage — contact, account, and deal are created in one step. Use this if the call already happened before you sat down to log it.</p>
+    <p style="margin:0 0 8px;">Have the first call (role-play it, or actually call a colleague). You learn there's a real need — worth pursuing.</p>
+    <p style="margin:0 0 8px;"><strong>Screen:</strong> click the card in New to open its drawer → <strong>"Accept → start Discovery"</strong> (not Lost/Pass).</p>
+    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> the opportunity moves to the <strong>Discovery</strong> stage, owned by you, value $42,000. Nothing converts or gets deleted — the same record changed stage, and Jordan/the account are still attached. There is no separate "lead" object anywhere.</p>
   </div>
 
-  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">3 · Log the call on the deal</h2>
+  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">3 · Discovery — fill the package, watch readiness</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;"><strong>Screen:</strong> click into the new deal to open its drawer → footer → <strong>"Log a call"</strong>.</p>
-    <p style="margin:0 0 8px;">Enter a short discovery note — what they actually need, in their words, e.g. <code>Fenwick runs crew scheduling on a shared spreadsheet. Jordan wants a mobile-friendly tool dispatchers and field crew can both use.</code></p>
-    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> the call is logged to the deal's activity/history, and the discovery note is attached to the deal (this note is what the AI proposal draft reads from later — vague notes make vague proposals).</p>
+    <p style="margin:0 0 8px;"><strong>Screen:</strong> the deal drawer → <strong>Discovery package</strong> section. On a fresh deal it shows all 10 fields with a red ✗ and a <strong>NOT SCORED</strong> pill: Business profile, Current workflow, Pain points, Budget posture, Decision makers, Success metrics, MVP priorities, Timeline, Customer terminology, Deferred scope.</p>
+    <p style="margin:0 0 8px;">Below the fields, check the <strong>"Ask on the next call"</strong> list — one suggested question per unfilled field (e.g. Business profile → <em>"What does the business actually do, in their words?"</em>). Also check the <strong>Next step</strong> card above it reads something like <em>"Capture the discovery call — requirements included — then draft the proposal."</em> These two are your call prep: use them on the discovery call.</p>
+    <p style="margin:0 0 8px;">Have the call and get its content onto the deal — in production the <em>Package extractor</em> agent reads a recorded call and fills the fields; you can also fill any field by hand: <strong>click the field</strong> → its editor opens with three status chips — <strong>ok / partial / missing</strong> — and an evidence box (<em>"What did they say? (evidence)"</em>) → pick a status, paste what they actually said, <strong>Save</strong>. Use real sentences, e.g. for Current workflow: <code>Fenwick runs crew scheduling on a shared spreadsheet. Jordan wants a mobile-friendly tool dispatchers and field crew can both use.</code> Vague evidence makes vague proposals — the AI draft in step 4 reads from this.</p>
+    <p style="margin:0 0 8px;">For this test, hand-fill a spread: mark ~5 fields <strong>ok</strong> with evidence, 1–2 <strong>partial</strong>, leave the rest <strong>missing</strong>.</p>
+    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> a saved <strong>ok</strong> field flips its ✗ to a green check and its question disappears from "Ask on the next call" — only green/completed fields drop off; <strong>partial</strong> and <strong>missing</strong> fields keep their question in the list. NOT SCORED becomes a readiness score and the Next step line updates. Partial fields should count for something but not read as done. With that spread the score should land below <strong>7/10</strong> — not proposal-ready, which is what step 4's nudge test needs. If a field saves but its check/score/ask-list don't move together, that's a disconnect.</p>
   </div>
 
-  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">4 · Move to Proposal out & draft the proposal</h2>
+  <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">4 · Draft &amp; send the proposal</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;">In the deal drawer, advance the stage: <strong>Discovery → Proposal out</strong>.</p>
-    <p style="margin:0 0 8px; padding:8px 12px; background:#fff7ed; border-radius:8px; border:1px solid #fadcb4;"><strong>Watch for:</strong> with training mode on, moving to Proposal out below a readiness threshold pops a "not proposal-ready" nudge. That's intended — either "Keep in Discovery" or "Advance anyway" (logged). Either is fine for this test; pick <strong>Advance anyway</strong> to keep moving.</p>
-    <p style="margin:0 0 8px;">Still in the drawer, click <strong>"◆ Rough out a draft"</strong> (or "+ Blank proposal" if you'd rather type it by hand). If prompted, choose <strong>"Standard vs. phased"</strong> (2 paths).</p>
-    <p style="margin:0 0 8px;">Once drafted, open the proposal editor and fill in real numbers on at least one option — name it, price it (e.g. <code>$42,000</code>), and if it's the phased option, give it 2 phases with amounts/weeks that add up.</p>
-    <p style="margin:0;">Click <strong>Send</strong>.</p>
-    <p style="margin:8px 0 0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> proposal status flips to <strong>Sent</strong>, and you get a public share link (<code>wahala.co/p/…</code>).</p>
+    <p style="margin:0 0 8px;">There is <strong>no "Move to Proposal out" button</strong> — the stage follows the proposal. The deal stays in Discovery while you draft; it moves to <strong>Proposal out</strong> automatically the moment you hit <strong>Send</strong>. If you see a manual "Move to Proposal out" action anywhere, that's a disconnect.</p>
+    <p style="margin:0 0 8px;">In the deal drawer, click <strong>"◆ Rough out a draft"</strong> (or "+ Blank proposal" if you'd rather type it by hand). If prompted, choose <strong>"Standard vs. phased"</strong> (2 paths).</p>
+    <p style="margin:0 0 8px;">Open the proposal editor and fill in real numbers on at least one option — name it, price it (e.g. <code>$42,000</code>), and if it's the phased option, give it 2 phases with amounts/weeks that add up.</p>
+    <p style="margin:0 0 8px;">Click <strong>Send</strong>.</p>
+    <p style="margin:0 0 8px; padding:8px 12px; background:#fff7ed; border-radius:8px; border:1px solid #fadcb4;"><strong>Watch for:</strong> with training mode on and readiness under 7, <strong>Send</strong> must pop the <strong>"not proposal-ready"</strong> nudge — "Hold the send" or "Send anyway" (override logged to the deal; the nudge is never a hard gate). Pick <strong>Send anyway</strong> to keep moving. If no nudge appears at sub-7 readiness with training mode on, that's a disconnect.</p>
+    <p style="margin:8px 0 0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> proposal status flips to <strong>Sent</strong>, the deal moves to <strong>Proposal out</strong> on its own (check the board — no manual stage click), and the editor shows the public <strong>share link</strong> ("the prospect reads &amp; signs here", <code>wahala.co/p/…</code>). Also check the <strong>Proposals</strong> page: your proposal appears there as a row belonging to this deal — proposals are not a pipeline of their own.</p>
   </div>
 
   <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">5 · Play the client — sign it</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;">Copy the share link, open it in your incognito window (no login). Pick an option, type <code>Jordan Blake</code> as the signer name, click <strong>Sign &amp; approve</strong>.</p>
-    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> a "Signed &amp; sealed" confirmation. Back in staff view, the deal should now be in <strong>Committed</strong> — <em>not</em> still sitting in Proposal out or Negotiating. If it didn't move, that's a disconnect to flag.</p>
+    <p style="margin:0 0 8px;">Copy the share link, open it in your incognito window (no login). Pick an option, type <code>Jordan Blake</code> under "Type your full name to sign", click <strong>Sign &amp; approve</strong>.</p>
+    <p style="margin:0; padding:8px 12px; background:#f4f5f7; border-radius:8px;"><strong>✓ Expect:</strong> a <strong>"Signed &amp; sealed"</strong> confirmation with the phase roadmap. Back in staff view, the deal should now be in <strong>Committed</strong> — <em>not</em> still sitting in Proposal out or Negotiating. If it didn't move, that's a disconnect to flag.</p>
   </div>
 
   <h2 style="margin:26px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">6 · Committed — agreements &amp; deposit</h2>
   <div style="font-size:13.5px; line-height:1.7; color:#16181d;">
-    <p style="margin:0 0 8px;">Open the deal drawer again. You should see an <strong>Agreement package</strong> checklist (MSA, NDA, commercial agreement, deposit invoice) and a <strong>"When the deposit clears"</strong> card listing the phases that will become the project.</p>
-    <p style="margin:0 0 8px; padding:8px 12px; background:#fff7ed; border-radius:8px; border:1px solid #fadcb4;"><strong>Watch for:</strong> this is the single riskiest spot in the whole loop — a brand-new account (like this test one) has never had agreements before. If the checklist renders empty, or the phase list under "When the deposit clears" is empty/zero, or <strong>Create project</strong> stays greyed out with no way to mark the deposit received — <strong>stop and report it exactly here.</strong> That's the seam between "proposal signed" and "becomes a real project," and it's the one place a system stitched together from many small changes is most likely to drop the thread.</p>
+    <p style="margin:0 0 8px;">Open the deal drawer again. You should see an <strong>Agreement package</strong> checklist and a <strong>"When the deposit clears"</strong> card listing the phases that will become the project.</p>
+    <p style="margin:0 0 8px; padding:8px 12px; background:#fff7ed; border-radius:8px; border:1px solid #fadcb4;"><strong>Watch for:</strong> this seam used to be the riskiest spot in the loop, and it now has defined behavior — <strong>a brand-new account must get a default agreement package seeded at Committed</strong> (MSA, NDA, commercial agreement, and a deposit invoice ≈10% of deal value, ~$4,200 here). If the checklist renders empty, the phase list under "When the deposit clears" is empty/zero, or <strong>Create project</strong> stays greyed out with no way to mark the deposit received — <strong>stop and report it exactly here.</strong> Also: a proposal signed without explicit phases should still produce one "Full engagement" phase at the deal value, never zero phases.</p>
     <p style="margin:0 0 8px;">Mark the deposit invoice as received/cleared (however production exposes that — an admin action, a Stripe webhook in real life, or a manual "mark paid" toggle if Stripe isn't wired up yet).</p>
     <p style="margin:0;">Click <strong>Create project →</strong>.</p>
   </div>
@@ -92,28 +91,29 @@
     <ul style="margin:0 0 8px; padding-left:20px;">
       <li>The project has the phase(s) from the signed proposal — right names, right amounts — not empty, not generic.</li>
       <li>Phase 1 opens already <strong>paid</strong> (the deposit is Phase 1's payment — you should not be asked to pay it twice).</li>
-      <li>The deal is gone from the Sales board — it should not still show anywhere in Discovery/Proposal out/Negotiating/Committed.</li>
-      <li>Go to <strong>Accounts</strong> → ZZ Test — Fenwick Labs: the account should now say <strong>Client</strong>, not Prospect, and its timeline should show the whole thread — capture, call, proposal, signed, committed, won — as one continuous history, not a gap.</li>
-      <li>You should be prompted (or able) to <strong>invite Jordan Blake to the portal</strong> — this is the moment the client gets their own login.</li>
+      <li>The deal is gone from the pipeline — it should not still show anywhere in New/Discovery/Proposal out/Negotiating/Committed.</li>
+      <li>Go to <strong>Accounts</strong> → ZZ Test — Fenwick Labs: the account should now say <strong>Client</strong>, not Prospect, and its timeline should show the whole thread — opportunity, discovery, proposal, signed, committed, won — as one continuous history, not a gap.</li>
+      <li>On Jordan Blake's contact page you should see portal status and a <strong>Send invite</strong> action — this is the moment the client gets their own login.</li>
     </ul>
-    <p style="margin:0; padding:8px 12px; background:#dcf5e3; border-radius:8px; color:#15803d; font-weight:600;">If all five hold, the loop closed end-to-end — lead to Won, no dead ends.</p>
+    <p style="margin:0; padding:8px 12px; background:#dcf5e3; border-radius:8px; color:#15803d; font-weight:600;">If all five hold, the loop closed end-to-end — opportunity to Won, no dead ends.</p>
   </div>
 
   <h2 style="margin:28px 0 10px; font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:.08em; color:#2b3ee6;">Known interim states — not bugs</h2>
   <ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.7; color:#3a3f47;">
     <li><strong>Payment:</strong> if Stripe checkout isn't live yet, "deposit cleared" may be an admin-only manual toggle rather than a real card payment. The gate (can't create the project until it's marked cleared) should still be enforced.</li>
-    <li><strong>Zoom:</strong> "Log a call" / "Schedule call" work without Zoom connected — you'll see a "no video link, paste one manually" state instead of a Join button. That's expected, not broken.</li>
+    <li><strong>Readiness extraction:</strong> the Package extractor agent only fills discovery fields from <em>recorded</em> calls. If call recording isn't connected, filling the package manually is the expected fallback — the readiness score and the sub-7 nudge should behave identically either way.</li>
+    <li><strong>Contact email invite:</strong> creating a contact with an email may fire a portal invite immediately ("Create + send invite"). For this test that's fine — the invite goes to a fake address; just don't use a real client's email.</li>
+    <li><strong>Zoom:</strong> scheduling/logging calls works without Zoom connected — you'll see a "no video link, paste one manually" state instead of a Join button. That's expected, not broken.</li>
     <li><strong>Contract/SOW:</strong> generating the linked Contract/SOW document is a separate action from the proposal itself (from the proposal editor, "Generate contract / SOW") — it's not required to reach Won, but if you want to test it too, do it right after step 4, before sending.</li>
   </ul>
 
-  <div style="margin-top:26px; padding-top:12px; border-top:1px solid #ededf1; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b4b9c1; line-height:1.7;">Clean-up: once you're done, archive the "ZZ Test — Fenwick Labs" account (Account page → Archive) rather than leaving it live — archive hides it, deletes nothing.</div>
+  <div style="margin-top:26px; padding-top:12px; border-top:1px solid #ededf1; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b4b9c1; line-height:1.7;">Clean-up: once you're done, archive the "ZZ Test — Fenwick Labs" account (Account page → Archive) rather than leaving it live — archive hides it, deletes nothing. Then turn Training mode back to whatever your team runs with.</div>
 
 </x-import>
 
 <template id="__bundler_thumbnail">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#16181d"/><rect x="38" y="38" width="24" height="24" rx="5" fill="#2b3ee6" transform="rotate(45 50 50)"/></svg>
 </template>
-
 </x-dc>
 </body>
 </html>

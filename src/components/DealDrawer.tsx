@@ -22,8 +22,7 @@ import { DealProcessPanel, ReadyPill, StagesVsGatesCallout } from "@/components/
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
-import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
-import { EXPLAIN, PROPOSAL_READY_AT, readinessTone, type PackageFields } from "@/domain/process";
+import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 
 const SUB_STATUSES = ["redlines with counsel", "verbal yes · terms open"];
@@ -85,7 +84,6 @@ export function DealDrawer({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [nudge, setNudge] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [logBump, setLogBump] = useState(0);
   const [rescheduling, setRescheduling] = useState<string | null>(null);
@@ -135,22 +133,9 @@ export function DealDrawer({
     }
   }
 
-  /** "Move to {next}" — with the board's readiness-nudge intercept (never a gate). */
+  /** "Move to {next}" — Discovery is excluded (09 Jul b): sending the proposal IS the advance. */
   async function moveNext() {
-    if (!next) return;
-    if (next === "proposal_out" && deal.stage === "discovery" && (process.readiness ?? 0) < PROPOSAL_READY_AT) {
-      if (process.trainingMode) {
-        setNudge(true); // the modal decides: keep in Discovery, or advance with override
-        return;
-      }
-      fetch(`/api/deals/${deal.id}/readiness`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ outcome: "fired", metadata: { surface: "drawer_move_quiet" } }),
-      }).catch(() => {});
-      await patchDeal({ stage: next, override: true });
-      return;
-    }
+    if (!next || deal.stage === "discovery") return;
     await patchDeal({ stage: next });
   }
 
@@ -298,17 +283,28 @@ export function DealDrawer({
         </div>
       )}
 
-      {/* Stage actions — dispositions, never gates (backward/skip moves live on the board) */}
+      {/* Stage actions — dispositions, never gates. Discovery has NO advance button
+          (09 Jul b): the Proposal-out stage is event-driven — sending the proposal
+          moves the deal. Mark lost stays. */}
       {canManage && !terminal && !committed && next && (
         <div style={{ marginTop: 14 }}>
           <div style={{ display: "flex", gap: 9 }}>
-            <button
-              onClick={() => void moveNext()}
-              disabled={busy}
-              style={{ flex: 1, background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
-            >
-              {busy ? "Moving…" : deal.stage === "new" ? "Accept → start Discovery" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
-            </button>
+            {deal.stage === "discovery" ? (
+              <div
+                className="mono"
+                style={{ flex: 1, border: "1.5px dashed #C9D0FB", background: "#FAFBFF", color: "#2536C4", borderRadius: 10, padding: "11px 14px", fontSize: 11, lineHeight: 1.5, textAlign: "center" }}
+              >
+                Sending the proposal moves this deal to Proposal out automatically.
+              </div>
+            ) : (
+              <button
+                onClick={() => void moveNext()}
+                disabled={busy}
+                style={{ flex: 1, background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
+              >
+                {busy ? "Moving…" : deal.stage === "new" ? "Accept → start Discovery" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
+              </button>
+            )}
             <button
               onClick={markLost}
               disabled={busy}
@@ -318,7 +314,7 @@ export function DealDrawer({
             </button>
           </div>
           <div className="mono" title={EXPLAIN.stagesVsGates} style={{ fontSize: 9.5, color: "var(--muted-line)", textAlign: "center", marginTop: 8 }}>
-            stages are never gates — overrides are logged to the deal
+            {deal.stage === "discovery" ? "the nudge is never a gate — overrides are logged to the deal" : "stages are never gates — overrides are logged to the deal"}
           </div>
         </div>
       )}
@@ -492,19 +488,6 @@ export function DealDrawer({
           zoomReady={process.zoomReady}
           calendarConnected={process.calendarConnected}
           onClose={() => setScheduling(false)}
-        />
-      )}
-
-      {nudge && (
-        <ReadinessNudgeModal
-          dealId={deal.id}
-          dealName={deal.name}
-          onKeep={() => setNudge(false)}
-          onAdvance={async () => {
-            setNudge(false);
-            await patchDeal({ stage: "proposal_out", override: true });
-          }}
-          onClose={() => setNudge(false)}
         />
       )}
 

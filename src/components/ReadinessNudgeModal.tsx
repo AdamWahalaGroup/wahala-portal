@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * Training nudge — not proposal-ready (frame 39). Fires when a deal is dragged to
- * Proposal out below the readiness bar. The failed checks quote the transcript
- * VERBATIM — the quotes are what make the nudge persuasive. Pipeline steps are
- * never gates: "Advance anyway" moves the deal immediately and logs an override.
+ * Training nudge — not proposal-ready (frame 39; trigger superseded by the 09 Jul b
+ * delta). Fires on SEND: clicking Send in the proposal editor below the readiness
+ * bar (there is no stage drag out of Discovery anymore). The failed checks quote
+ * the transcript VERBATIM — the quotes are what make the nudge persuasive. The
+ * nudge is never a gate: "Send anyway" runs the full send path and logs an override.
+ * variant="advance" keeps the legacy stage-move copy for any remaining callers.
  */
 import { useEffect, useState } from "react";
 
@@ -14,19 +16,24 @@ type ReadinessData = { score: number; tone: string; ready: boolean; failed: Chec
 export function ReadinessNudgeModal({
   dealId,
   dealName,
+  variant = "advance",
   onKeep,
   onAdvance,
   onClose,
 }: {
   dealId: string;
   dealName: string;
-  /** Keep in Discovery — logs nudge_acted, closes. */
+  /** "send" = the proposal-editor Send intercept (09 Jul b copy); "advance" = legacy stage move. */
+  variant?: "advance" | "send";
+  /** Hold the send / keep in Discovery — logs nudge_acted, closes. */
   onKeep: () => void;
-  /** Advance anyway — the caller performs the move with override:true. */
+  /** Send anyway / advance anyway — the caller runs the send (or move) and logs the override. */
   onAdvance: () => void;
   onClose: () => void;
 }) {
   const [data, setData] = useState<ReadinessData | null>(null);
+
+  const send = variant === "send";
 
   useEffect(() => {
     fetch(`/api/deals/${dealId}/readiness`)
@@ -37,15 +44,15 @@ export function ReadinessNudgeModal({
     fetch(`/api/deals/${dealId}/readiness`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ outcome: "fired", metadata: { surface: "board_drag" } }),
+      body: JSON.stringify({ outcome: "fired", metadata: { surface: send ? "proposal_send" : "board_drag" } }),
     }).catch(() => {});
-  }, [dealId]);
+  }, [dealId, send]);
 
   async function keep() {
     await fetch(`/api/deals/${dealId}/readiness`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ outcome: "acted", metadata: { choice: "keep_in_discovery" } }),
+      body: JSON.stringify({ outcome: "acted", metadata: { choice: send ? "hold_the_send" : "keep_in_discovery" } }),
     }).catch(() => {});
     onKeep();
   }
@@ -77,7 +84,9 @@ export function ReadinessNudgeModal({
 
         <div style={{ padding: "16px 18px" }}>
           <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>
-            A proposal written on this package argues price instead of the customer&apos;s own pain — the open fields below are what it would be guessing about.
+            {send
+              ? "A proposal written on this package argues price instead of the customer's own pain — sending this proposal now risks a pitch built on gaps."
+              : "A proposal written on this package argues price instead of the customer's own pain — the open fields below are what it would be guessing about."}
           </p>
 
           {/* Failed checks, evidence quoted verbatim */}
@@ -109,8 +118,12 @@ export function ReadinessNudgeModal({
               ?
             </span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#2536C4" }}>Recommended: stay in Discovery</div>
-              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>{data?.recommendation ?? "One more call closing the open fields, then draft."}</p>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#2536C4" }}>{send ? "Recommended: hold the send." : "Recommended: stay in Discovery"}</div>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
+                {send
+                  ? "Schedule a follow-up call with the named decision-maker and fill the gaps — the draft keeps."
+                  : data?.recommendation ?? "One more call closing the open fields, then draft."}
+              </p>
             </div>
           </div>
 
@@ -120,17 +133,17 @@ export function ReadinessNudgeModal({
               onClick={keep}
               style={{ background: "var(--cobalt)", color: "var(--white)", border: 0, borderRadius: 9, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", flex: "2 1 50%" }}
             >
-              Keep in Discovery · schedule workshop
+              {send ? "Hold the send · stay in Discovery" : "Keep in Discovery · schedule workshop"}
             </button>
             <button
               onClick={onAdvance}
               style={{ background: "var(--white)", color: "var(--muted)", border: "1px solid #E2E3E8", borderRadius: 9, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", flex: "1 1 30%" }}
             >
-              Advance anyway
+              {send ? "Send anyway" : "Advance anyway"}
             </button>
           </div>
           <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", textAlign: "center", marginTop: 9 }}>
-            stages are never gates — overrides are logged to the deal
+            {send ? "the nudge is never a gate — overrides are logged to the deal" : "stages are never gates — overrides are logged to the deal"}
           </div>
         </div>
       </div>

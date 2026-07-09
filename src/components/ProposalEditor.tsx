@@ -17,7 +17,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Money } from "@/components/Money";
 import { ProposalStatusPill } from "@/components/SalesChips";
+import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { canAmendPhase } from "@/domain/proposal-math";
+import { PROPOSAL_READY_AT } from "@/domain/process";
 import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
 
 type Option = {
@@ -36,6 +38,9 @@ type Proposal = {
   id: string;
   dealId: string;
   dealName: string;
+  /** 09 Jul b — send IS the advance; the readiness nudge fires on Send. */
+  dealStage: string | null;
+  dealReadiness: number | null;
   organizationName: string;
   version: number;
   status: "draft" | "sent" | "approved" | "declined" | "superseded";
@@ -86,12 +91,14 @@ function useDebounced<A extends unknown[]>(fn: (...args: A) => void, ms: number)
   };
 }
 
-export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; canManage: boolean }) {
+export function ProposalEditor({ proposal, canManage, trainingMode = false }: { proposal: Proposal; canManage: boolean; trainingMode?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [nudge, setNudge] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [amendConfirmIndex, setAmendConfirmIndex] = useState<number | null>(null);
   const [respond, setRespond] = useState({ outcome: "", optionId: "", name: "", note: "" });
@@ -169,6 +176,53 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
     setBusy(null);
     if (ok) router.refresh();
     return ok;
+  }
+
+  // ---------------------------------------------------------------- send (09 Jul b: stage follows the proposal)
+
+  // Sending is the ONLY forward path out of Discovery — the readiness nudge fires here now.
+  const sendWillAdvance = proposal.dealStage === "discovery" || proposal.dealStage === "new";
+  const belowReady = sendWillAdvance && (proposal.dealReadiness ?? 0) < PROPOSAL_READY_AT;
+
+  function recordSendOverride() {
+    return fetch(`/api/deals/${proposal.dealId}/readiness`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ outcome: "overridden", metadata: { surface: "proposal_send", proposalId: proposal.id } }),
+    }).catch(() => {});
+  }
+
+  /** The full send path (§2): status sent + share token + auto-advance, one transaction server-side. */
+  async function doSend(): Promise<boolean> {
+    return structural(async () => {
+      try {
+        const res = await fetch(`/api/proposals/${proposal.id}/send`, { method: "POST" });
+        const data = (await res.json().catch(() => ({}))) as { message?: string; movedToProposalOut?: boolean };
+        if (!res.ok) {
+          setError(data.message ?? `Failed (${res.status}).`);
+          return false;
+        }
+        setError(null);
+        setConfirmSend(false);
+        if (belowReady && !trainingMode) {
+          // Frame 39's training-off inline variant, now on Send: quiet, logged.
+          void recordSendOverride();
+          setFlash(`Sent — deal moved to "Proposal out" · ⚠ below proposal-ready (${(proposal.dealReadiness ?? 0).toFixed(1)}/10), logged to the deal`);
+        } else {
+          setFlash(data.movedToProposalOut ? 'Sent — deal moved to "Proposal out"' : "Sent — share link is live");
+        }
+        return true;
+      } catch {
+        setError("Network error — please try again.");
+        return false;
+      }
+    }, "send");
+  }
+
+  function onSendClick() {
+    // Training mode + below the bar → the nudge decides: hold the send, or send anyway.
+    if (belowReady && trainingMode) setNudge(true);
+    else setConfirmSend(true);
   }
 
   // ---------------------------------------------------------------- spine
@@ -564,6 +618,12 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
         </section>
 
         {error && <p style={{ color: "#b00020", fontSize: 13, margin: 0 }}>{error}</p>}
+        {flash && (
+          <p className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: flash.startsWith("Held") ? "#2536C4" : "#15803D", margin: 0 }}>
+            {flash}
+            <button onClick={() => setFlash(null)} style={{ border: 0, background: "none", color: "#C4C8CF", cursor: "pointer", marginLeft: 8 }}>×</button>
+          </p>
+        )}
 
         {/* Action row (design): Save draft · Send to client → · Preview public page ↗ · Generate contract/SOW · Delete */}
         {canManage && (
@@ -596,7 +656,7 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
               </button>
             )}
             {isDraft && (
-              <button onClick={() => setConfirmSend(true)} disabled={busy === "send"} style={btn("ink", busy === "send")}>
+              <button onClick={onSendClick} disabled={busy === "send"} style={btn("ink", busy === "send")}>
                 Send to client →
               </button>
             )}
@@ -646,22 +706,31 @@ export function ProposalEditor({ proposal, canManage }: { proposal: Proposal; ca
               </p>
               <div style={{ display: "flex", gap: 9, marginTop: 16, justifyContent: "flex-end" }}>
                 <button onClick={() => setConfirmSend(false)} style={btn("plain")}>Cancel</button>
-                <button
-                  onClick={() =>
-                    void structural(async () => {
-                      const ok = await api(`/api/proposals/${proposal.id}/send`, "POST");
-                      if (ok) setConfirmSend(false);
-                      return ok;
-                    }, "send")
-                  }
-                  disabled={busy === "send"}
-                  style={btn(complexity > 3 ? "plain" : "ink", busy === "send")}
-                >
+                <button onClick={() => void doSend()} disabled={busy === "send"} style={btn(complexity > 3 ? "plain" : "ink", busy === "send")}>
                   {busy === "send" ? "Sending…" : complexity > 3 ? "Send anyway" : "Send"}
                 </button>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Readiness nudge on Send (09 Jul b — replaces the stage-drag trigger) */}
+        {nudge && (
+          <ReadinessNudgeModal
+            dealId={proposal.dealId}
+            dealName={proposal.dealName}
+            variant="send"
+            onKeep={() => {
+              setNudge(false);
+              setFlash("Held — the draft keeps, deal stays in Discovery");
+            }}
+            onAdvance={() => {
+              setNudge(false);
+              void recordSendOverride();
+              void doSend();
+            }}
+            onClose={() => setNudge(false)}
+          />
         )}
 
         {/* Delete confirm */}

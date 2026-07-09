@@ -13,9 +13,7 @@ import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
 import { NewOpportunityModal } from "@/components/OpportunityModals";
-import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
-import { PROPOSAL_READY_AT } from "@/domain/process";
 import type { SalesOverview, DealItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
@@ -161,7 +159,7 @@ function CardChip({ text, tone }: { text: string; tone: "amber" | "green" | "gre
   );
 }
 
-function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, onMoved }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string; trainingMode: boolean; onMoved: (m: StageMoment | null) => void }) {
+function KanbanView({ overview, canManage, filter, currentUserId, onMoved }: { overview: SalesOverview; canManage: boolean; filter: SalesFilter; currentUserId?: string; onMoved: (m: StageMoment | null) => void }) {
   const router = useRouter();
   // Filter chips lens the board (frame 29). Counts in the summary strip stay whole.
   const dealPred = (d: DealItem): boolean => {
@@ -196,8 +194,7 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
       return next;
     });
   }
-  // Frame 39: the not-proposal-ready nudge (modal in training mode; inline line otherwise).
-  const [nudge, setNudge] = useState<{ dealId: string; dealName: string } | null>(null);
+  // 09 Jul b: no readiness nudge here anymore — the nudge fires on proposal Send.
   const [inlineWarn, setInlineWarn] = useState<string | null>(null);
 
   // A card click goes straight to its drawer (soft nav — the board stays behind).
@@ -232,25 +229,11 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
       await run(`/api/deals/${p.id}`, { stage: "lost", reason });
       return;
     }
-    if (target === "proposal_out") {
-      // Frame 39: proposal-ready check. Steps are never gates — training mode gets
-      // the modal, training off gets a one-line inline warning; both log.
-      const score = deal?.readinessScore ?? 0;
-      if (deal && deal.stage === "discovery" && score < PROPOSAL_READY_AT) {
-        if (trainingMode) {
-          setNudge({ dealId: deal.id, dealName: deal.name });
-          return; // the modal decides: keep in Discovery, or advance with override
-        }
-        setInlineWarn(`⚠ ${deal.name} advanced below proposal-ready (${(deal.readinessScore ?? 0).toFixed(1)}/10) — logged to the deal.`);
-        fetch(`/api/deals/${p.id}/readiness`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ outcome: "fired", metadata: { surface: "board_drag_quiet" } }),
-        }).catch(() => {});
-        const err = await run(`/api/deals/${p.id}`, { stage: target, override: true });
-        if (!err) onMoved(stageMomentFor(deal.stage, target, deal));
-        return;
-      }
+    if (target === "proposal_out" && deal?.stage === "discovery") {
+      // 09 Jul b: the Proposal-out stage is event-driven — there is NO manual
+      // advance out of Discovery. Draft & send the proposal; sending moves the deal.
+      setInlineWarn(`${deal.name} stays in Discovery — sending its proposal moves it to Proposal out automatically.`);
+      return;
     }
     if (target === "won") {
       // The package nudges, never blocks: warn when docs are open, then proceed.
@@ -532,23 +515,6 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
         </p>
       )}
 
-      {nudge && (
-        <ReadinessNudgeModal
-          dealId={nudge.dealId}
-          dealName={nudge.dealName}
-          onKeep={() => setNudge(null)}
-          onAdvance={async () => {
-            const id = nudge.dealId;
-            const deal = [...overview.columns.flatMap((c) => c.deals)].find((d) => d.id === id);
-            setNudge(null);
-            const err = await run(`/api/deals/${id}`, { stage: "proposal_out", override: true });
-            // Nudge composes first; the achievement moment only after the override lands.
-            if (!err && deal) onMoved(stageMomentFor(deal.stage, "proposal_out", deal));
-          }}
-          onClose={() => setNudge(null)}
-        />
-      )}
-
       {/* Columns: New (opportunities) + the four deal stages */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, alignItems: "start" }}>
         {overview.columns.map(column)}
@@ -735,13 +701,10 @@ export function SalesBoard({
   overview,
   canManage,
   currentUserId,
-  trainingMode = false,
 }: {
   overview: SalesOverview;
   canManage: boolean;
   currentUserId?: string;
-  /** Frame 39: modal nudge chrome when on; quiet inline warning when off. */
-  trainingMode?: boolean;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -864,7 +827,7 @@ export function SalesBoard({
       {creating === "opportunity" && <NewOpportunityModal currentUserId={currentUserId} onClose={() => setCreating(null)} />}
 
       {view === "board" ? (
-        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} onMoved={setMoment} />
+        <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} onMoved={setMoment} />
       ) : (
         <ListView overview={overview} canManage={canManage} onMoved={setMoment} />
       )}

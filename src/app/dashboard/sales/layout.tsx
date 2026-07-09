@@ -35,12 +35,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       proposalCount={proposalCount}
       trainingMode={trainingMode}
     >
-      <SalesBoard
-        overview={overview}
-        canManage={canManage}
-        currentUserId={ctx.user.id}
-        trainingMode={trainingMode}
-      />
+      <SalesBoard overview={overview} canManage={canManage} currentUserId={ctx.user.id} />
       {/* Child segments render the drawer overlay (deal/contact/proposal); null on the bare board. */}
       {children}
     </AppShell>

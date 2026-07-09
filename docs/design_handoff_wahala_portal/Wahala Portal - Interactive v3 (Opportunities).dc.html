@@ -1690,14 +1690,71 @@
       </div>
       <div class="mono" style="font-size:10.5px; color:#b4b9c1; text-align:center; margin-top:6px;">stage {{ dealDrawer.stepIndex }} of 5 — {{ dealDrawer.stageLabel }}</div>
 
+      <sc-if value="{{ dealDrawer.hasActions }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <sc-if value="{{ dealDrawer.hasAdvance }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ dealDrawer.onAdvance }}" style="flex:1; border:0; padding:12px; border-radius:10px; background:#16181d; color:#fff; font:700 13.5px 'Hanken Grotesk'; cursor:pointer;">{{ dealDrawer.advanceLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ dealDrawer.isDiscovery }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1; display:flex; align-items:center; padding:8px 14px; border-radius:10px; background:#fbfbfc; border:1px dashed #d7d9df; font-size:11.5px; line-height:1.45; color:#5a6069;">Sending the proposal moves this deal to Proposal out automatically.</div>
+          </sc-if>
+          <button onClick="{{ dealDrawer.onLost }}" style="padding:12px 16px; border-radius:10px; background:#fff; color:#b91c1c; border:1px solid #f0caca; font:600 13.5px 'Hanken Grotesk'; cursor:pointer;">Mark lost</button>
+        </div>
+        <div class="mono" style="font-size:9.5px; color:#b4b9c1; text-align:center; margin-top:10px;">stages are never gates — overrides are logged to the deal</div>
+      </sc-if>
+
       <sc-if value="{{ dealDrawer.showTraining }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px; background:#eef0fe; border:1.5px solid #dde1fb; border-radius:12px; padding:14px 16px;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="mono" style="font-size:9.5px; font-weight:700; background:#2b3ee6; color:#fff; padding:2px 8px; border-radius:999px;">TRAINING</span><span style="font-size:12.5px; font-weight:600;">{{ dealDrawer.goalSentence }}</span></div>
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <span class="mono" style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#4b5563;">Discovery package</span>
-            <span style="{{ dealDrawer.readinessPillStyle }}">READY {{ dealDrawer.readinessLabel }}</span>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:16px; background:#eef0fe; border:1.5px solid #dde1fb; border-radius:12px; padding:12px 16px;"><span class="mono" style="font-size:9.5px; font-weight:700; background:#2b3ee6; color:#fff; padding:2px 8px; border-radius:999px;">TRAINING</span><span style="font-size:12.5px; font-weight:600;">{{ dealDrawer.goalSentence }}</span></div>
+      </sc-if>
+
+      <sc-if value="{{ dealDrawer.showNextStep }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:16px; background:#fafbff; border:1px solid #dde1fb; border-radius:12px; padding:14px 16px;">
+          <div class="mono" style="font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:6px;">Next step</div>
+          <div style="font-size:13px; line-height:1.55; color:#16181d;">{{ dealDrawer.nextStepText }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ dealDrawer.showPkg }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:16px; border:1px solid #e7e8ec; border-radius:12px; padding:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span class="mono" style="font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa;">Discovery package</span>
+            <span class="mono" style="{{ dealDrawer.pkgPillStyle }}">{{ dealDrawer.pkgPillLabel }}</span>
           </div>
-          <div style="font-size:11.5px; color:#4b5563; line-height:1.5;">Readiness drives when this deal is proposal-ready — completeness of the 10-field discovery package, extracted from recorded calls.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px 12px;">
+            <sc-for list="{{ dealDrawer.pkgFields }}" as="pf" hint-placeholder-count="10">
+              <div onClick="{{ pf.onOpen }}" style="{{ pf.rowStyle }}"><span style="{{ pf.iconStyle }}">{{ pf.icon }}</span><span style="font-size:12.5px; font-weight:600;">{{ pf.label }}</span></div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ dealDrawer.pkgEditor.open }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px; background:#fbfbfc; border:1px solid #ededf1; border-radius:11px; padding:14px;">
+              <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:10px;"><span style="font-size:13.5px; font-weight:800;">{{ dealDrawer.pkgEditor.fieldLabel }}</span><span onClick="{{ dealDrawer.pkgEditor.onCancel }}" style="font-size:11.5px; color:#2b3ee6; cursor:pointer;">close</span></div>
+              <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <sc-for list="{{ dealDrawer.pkgEditor.chips }}" as="ch" hint-placeholder-count="3">
+                  <span onClick="{{ ch.onPick }}" style="{{ ch.style }}">{{ ch.label }}</span>
+                </sc-for>
+              </div>
+              <input value="{{ dealDrawer.pkgEditor.evidence }}" onInput="{{ dealDrawer.pkgEditor.onEvidence }}" placeholder="What did they say? (evidence)" style="width:100%; padding:10px 12px; border:1px solid #d7d9df; border-radius:9px; font:500 13px 'Hanken Grotesk'; box-sizing:border-box;">
+              <div style="display:flex; align-items:center; gap:14px; margin-top:10px;">
+                <button onClick="{{ dealDrawer.pkgEditor.onSave }}" style="border:0; background:#16181d; color:#fff; padding:9px 22px; border-radius:999px; font:700 13px 'Hanken Grotesk'; cursor:pointer;">Save</button>
+                <span onClick="{{ dealDrawer.pkgEditor.onCancel }}" style="font-size:12.5px; font-weight:600; color:#5a6069; cursor:pointer;">Cancel</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dealDrawer.hasAsk }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #ededf1;">
+              <div class="mono" style="font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#9aa0aa; margin-bottom:8px;">Ask on the next call</div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <sc-for list="{{ dealDrawer.askRows }}" as="aq" hint-placeholder-count="4">
+                  <div style="display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:baseline;"><span class="mono" style="font-size:9px; letter-spacing:.06em; color:#b91c1c;">{{ aq.label }}</span><span style="font-size:12px; color:#3a3f47; line-height:1.5;">{{ aq.question }}</span></div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ dealDrawer.showAskToggle }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ dealDrawer.onAskToggle }}" style="display:inline-block; margin-top:8px; font-size:11.5px; color:#2b3ee6; cursor:pointer;">{{ dealDrawer.askToggleLabel }}</span>
+              </sc-if>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 
@@ -1727,13 +1784,6 @@
         </div>
       </sc-if>
 
-      <sc-if value="{{ dealDrawer.hasActions }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex; gap:8px; margin-top:22px;">
-          <button onClick="{{ dealDrawer.onAdvance }}" style="flex:1; border:0; padding:12px; border-radius:10px; background:#16181d; color:#fff; font:700 13.5px 'Hanken Grotesk'; cursor:pointer;">{{ dealDrawer.advanceLabel }}</button>
-          <button onClick="{{ dealDrawer.onLost }}" style="padding:12px 16px; border-radius:10px; background:#fff; color:#b91c1c; border:1px solid #f0caca; font:600 13.5px 'Hanken Grotesk'; cursor:pointer;">Mark lost</button>
-        </div>
-      </sc-if>
-      <div class="mono" style="font-size:9.5px; color:#b4b9c1; text-align:center; margin-top:14px;">stages are never gates — overrides are logged to the deal</div>
     </div>
   </sc-if>
 
@@ -1747,15 +1797,15 @@
           <span style="font-size:11.5px; font-weight:700; color:#b91c1c; background:#fbe3e3; padding:3px 9px; border-radius:999px;">READINESS {{ nudgeDeal.readinessLabel }}</span>
         </div>
         <div style="padding:18px 20px;">
-          <p style="margin:0 0 12px; font-size:13.5px; color:#3a3f47; line-height:1.6;">Discovery package fields are still incomplete for <strong>{{ nudgeDeal.name }}</strong> — advancing now risks a proposal built on gaps.</p>
+          <p style="margin:0 0 12px; font-size:13.5px; color:#3a3f47; line-height:1.6;">Discovery package fields are still incomplete for <strong>{{ nudgeDeal.name }}</strong> — sending this proposal now risks a pitch built on gaps.</p>
           <div style="background:#eef0fe; border:1px solid #dde1fb; border-radius:11px; padding:13px 15px;">
-            <div style="display:flex; gap:8px;"><span style="width:18px;height:18px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center; flex-shrink:0;">?</span><div style="font-size:12.5px; line-height:1.5; color:#3a3f47;"><strong style="color:#2536c4;">Recommended: stay in Discovery.</strong> Schedule a follow-up call with the named decision-maker before drafting a proposal.</div></div>
+            <div style="display:flex; gap:8px;"><span style="width:18px;height:18px;border-radius:50%;background:#2b3ee6;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center; flex-shrink:0;">?</span><div style="font-size:12.5px; line-height:1.5; color:#3a3f47;"><strong style="color:#2536c4;">Recommended: hold the send.</strong> Schedule a follow-up call with the named decision-maker and fill the gaps — the draft keeps.</div></div>
           </div>
         </div>
         <div style="padding:0 20px 20px; display:flex; flex-direction:column; gap:9px;">
-          <button onClick="{{ keepInDiscovery }}" style="border:0; padding:12px; border-radius:10px; background:#2b3ee6; color:#fff; font:700 13.5px 'Hanken Grotesk'; cursor:pointer;">Keep in Discovery · schedule workshop</button>
-          <button onClick="{{ advanceAnyway }}" style="border:1px solid #e2e3e8; background:#fff; padding:11px; border-radius:10px; color:#5a6069; font:600 13px 'Hanken Grotesk'; cursor:pointer;">Advance anyway</button>
-          <div class="mono" style="font-size:9.5px; color:#b4b9c1; text-align:center;">stages are never gates — overrides are logged to the deal</div>
+          <button onClick="{{ keepInDiscovery }}" style="border:0; padding:12px; border-radius:10px; background:#2b3ee6; color:#fff; font:700 13.5px 'Hanken Grotesk'; cursor:pointer;">Hold the send · stay in Discovery</button>
+          <button onClick="{{ advanceAnyway }}" style="border:1px solid #e2e3e8; background:#fff; padding:11px; border-radius:10px; color:#5a6069; font:600 13px 'Hanken Grotesk'; cursor:pointer;">Send anyway</button>
+          <div class="mono" style="font-size:9.5px; color:#b4b9c1; text-align:center;">the nudge is never a gate — overrides are logged to the deal</div>
         </div>
       </div>
     </div>
@@ -1906,10 +1956,22 @@ const DEAL_STAGE_META = {
 const DEAL_STAGE_ORDER = ['new', 'discovery', 'proposal_out', 'negotiating', 'committed'];
 const DEAL_NEXT = {
   new: { label: 'Accept → start Discovery', next: 'discovery' },
-  discovery: { label: 'Move to Proposal out', next: 'proposal_out' },
+  // discovery has no manual advance — sending the proposal moves the deal to proposal_out
   proposal_out: { label: 'Move to Negotiating', next: 'negotiating' },
   negotiating: { label: 'Move to Committed', next: 'committed' },
 };
+const DISCOVERY_FIELDS = [
+  { key: 'business_profile', label: 'Business profile', question: 'What does the business actually do, in their words?' },
+  { key: 'current_workflow', label: 'Current workflow', question: 'Walk me through how this works today, step by step.' },
+  { key: 'pain_points', label: 'Pain points', question: "Where does today's process hurt the most?" },
+  { key: 'budget_posture', label: 'Budget posture', question: 'What budget range are you working within for this?' },
+  { key: 'decision_makers', label: 'Decision makers', question: 'Who signs off — can they join the next call?' },
+  { key: 'success_metrics', label: 'Success metrics', question: 'What number tells you this worked?' },
+  { key: 'mvp_priorities', label: 'MVP priorities', question: 'If we could only ship one thing first, what is it?' },
+  { key: 'timeline', label: 'Timeline', question: "When does this need to be live, and what's driving that date?" },
+  { key: 'customer_terminology', label: 'Customer terminology', question: 'What do you call these things internally?' },
+  { key: 'deferred_scope', label: 'Deferred scope', question: 'What are we explicitly NOT doing in round one?' },
+];
 const PROPOSAL_STATUS_META = {
   draft:    { label: 'Draft',    fg: '#4b5159', bg: '#f1f2f4' },
   sent:     { label: 'Sent',     fg: '#6d28d9', bg: '#f1ebfe' },
@@ -1931,6 +1993,8 @@ class Component extends DCLogic {
     clientAccountId: 'acc_meridian',
     page: 'home',
     trainingMode: true,
+    pkgEditor: null,
+    askShowAll: true,
     toast: null,
 
     accounts: [
@@ -2189,7 +2253,7 @@ class Component extends DCLogic {
       const estValue = Number(String(f.estValue).replace(/[^0-9.]/g, '')) || 0;
       const need = f.need.trim();
       const shortNeed = need ? (need.length > 36 ? need.slice(0, 36).trim() + '…' : need) : 'new opportunity';
-      const deal = { id: uid('deal'), accountId, contactId, name: (account ? account.name : (existing ? existing.name : f.contactName.trim())) + ' — ' + shortNeed, value: estValue, stage: 'new', owner: 'Ada Obi', daysInStage: 0, readiness: 1.0, discoveryNote: need || undefined };
+      const deal = { id: uid('deal'), accountId, contactId, name: (account ? account.name : (existing ? existing.name : f.contactName.trim())) + ' — ' + shortNeed, value: estValue, stage: 'new', owner: 'Ada Obi', daysInStage: 0, readiness: 1.0, pkg: {}, discoveryNote: need || undefined };
       return { accounts, contacts, deals: [deal, ...s.deals], modal: null, page: 'sales' };
     });
     this.showToast('Opportunity created — accept it to start the deal');
@@ -2341,10 +2405,6 @@ class Component extends DCLogic {
     if (!deal) return;
     const next = DEAL_NEXT[deal.stage];
     if (!next) return;
-    if (next.next === 'proposal_out' && deal.readiness < 7 && this.state.trainingMode) {
-      this.setState({ modal: 'nudge', nudgeDealId: id });
-      return;
-    }
     this.setState(s => {
       const account = s.accounts.find(a => a.id === deal.accountId);
       const patch = { deals: s.deals.map(d => d.id === id ? { ...d, stage: next.next, daysInStage: 0, proposalPhases: next.next === 'committed' ? this._deriveProposalPhases(d, d.proposal && d.proposal.selectedOptionId) : d.proposalPhases } : d) };
@@ -2353,11 +2413,11 @@ class Component extends DCLogic {
     });
     this.showToast('Moved to "' + DEAL_STAGE_META[next.next].label + '"');
   }
-  keepInDiscovery() { this.setState({ modal: 'deal' }); this.showToast('Stayed in Discovery — workshop scheduled'); }
+  keepInDiscovery() { this.setState({ modal: null }); this.showToast('Held — the draft keeps, deal stays in Discovery'); }
   advanceAnyway() {
     const id = this.state.nudgeDealId;
-    this.setState(s => ({ deals: s.deals.map(d => d.id === id ? { ...d, stage: 'proposal_out', daysInStage: 0, overridden: true } : d), modal: 'deal' }));
-    this.showToast('Advanced — override logged');
+    this.setState(s => ({ deals: s.deals.map(d => d.id === id ? { ...d, overridden: true } : d), modal: null }));
+    this._doSendProposal(id, ' — override logged');
   }
   markDealLost(id) {
     const deal = this.state.deals.find(d => d.id === id);
@@ -2427,6 +2487,48 @@ class Component extends DCLogic {
     const id = this.state.dealDrawerDealId;
     this.setState(s => ({ deals: s.deals.map(d => d.id === id ? { ...d, depositCleared: !d.depositCleared } : d) }));
   }
+  // ---------- Discovery package (matches production drawer) ----------
+  _pkgFor(deal) {
+    const full = {};
+    if (deal.pkg) {
+      DISCOVERY_FIELDS.forEach(f => { full[f.key] = deal.pkg[f.key] || { status: 'missing', evidence: '' }; });
+      return full;
+    }
+    // demo deals authored with only a readiness number — seed statuses to match
+    const r = deal.readiness || 0;
+    const okN = Math.min(10, Math.floor(r));
+    const partialN = (r - okN) >= 0.4 ? 1 : 0;
+    DISCOVERY_FIELDS.forEach((f, i) => { full[f.key] = { status: i < okN ? 'ok' : i < okN + partialN ? 'partial' : 'missing', evidence: '' }; });
+    return full;
+  }
+  _pkgReadiness(pkg) {
+    return DISCOVERY_FIELDS.reduce((sum, f) => {
+      const st = (pkg[f.key] || {}).status;
+      return sum + (st === 'ok' ? 1 : st === 'partial' ? 0.5 : 0);
+    }, 0);
+  }
+  openPkgField(dealId, key) {
+    const deal = this.state.deals.find(d => d.id === dealId);
+    if (!deal) return;
+    const cur = this._pkgFor(deal)[key];
+    this.setState({ pkgEditor: { dealId, key, status: cur.status, evidence: cur.evidence || '' } });
+  }
+  cancelPkgField() { this.setState({ pkgEditor: null }); }
+  setPkgStatus(status) { this.setState(s => ({ pkgEditor: { ...s.pkgEditor, status } })); }
+  setPkgEvidence(evidence) { this.setState(s => ({ pkgEditor: { ...s.pkgEditor, evidence } })); }
+  savePkgField() {
+    const ed = this.state.pkgEditor;
+    if (!ed) return;
+    this.setState(s => ({
+      deals: s.deals.map(d => {
+        if (d.id !== ed.dealId) return d;
+        const pkg = { ...this._pkgFor(d), [ed.key]: { status: ed.status, evidence: ed.evidence.trim() } };
+        return { ...d, pkg, readiness: this._pkgReadiness(pkg) };
+      }),
+      pkgEditor: null,
+    }));
+  }
+  toggleAskAll() { this.setState(s => ({ askShowAll: !s.askShowAll })); }
   resendAgreement(accountId, kind) { this.showToast('Resent · ' + kind); }
 
   // ---------- Proposals ----------
@@ -2688,10 +2790,22 @@ class Component extends DCLogic {
   saveProposalDraft() { this.showToast('Saved ✓'); }
   sendProposal() {
     const id = this.state.selectedProposalDealId;
+    const deal = this.state.deals.find(d => d.id === id);
+    if (!deal || !deal.proposal) return;
+    if ((deal.stage === 'new' || deal.stage === 'discovery') && (deal.readiness || 0) < 7 && this.state.trainingMode) {
+      this.setState({ modal: 'nudge', nudgeDealId: id });
+      return;
+    }
+    this._doSendProposal(id, '');
+  }
+  _doSendProposal(id, toastSuffix) {
+    const deal = this.state.deals.find(d => d.id === id);
+    if (!deal || !deal.proposal) return;
+    const moves = deal.stage === 'new' || deal.stage === 'discovery';
     this.setState(s => ({
-      deals: s.deals.map(d => d.id === id && d.proposal ? { ...d, proposal: { ...d.proposal, status: 'sent', shareToken: d.proposal.shareToken || uid('p') } } : d),
+      deals: s.deals.map(d => d.id === id && d.proposal ? { ...d, proposal: { ...d.proposal, status: 'sent', shareToken: d.proposal.shareToken || uid('p') }, stage: moves ? 'proposal_out' : d.stage, daysInStage: moves ? 0 : d.daysInStage } : d),
     }));
-    this.showToast('Sent — share link is live');
+    this.showToast((moves ? 'Sent — deal moved to "Proposal out"' : 'Sent — share link is live') + (toastSuffix || ''));
   }
   openPublicPreview() {
     const deal = this.state.deals.find(d => d.id === this.state.selectedProposalDealId);
@@ -3096,6 +3210,42 @@ class Component extends DCLogic {
         });
         const allSigned = agreements.length && agreements.every(a => a.kind !== 'Deposit invoice — $65,000' || d.depositCleared);
         const next = DEAL_NEXT[d.stage];
+        // ---- discovery package (matches production drawer) ----
+        const pkg = this._pkgFor(d);
+        const pkgScoreVal = this._pkgReadiness(pkg);
+        const pkgNotScored = DISCOVERY_FIELDS.every(f => pkg[f.key].status === 'missing' && !pkg[f.key].evidence);
+        const ed = s.pkgEditor && s.pkgEditor.dealId === d.id ? s.pkgEditor : null;
+        const pkgFields = DISCOVERY_FIELDS.map(f => {
+          const st = pkg[f.key].status;
+          const selected = ed && ed.key === f.key;
+          return {
+            label: f.label,
+            icon: st === 'ok' ? '✓' : st === 'partial' ? '–' : '✕',
+            iconStyle: 'width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;' + (st === 'ok' ? 'background:#dcf5e3;color:#15803d;' : st === 'partial' ? 'background:#fcefdc;color:#b45309;' : 'background:#fbe3e3;color:#b91c1c;'),
+            rowStyle: 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;' + (selected ? 'background:#eef0fe;' : ''),
+            onOpen: () => this.openPkgField(d.id, f.key),
+          };
+        });
+        const edField = ed ? DISCOVERY_FIELDS.find(f => f.key === ed.key) : null;
+        const pkgEditor = {
+          open: !!ed,
+          fieldLabel: edField ? edField.label : '',
+          evidence: ed ? ed.evidence : '',
+          onEvidence: (e) => this.setPkgEvidence(e.target.value),
+          onSave: () => this.savePkgField(),
+          onCancel: () => this.cancelPkgField(),
+          chips: [{ v: 'ok', lab: 'ok' }, { v: 'partial', lab: '– partial' }, { v: 'missing', lab: '✕ missing' }].map(c => ({
+            label: c.lab,
+            style: 'padding:6px 15px;border-radius:999px;font:600 12px \'Hanken Grotesk\';cursor:pointer;' + (ed && ed.status === c.v
+              ? (c.v === 'ok' ? 'border:1px solid #15803d;background:#dcf5e3;color:#15803d;' : c.v === 'partial' ? 'border:1px solid #b45309;background:#fcefdc;color:#b45309;' : 'border:1px solid #b91c1c;background:#fbe3e3;color:#b91c1c;')
+              : 'border:1px solid #d7d9df;background:#fff;color:#5a6069;'),
+            onPick: () => this.setPkgStatus(c.v),
+          })),
+        };
+        const askAll = DISCOVERY_FIELDS.filter(f => pkg[f.key].status !== 'ok').map(f => ({ label: f.label.toUpperCase(), question: '\u201C' + f.question + '\u201D' }));
+        const askRows = s.askShowAll ? askAll : askAll.slice(0, 3);
+        const pkgPillLabel = pkgNotScored ? 'NOT SCORED' : 'READY ' + pkgScoreVal.toFixed(1) + '/10';
+        const pkgPillStyle = 'font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 10px;border-radius:999px;' + (pkgNotScored ? 'background:#fbe3e3;color:#b91c1c;' : pkgScoreVal >= 7 ? 'background:#dcf5e3;color:#15803d;' : pkgScoreVal >= 4 ? 'background:#fcefdc;color:#b45309;' : 'background:#fbe3e3;color:#b91c1c;');
         dealDrawer = {
           name: d.name, valueLabel: fmtMoney(d.value),
           badgeLabel: d.stage === 'new' ? '◔ OPPORTUNITY' : '◭ DEAL',
@@ -3115,7 +3265,8 @@ class Component extends DCLogic {
           createProjectDisabled: !d.depositCleared,
           createProjectStyle: 'width:100%; margin-top:12px; border:0; padding:11px 16px; border-radius:9px; font:600 13px \'Hanken Grotesk\'; cursor:pointer; ' + (d.depositCleared ? 'background:#16181d; color:#fff;' : 'background:#e7e8ec; color:#9aa0aa; cursor:not-allowed;'),
           depositHint: d.depositCleared ? 'Deposit cleared — ready to create the project.' : 'Waiting on the deposit invoice. (Demo: click the deposit row to mark it cleared →) ',
-          hasActions: !!next,
+          hasActions: !!next || d.stage === 'discovery',
+          hasAdvance: !!next, isDiscovery: d.stage === 'discovery',
           advanceLabel: next ? next.label : '', onAdvance: () => this.advanceDeal(d.id), onLost: () => this.markDealLost(d.id),
           hasProposal: !!d.proposal,
           proposalStatusLabel: d.proposal ? PROPOSAL_STATUS_META[d.proposal.status].label : '',
@@ -3126,6 +3277,20 @@ class Component extends DCLogic {
           draftProposalStyle: 'width:100%; margin-top:14px; border:0; padding:11px 16px; border-radius:9px; font:600 13px \'Hanken Grotesk\'; cursor:pointer; ' + (s.draftingDealId === d.id ? 'background:#e7e8ec; color:#9aa0aa; cursor:default;' : 'background:#16181d; color:#fff;'),
           draftProposal: () => this.openAISetup(d.id),
           draftBlank: () => this.draftBlankProposal(d.id),
+          showNextStep: d.stage !== 'committed',
+          nextStepText: ({
+            new: 'Accept the opportunity into Discovery — the first call decides whether this becomes a deal.',
+            discovery: 'Capture the discovery call — requirements included — then draft the proposal. Sending it moves this deal to Proposal out.',
+            proposal_out: 'Follow up on the sent proposal — chase a response before it goes silent past the SLA.',
+            negotiating: 'Get to a signed option — one signature covers the whole phase plan.',
+          })[d.stage] || '',
+          showPkg: d.stage === 'discovery' || d.stage === 'proposal_out' || d.stage === 'negotiating',
+          pkgFields, pkgEditor, askRows,
+          pkgPillLabel, pkgPillStyle,
+          hasAsk: askAll.length > 0,
+          showAskToggle: askAll.length > 3,
+          askToggleLabel: s.askShowAll ? 'show fewer' : 'show all ' + askAll.length,
+          onAskToggle: () => this.toggleAskAll(),
         };
         // allow demo-clicking the blocking deposit row to clear it
         dealDrawer.agreements = dealDrawer.agreements.map(a => a.showResend ? { ...a, onResend: () => this.toggleDepositCleared() } : a);

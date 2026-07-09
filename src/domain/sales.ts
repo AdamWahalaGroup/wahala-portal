@@ -83,7 +83,7 @@ export function nextStepFor(stage: DealStage): string {
     case "new":
       return "Accept the opportunity into Discovery to start the deal.";
     case "discovery":
-      return "Capture the discovery call — requirements included — then draft the proposal.";
+      return "Capture the discovery call — requirements included — then draft the proposal. Sending it moves this deal to Proposal out.";
     case "proposal_out":
       return "Follow up — silence past the SLA is at-risk time.";
     case "negotiating":

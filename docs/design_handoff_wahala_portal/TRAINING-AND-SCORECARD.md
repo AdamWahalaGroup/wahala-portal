@@ -62,7 +62,13 @@ off, the same screen renders without the cobalt guidance elements — nothing mo
 
 ## Frame 39 — Training nudge · not proposal-ready (modal)
 
-- **Trigger:** a deal is dragged to **Proposal out** (or "Draft proposal" clicked) while
+> **⚠ 09 Jul (b):** trigger + footer superseded by
+> [`HANDOFF-DELTA-2026-07-09b-stage-follows-proposal.md`](HANDOFF-DELTA-2026-07-09b-stage-follows-proposal.md) §3 —
+> there is no manual move to Proposal out anymore; the nudge fires on proposal **Send**
+> (buttons: "Hold the send · stay in Discovery" / "Send anyway"). Layout, evidence quotes,
+> and the training-off inline variant below still stand.
+
+- **Trigger (superseded, see note):** a deal is dragged to **Proposal out** (or "Draft proposal" clicked) while
   `readiness_score < 7`. Training mode makes it a modal; with training off it's a
   one-line inline warning on the drop — same logic, quieter chrome.
 - Amber header strip: ⚠ tile, "Hold on — this deal isn't proposal-ready", mono context

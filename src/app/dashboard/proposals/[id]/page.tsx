@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { getProposal, countSentProposals } from "@/services/proposals";
+import { trainingModeFor } from "@/services/process";
 import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
@@ -19,12 +20,13 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   if (!ctx.isStaff) redirect("/dashboard");
 
   const { id } = await params;
-  const [p, proposalCount] = await Promise.all([
+  const [p, proposalCount, trainingMode] = await Promise.all([
     getProposal(ctx, id).catch((e) => {
       if (e instanceof StageError && e.code === "NOT_FOUND") notFound();
       throw e;
     }),
     countSentProposals(ctx),
+    trainingModeFor(ctx),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
@@ -42,7 +44,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
         <Link href={`/dashboard/sales/deals/${p.dealId}`} style={{ color: "inherit" }}>{p.dealName}</Link> / v{p.version}
       </div>
       <div style={{ marginTop: 14 }}>
-        <ProposalEditor proposal={p} canManage={canManage} />
+        <ProposalEditor proposal={p} canManage={canManage} trainingMode={trainingMode} />
       </div>
     </AppShell>
   );

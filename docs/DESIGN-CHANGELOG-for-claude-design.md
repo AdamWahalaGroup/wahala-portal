@@ -531,3 +531,52 @@ the invite is deliberate, not automatic):
 
 The diamond glyph is gone from the Proposals nav item — plain "Proposals",
 matching the rest of the sidebar. (◆ elsewhere still means "AI-assisted".)
+
+# Update — 2026-07-09 (Accounts: + Add account replaces the onboard panel)
+
+Founder call: the "Onboard an account" side panel (company + primary contact +
+email + invite on submit) is **retired** from /dashboard/accounts. In its place:
+
+- **"+ Add account"** button in the page header (admin / account owner) opening a
+  modal: account name · account owner select · optional intake notes · and an
+  **"Attach existing contacts"** searchable checkbox list — the "two standalone
+  people, now their company exists" flow. Account-less contacts sort first
+  ("no account yet"); picking someone already on another account shows an amber
+  "moves from {account}" note. Attaching links both ways (current account +
+  contact_companies row). **No invites are sent from this flow** — invites stay a
+  deliberate step on each contact's page. Create lands on the new account's page.
+- Backend: `POST /api/accounts` → `createAccount` in services/clients.ts (org born
+  prospect, `account.created` audit). The old `POST /api/clients` onboard+invite
+  endpoint still exists but has no UI.
+
+# Update — 2026-07-09 (b) — Stage follows the proposal (HANDOFF-DELTA-2026-07-09b)
+
+Implements the 09b delta in full — **Proposal out is event-driven, not a button**:
+
+- §1 **No manual advance out of Discovery.** The deal drawer's black "Move to
+  Proposal out" button is gone — Discovery shows a dashed cobalt hint chip
+  ("Sending the proposal moves this deal to Proposal out automatically.") with
+  **Mark lost** unchanged beside it; the caption reads "the nudge is never a
+  gate…". Dragging a Discovery card onto the Proposal-out column bounces with an
+  inline note instead of moving. (The ☰ List view and Deal-record disposition
+  SELECTS still allow any→any as logged corrections — flag if v3 wants those
+  narrowed too.)
+- §2 **Send advances the deal.** `sendProposal` moves a `new`/`discovery` deal to
+  `proposal_out` in the same transaction (status sent + share token + supersede +
+  stage move + `deal.stage_changed via proposal.sent` audit) and returns
+  `movedToProposalOut`. Editor toast: **"Sent — deal moved to \"Proposal out\""** /
+  "Sent — share link is live".
+- §3 **The readiness nudge fires on Send.** Clicking Send with readiness < 7 +
+  training mode opens the frame-39 modal in its new send variant: body "…sending
+  this proposal now risks a pitch built on gaps.", recommendation **"Recommended:
+  hold the send."** (follow-up call with the named decision-maker — the draft
+  keeps), cobalt **"Hold the send · stay in Discovery"** · ghost **"Send anyway"**
+  · caption "the nudge is never a gate — overrides are logged to the deal".
+  Hold → toast "Held — the draft keeps, deal stays in Discovery". Send anyway →
+  override logged to process_events (surface `proposal_send`) then the full §2
+  send path. Training OFF below the bar = quiet variant on Send: it sends, logs
+  the override, and the toast carries "⚠ below proposal-ready (x/10), logged to
+  the deal".
+- §4 Discovery "Next step" copy now ends "…Sending it moves this deal to Proposal
+  out." The board-drag and drawer-move nudge triggers are deleted (frame 39
+  trigger superseded per the delta's supersession map).

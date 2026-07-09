@@ -55,6 +55,9 @@ export type ProposalDetail = {
   dealId: string;
   dealName: string;
   dealValueCents: number;
+  /** Send-time readiness nudge (09 Jul b delta — the nudge moved to Send). */
+  dealStage: string | null;
+  dealReadiness: number | null;
   discoveryNote: string | null;
   organizationId: string | null;
   organizationName: string;
@@ -295,6 +298,8 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     dealId: p.dealId,
     dealName: deal?.name ?? "Deal",
     dealValueCents: deal?.valueCents ?? 0,
+    dealStage: deal?.stage ?? null,
+    dealReadiness: deal?.readinessScore ?? null,
     discoveryNote: deal?.discoveryNote ?? null,
     organizationId: p.organizationId,
     organizationName: org?.name ?? headerContact?.name ?? "Unknown",
@@ -643,7 +648,7 @@ export async function deleteProposal(ctx: AuthContext, proposalId: string): Prom
  * every other open (draft/sent) proposal on the deal; nudges the deal's disposition
  * to 'proposal_out'. Complexity >3 is a SOFT flag — the UI confirms, never blocks.
  */
-export async function sendProposal(ctx: AuthContext, proposalId: string): Promise<{ shareToken: string }> {
+export async function sendProposal(ctx: AuthContext, proposalId: string): Promise<{ shareToken: string; movedToProposalOut: boolean }> {
   assertSalesManager(ctx, "send_proposal");
   const p = await loadProposal(proposalId);
   assertStaffScoped(ctx, p.organizationId, "send_proposal");
@@ -684,8 +689,10 @@ export async function sendProposal(ctx: AuthContext, proposalId: string): Promis
       db.update(schema.proposals).set({ status: "superseded" }).where(inArray(schema.proposals.id, otherIds)),
     );
   }
-  // Disposition nudge: a sent proposal means the deal IS at Proposal out.
-  if (deal && deal.stage === "discovery") {
+  // Stage follows the proposal (09 Jul b): sending IS the advance — one event,
+  // one transaction. There is no manual move out of Discovery anymore.
+  const movedToProposalOut = !!deal && (deal.stage === "discovery" || deal.stage === "new");
+  if (deal && movedToProposalOut) {
     statements.push(
       db.update(schema.deals).set({ stage: "proposal_out", stageEnteredAt: now, subStatus: null }).where(eq(schema.deals.id, deal.id)),
       db.insert(schema.auditLog).values(
@@ -701,7 +708,7 @@ export async function sendProposal(ctx: AuthContext, proposalId: string): Promis
     );
   }
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-  return { shareToken };
+  return { shareToken, movedToProposalOut };
 }
 
 /** Shared approve/decline bookkeeping used by both the public link and staff recording. */

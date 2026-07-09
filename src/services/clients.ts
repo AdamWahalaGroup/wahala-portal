@@ -242,6 +242,74 @@ export async function setOrgAiContextMd(ctx: AuthContext, orgId: string, body: s
     .where(eq(schema.organizations.id, orgId));
 }
 
+// ---------------------------------------------------------------- add account (founder call, 09 Jul)
+
+/**
+ * Create a bare account — no contact required, no invite sent (that's a deliberate
+ * later step from the contact page). Optionally attach EXISTING contacts: each gets
+ * this org as its current account plus a contact_companies link ("attaching links
+ * both ways"). Admin / account owner.
+ */
+export async function createAccount(
+  ctx: AuthContext,
+  input: { name: string; accountOwnerUserId?: string; intakeNotes?: string; contactIds?: string[] },
+): Promise<{ organizationId: string; attached: number }> {
+  if (!(ctx.isAdmin || ctx.user.role === "account_owner")) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "create_account", reason: "not_admin_or_owner" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin or account owner can add an account.");
+  }
+  const name = input.name?.trim();
+  if (!name) throw new StageError("VALIDATION", "An account needs a name.");
+  const db = getDb();
+
+  const ownerId = input.accountOwnerUserId?.trim() || ctx.user.id;
+  const owner = await db.query.users.findFirst({ where: eq(schema.users.id, ownerId) });
+  if (!owner || owner.userType !== "wahala") throw new StageError("VALIDATION", "The account owner must be Wahala staff.");
+
+  const organizationId = crypto.randomUUID();
+  await db.batch([
+    db.insert(schema.organizations).values({
+      id: organizationId,
+      name,
+      status: "prospect",
+      accountOwnerUserId: ownerId,
+      ownerAssignedAt: new Date(),
+      intakeNotes: input.intakeNotes?.trim() || null,
+    }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId,
+        actorUserId: ctx.user.id,
+        action: "account.created",
+        entityType: "organization",
+        entityId: organizationId,
+        metadata: { name, accountOwnerUserId: ownerId },
+      }),
+    ),
+  ]);
+
+  // Attach pre-existing contacts (e.g. two standalone people whose company now exists).
+  let attached = 0;
+  const contactIds = [...new Set(input.contactIds ?? [])];
+  for (const contactId of contactIds) {
+    const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+    if (!contact) continue;
+    await db.batch([
+      db.update(schema.contacts).set({ organizationId }).where(eq(schema.contacts.id, contactId)),
+      db.insert(schema.contactCompanies).values({
+        id: crypto.randomUUID(),
+        contactId,
+        organizationId,
+        title: contact.title,
+        isPrimary: attached === 0,
+        current: true,
+      }),
+    ]);
+    attached++;
+  }
+  return { organizationId, attached };
+}
+
 // ---------------------------------------------------------------- portal invites (frame 35)
 
 export type PortalRole = "client_admin" | "client_billing" | "client_readonly";

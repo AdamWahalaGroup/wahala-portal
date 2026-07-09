@@ -32,7 +32,7 @@ const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, letter
 
 const stateLabel = (s: string) => (s === "active" ? "client" : s === "archived" ? "past client" : "prospect");
 
-function ModalShell({ title, kicker, onClose, children }: { title: string; kicker: string; onClose: () => void; children: React.ReactNode }) {
+export function ModalShell({ title, kicker, onClose, children }: { title: string; kicker: string; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();

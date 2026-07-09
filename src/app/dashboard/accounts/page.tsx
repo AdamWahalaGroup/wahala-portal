@@ -1,15 +1,16 @@
 /**
  * Accounts (staff) — the org list under the two-object model (CRM-RESTRUCTURE):
- * an account is prospect → client (first won deal) → past client. Left: state-
- * filtered table; right: the onboard panel (create the org + portal invite).
+ * an account is prospect → client (first won deal) → past client. State-filtered
+ * table + "+ Add account" (bare org, optionally attaching existing contacts —
+ * the onboard-with-invite panel is retired; invites are sent from contact pages).
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
-import { listClients, listWahalaStaff } from "@/services/clients";
+import { listClients } from "@/services/clients";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
-import { OnboardClientForm } from "@/components/OnboardClientForm";
+import { AddAccountButton } from "@/components/AddAccountModal";
 import { ArchiveAccountButton, RestoreAccountButton } from "@/components/ArchiveAccountButton";
 import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
@@ -61,7 +62,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   if (!ctx.isStaff) redirect("/dashboard");
 
   const accounts = await listClients(ctx);
-  const staff = ctx.isAdmin ? await listWahalaStaff(ctx) : [];
+  const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
 
   const { state } = await searchParams;
   const filter: FilterKey = state === "prospects" || state === "clients" || state === "archived" ? state : "all";
@@ -91,22 +92,19 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
       accountOwner={null}
     >
       <AutoRefresh enabled={invitedCount > 0} />
-      <div className="kicker">Accounts</div>
-      <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>Accounts</h1>
-      <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 14.5 }}>
-        One record per organization — &ldquo;client&rdquo; is a state it earns on its first won deal.
-      </p>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div className="kicker">Accounts</div>
+          <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, letterSpacing: "-.025em" }}>Accounts</h1>
+          <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: 14.5 }}>
+            One record per organization — &ldquo;client&rdquo; is a state it earns on its first won deal.
+          </p>
+        </div>
+        {canManage && <AddAccountButton currentUserId={ctx.user.id} />}
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: ctx.isAdmin ? "minmax(0,1fr) 330px" : "minmax(0,1fr)",
-          gap: 28,
-          marginTop: 22,
-          alignItems: "start",
-        }}
-      >
-        {/* Left: state filter + accounts table */}
+      <div style={{ marginTop: 22 }}>
+        {/* State filter + accounts table */}
         <div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {FILTERS.map((f) => {
@@ -137,7 +135,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
 
           {filtered.length === 0 ? (
             <p style={{ color: "var(--muted)", fontSize: 14 }}>
-              {accounts.length === 0 ? "No accounts yet — capture a contact on the board, or onboard one on the right." : `No ${filter}.`}
+              {accounts.length === 0 ? "No accounts yet — add one above, or start an opportunity from a contact." : `No ${filter}.`}
             </p>
           ) : (
             <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
@@ -217,25 +215,6 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
             </div>
           )}
         </div>
-
-        {/* Right: onboard panel (slight grey) */}
-        {ctx.isAdmin && (
-          <aside
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: 18,
-              position: "sticky",
-              top: 24,
-            }}
-          >
-            <div className="kicker" style={{ marginBottom: 12 }}>
-              Onboard an account
-            </div>
-            <OnboardClientForm staff={staff} currentUserId={ctx.user.id} />
-          </aside>
-        )}
       </div>
     </AppShell>
   );
