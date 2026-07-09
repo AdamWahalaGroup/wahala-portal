@@ -526,3 +526,8 @@ the invite is deliberate, not automatic):
   treatment with the amber "Invited — no login yet" pill + Resend invite.
 - Acceptance automation is unchanged — when they do accept, the login links to the
   contact by email.
+
+# Update — 2026-07-09 (nav copy: "◆ Proposals" → "Proposals")
+
+The diamond glyph is gone from the Proposals nav item — plain "Proposals",
+matching the rest of the sidebar. (◆ elsewhere still means "AI-assisted".)
