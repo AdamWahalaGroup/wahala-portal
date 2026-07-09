@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Money } from "@/components/Money";
 import { DaysTag, STAGE_COLORS, stageSelectStyle } from "@/components/SalesChips";
-import { NewOpportunityModal, NewContactModal } from "@/components/OpportunityModals";
+import { NewOpportunityModal } from "@/components/OpportunityModals";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { PROPOSAL_READY_AT } from "@/domain/process";
@@ -714,7 +714,7 @@ export function SalesBoard({
   const search = useSearchParams();
   const filter = (search.get("filter") as SalesFilter) || "all";
   const [view, setView] = useState<"board" | "list">("board");
-  const [creating, setCreating] = useState<"opportunity" | "contact" | null>(null);
+  const [creating, setCreating] = useState<"opportunity" | null>(null);
   // Achievement moment (Jason feedback) — survives router.refresh, one per move.
   const [moment, setMoment] = useState<StageMoment | null>(null);
 
@@ -820,22 +820,6 @@ export function SalesBoard({
           </Link>
         )}
         <button
-          onClick={() => setCreating("contact")}
-          style={{
-            background: "var(--white)",
-            color: "var(--ink)",
-            border: "1px solid #d7d9df",
-            borderRadius: 9,
-            padding: "9px 15px",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            flex: "none",
-          }}
-        >
-          + New contact
-        </button>
-        <button
           onClick={() => setCreating("opportunity")}
           style={{
             background: "var(--ink)",
@@ -854,7 +838,6 @@ export function SalesBoard({
       </div>
 
       {creating === "opportunity" && <NewOpportunityModal currentUserId={currentUserId} onClose={() => setCreating(null)} />}
-      {creating === "contact" && <NewContactModal onClose={() => setCreating(null)} />}
 
       {view === "board" ? (
         <KanbanView overview={overview} canManage={canManage} filter={filter} currentUserId={currentUserId} trainingMode={trainingMode} onMoved={setMoment} />
