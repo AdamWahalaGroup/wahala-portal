@@ -175,6 +175,27 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Won/Lost swimlanes collapse to their header row (drops still land there).
+  const [zoneClosed, setZoneClosed] = useState<Record<"won" | "lost", boolean>>({ won: false, lost: false });
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ZONES_KEY);
+      if (saved) setZoneClosed((v) => ({ ...v, ...(JSON.parse(saved) as Partial<typeof v>) }));
+    } catch {
+      // private mode etc. — default (open) stands
+    }
+  }, []);
+  function toggleZone(kind: "won" | "lost") {
+    setZoneClosed((v) => {
+      const next = { ...v, [kind]: !v[kind] };
+      try {
+        localStorage.setItem(ZONES_KEY, JSON.stringify(next));
+      } catch {
+        // non-persistent is fine
+      }
+      return next;
+    });
+  }
   // Frame 39: the not-proposal-ready nudge (modal in training mode; inline line otherwise).
   const [nudge, setNudge] = useState<{ dealId: string; dealName: string } | null>(null);
   const [inlineWarn, setInlineWarn] = useState<string | null>(null);
@@ -403,10 +424,12 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
   };
 
   // Won / Lost containers — terminal drop targets that also HOLD the deals dropped in.
+  // Collapsible to the header row; drops still land while collapsed (handlers live on the container).
   const dropZone = (kind: "won" | "lost") => {
     const won = kind === "won";
     const deals = (won ? overview.wonDeals : overview.lostDeals).filter(dealPred);
     const sum = deals.reduce((n, d) => n + d.valueCents, 0);
+    const closed = zoneClosed[kind];
     const c = won
       ? { bg: "#DCF5E3", dash: "#9FD9B4", solid: "#16A34A", text: "#15803D", pill: "#C6ECD2", hint: "drop a deal here → becomes a project on the same account" }
       : { bg: "#FBE3E3", dash: "#ECB6B6", solid: "#B91C1C", text: "#B91C1C", pill: "#F4CFCF", hint: "drop a deal here → closed lost (reason logged)" };
@@ -422,24 +445,30 @@ function KanbanView({ overview, canManage, filter, currentUserId, trainingMode, 
           padding: 10,
           display: "flex",
           flexDirection: "column",
-          gap: 8,
-          minHeight: 96,
+          gap: closed ? 0 : 8,
+          minHeight: closed ? 0 : 96,
           transition: "border-color 120ms ease",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 4px 0" }}>
+        <div
+          onClick={() => toggleZone(kind)}
+          title={closed ? "Expand" : "Collapse"}
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: closed ? "4px 4px" : "4px 4px 0", cursor: "pointer", userSelect: "none" }}
+        >
           <span style={{ width: 9, height: 9, borderRadius: 999, background: c.solid, flex: "none" }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{won ? "Won" : "Lost"}</span>
           <span className="tabular" style={{ fontSize: 10.5, fontWeight: 700, color: c.text, background: c.pill, padding: "1px 8px", borderRadius: 999 }}>
             {deals.length}
           </span>
           {sum > 0 && <span className="tabular" style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{fmtK(sum)}</span>}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: c.text, opacity: 0.75, flex: "none" }}>{closed ? "▸" : "▾"}</span>
         </div>
-        {deals.length === 0 ? (
-          <div className="mono" style={{ fontSize: 9.5, color: c.solid, opacity: 0.7, textAlign: "center", padding: "10px 0" }}>{c.hint}</div>
-        ) : (
-          <div style={{ display: "grid", gap: 8, maxHeight: 320, overflowY: "auto" }}>{deals.map(dealCard)}</div>
-        )}
+        {!closed &&
+          (deals.length === 0 ? (
+            <div className="mono" style={{ fontSize: 9.5, color: c.solid, opacity: 0.7, textAlign: "center", padding: "10px 0" }}>{c.hint}</div>
+          ) : (
+            <div style={{ display: "grid", gap: 8, maxHeight: 320, overflowY: "auto" }}>{deals.map(dealCard)}</div>
+          ))}
       </div>
     );
   };
@@ -540,6 +569,7 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
   const newOppN = overview.newOppCount;
   const openDealCount = overview.columns.reduce((n, c) => n + c.deals.length, 0);
   const wonCents = overview.wonDeals.reduce((n, d) => n + d.valueCents, 0);
+  const [wonOpen, setWonOpen] = useState(true);
 
   const cardBase: React.CSSProperties = {
     background: "var(--white)",
@@ -614,10 +644,10 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
         </div>
       </div>
 
-      {/* Pipeline — the four stage sections, stacked */}
+      {/* Opportunities — the open stage sections, stacked */}
       <section style={{ marginTop: 32 }}>
         <div className="kicker" style={{ marginBottom: 12 }}>
-          Pipeline
+          Opportunities
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           {overview.columns.map((col) => {
@@ -657,9 +687,11 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
         </div>
       </section>
 
-      {/* Won strip */}
+      {/* Won strip — header click expands/collapses the rows */}
       <section style={{ marginTop: 30 }}>
         <div
+          onClick={() => setWonOpen((v) => !v)}
+          title={wonOpen ? "Collapse" : "Expand"}
           style={{
             display: "flex",
             alignItems: "center",
@@ -668,6 +700,8 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
             border: "1px solid #BFE6CC",
             borderRadius: 12,
             padding: "12px 16px",
+            cursor: "pointer",
+            userSelect: "none",
           }}
         >
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "#16A34A", flex: "none" }} />
@@ -676,8 +710,9 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
           <span className="mono" style={{ fontSize: 11, color: "#3f9560", marginLeft: "auto" }}>
             each links to its deal room
           </span>
+          <span style={{ fontSize: 12, color: "#15803D", opacity: 0.75, flex: "none" }}>{wonOpen ? "▾" : "▸"}</span>
         </div>
-        {overview.wonDeals.length > 0 && (
+        {wonOpen && overview.wonDeals.length > 0 && (
           <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
             {overview.wonDeals.map((d) => (
               <DealRow key={d.id} deal={d} canManage={canManage} />
@@ -692,6 +727,7 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
 // ---------------------------------------------------------------- board shell (header + ▦/☰ toggle)
 
 const VIEW_KEY = "wahala.sales-view";
+const ZONES_KEY = "wahala.sales-zones";
 
 export type SalesFilter = "all" | "mine" | "new" | "proposals_out" | "stuck";
 
@@ -700,15 +736,12 @@ export function SalesBoard({
   canManage,
   currentUserId,
   trainingMode = false,
-  showTeamLink = false,
 }: {
   overview: SalesOverview;
   canManage: boolean;
   currentUserId?: string;
   /** Frame 39: modal nudge chrome when on; quiet inline warning when off. */
   trainingMode?: boolean;
-  /** Frame 41: owners get the Team scorecard link. */
-  showTeamLink?: boolean;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -810,15 +843,6 @@ export function SalesBoard({
           {tab("board", "▦ Board")}
           {tab("list", "☰ List")}
         </div>
-        {showTeamLink && (
-          <Link
-            href="/dashboard/sales/team"
-            style={{ flex: "none", fontSize: 12.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", padding: "9px 4px" }}
-            title="Process scorecard — owners only"
-          >
-            Team →
-          </Link>
-        )}
         <button
           onClick={() => setCreating("opportunity")}
           style={{

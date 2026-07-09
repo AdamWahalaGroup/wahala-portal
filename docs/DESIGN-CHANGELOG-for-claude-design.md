@@ -453,3 +453,22 @@ The Opportunities page header is now eyebrow **Leads** / h1 **Opportunities**
 "Leads" as the page eyebrow even though the restructure retired "lead" as a
 vocabulary term; if that conflicts with v3's intent, raise it with him rather
 than reverting.
+
+# Update — 2026-07-09 (founder calls: Team page promoted to nav, board de-clutter, collapsible Won/Lost)
+
+Three founder-directed changes to the Opportunities surface and nav:
+
+1. **Team is a top-level nav item now**, sitting **below Settings** (admin-only,
+   like Settings). It renders at `/dashboard/team` as a normal page inside the
+   app shell — kicker **Team**, h1 **Process scorecard** — no longer a full-screen
+   layer over the sales board, so the "← Board / Esc closes" chrome is gone. The
+   old `/dashboard/sales/team` URL redirects. The **"Team →" link was removed
+   from the Opportunities board header** (header is now: Leads/Opportunities +
+   filter chips · ▦/☰ toggle · + New opportunity).
+2. **List view section kicker** renamed **Pipeline → Opportunities** (the board's
+   "Open pipeline" money stat keeps its name — it's a metric, not a section).
+3. **Won and Lost swimlanes are expand/collapse capable.** Board view: each
+   zone's header row (dot · Won/Lost · count pill · $ sum) is now a click target
+   with a ▾/▸ chevron at the right; collapsed = header row only, and it still
+   works as a drag-drop target. State persists per browser (localStorage). List
+   view: the green Won strip header toggles its deal rows the same way.

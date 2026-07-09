@@ -2,14 +2,13 @@
 
 /**
  * Admin scorecard (frame 41) — one row card per admin, all math from
- * process_events. "Outcomes lag; process health leads." Renders as a full-screen
- * layer over the persistent board (the sales layout keeps the board mounted
- * behind child segments). Max-2 signals band at the bottom: a conversation
- * starter, not a surveillance wall.
+ * process_events. "Outcomes lag; process health leads." A normal page under the
+ * Team nav item (below Settings) — no longer a layer over the sales board.
+ * Max-2 signals band at the bottom: a conversation starter, not a
+ * surveillance wall.
  */
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Avatar } from "@/components/People";
 
 type Row = {
@@ -53,14 +52,6 @@ export function TeamScorecard({ rows, signals, currentUserId }: { rows: Row[]; s
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") router.push("/dashboard/sales", { scroll: false });
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [router]);
-
   async function toggleTraining(userId: string, on: boolean) {
     setBusy(userId);
     try {
@@ -84,17 +75,9 @@ export function TeamScorecard({ rows, signals, currentUserId }: { rows: Row[]; s
   );
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "var(--surface-soft)", zIndex: 70, overflowY: "auto" }}>
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 32px 60px" }}>
-        <div className="mono" style={{ fontSize: 11, color: "var(--muted-line)", display: "flex", gap: 14 }}>
-          <Link href="/dashboard/sales" style={{ color: "var(--cobalt-text)", textDecoration: "none", fontWeight: 700 }}>
-            ← Board
-          </Link>
-          <span>sales / team</span>
-          <span style={{ marginLeft: "auto" }}>Esc closes</span>
-        </div>
-
-        <div className="kicker" style={{ marginTop: 18 }}>Sales · Team</div>
+    <div>
+      <div style={{ maxWidth: 1080 }}>
+        <div className="kicker">Team</div>
         <h1 style={{ margin: "6px 0 4px", fontSize: 24, fontWeight: 800, letterSpacing: "-.025em" }}>Process scorecard</h1>
         <p style={{ margin: 0, fontSize: 13.5, color: "var(--muted)" }}>
           Outcomes lag; process health leads. Every number below comes from the process event log — no gut feel.

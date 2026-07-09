@@ -14,6 +14,7 @@ const NAV = [
   { key: "files", label: "Files", href: null, staffOnly: false, adminOnly: false },
   { key: "messages", label: "Messages", href: "/dashboard/messages" as string | null, staffOnly: false, adminOnly: false },
   { key: "settings", label: "Settings", href: "/dashboard/settings" as string | null, staffOnly: true, adminOnly: true },
+  { key: "team", label: "Team", href: "/dashboard/team" as string | null, staffOnly: true, adminOnly: true },
 ] as const;
 
 // Settings gains a sub-nav (frame 28): AI agents · SLAs & nudges. Sales is one item now
