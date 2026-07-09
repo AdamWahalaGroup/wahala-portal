@@ -592,3 +592,19 @@ Deals that already created a project are refused (use the account dev tools).
 This exists so walkthroughs can be redone on the same data — **the product path
 remains "Mark lost with a reason"**, and these buttons come out once the system
 settles (do NOT design around them).
+
+# Update — 2026-07-09 (proposal spine: progress rail + full height)
+
+Two founder polish calls on the proposal editor's ink spine, matching the
+prototype screenshot:
+
+- **Full height:** the grid's `align-items: start` is gone — the ink column now
+  stretches to the full height of the content beside it, whatever the page
+  length (content stays top-aligned).
+- **Progress rail:** when the chosen/recommended option has phases, a 2px
+  `#2c2f36` connector line runs vertically behind the step dots (master
+  signature ✓ → numbered phase dots), each dot ringed with an ink halo so the
+  line passes cleanly behind it. The hard border-bottom separators between
+  master signature and phases are gone (the rail is the connective tissue);
+  **Eligible approvers** keeps a 1px rule above it. Single-delivery proposals
+  (no phases) render no rail.

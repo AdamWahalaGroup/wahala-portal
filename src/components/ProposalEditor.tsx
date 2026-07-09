@@ -237,11 +237,16 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           : { bg: "#3a3f47", icon: "·", note: "Not yet sent" };
 
   const spine = (
-    <aside style={{ background: "var(--ink)", borderRadius: 14, padding: "16px 14px", color: "#cfd2da" }}>
+    <aside style={{ background: "var(--ink)", borderRadius: 14, padding: "16px 14px", color: "#cfd2da", alignSelf: "stretch" }}>
       <div className="kicker" style={{ color: "#6b7079", marginBottom: 10 }}>Phased agreement</div>
+      {/* Steps — one progress rail: the connector line runs behind the dots */}
+      <div style={{ position: "relative" }}>
+        {spinePhases && spinePhases.length > 0 && (
+          <span aria-hidden style={{ position: "absolute", left: 9, top: 10, bottom: 10, width: 2, background: "#2c2f36" }} />
+        )}
       {/* Master signature */}
-      <div style={{ display: "flex", gap: 9, alignItems: "flex-start", paddingBottom: 12, borderBottom: "1px solid #2c2f36" }}>
-        <span style={{ width: 20, height: 20, borderRadius: 999, background: sigDot.bg, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>
+      <div style={{ display: "flex", gap: 9, alignItems: "flex-start", paddingBottom: 14 }}>
+        <span style={{ width: 20, height: 20, borderRadius: 999, background: sigDot.bg, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none", position: "relative", zIndex: 1 }}>
           {sigDot.icon}
         </span>
         <div style={{ minWidth: 0 }}>
@@ -255,13 +260,13 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
       {/* Phase rows of the chosen/recommended option */}
       {spinePhases && spinePhases.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 0", borderBottom: "1px solid #2c2f36" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 12 }}>
           {spinePhases.map((ph, i) => {
             const dot = ph.status === "done" ? { bg: "#16a34a", icon: "✓" } : ph.status === "active" ? { bg: "#2b3ee6", icon: String(i + 1) } : { bg: "#2c2f36", icon: String(i + 1) };
             const note = ph.status === "done" ? "delivered" : ph.status === "active" ? "active now" : "awaits amendment";
             return (
               <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                <span style={{ width: 20, height: 20, borderRadius: 999, background: dot.bg, color: ph.status === "awaiting_amendment" ? "#8b909a" : "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flex: "none" }}>
+                <span style={{ width: 20, height: 20, borderRadius: 999, background: dot.bg, color: ph.status === "awaiting_amendment" ? "#8b909a" : "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flex: "none", position: "relative", zIndex: 1, boxShadow: "0 0 0 3px var(--ink)" }}>
                   {dot.icon}
                 </span>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -307,13 +312,14 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           <div className="mono" style={{ fontSize: 9, color: "#595e67" }}>phases confirm in-app — no new signature</div>
         </div>
       ) : (
-        <div className="mono" style={{ fontSize: 10, color: "#8b909a", padding: "12px 0", borderBottom: "1px solid #2c2f36" }}>
+        <div className="mono" style={{ fontSize: 10, color: "#8b909a", paddingBottom: 12 }}>
           {chosen ? "single delivery — no phases" : "no options yet"}
         </div>
       )}
+      </div>
 
       {/* Approvers */}
-      <div style={{ paddingTop: 12 }}>
+      <div style={{ paddingTop: 12, borderTop: "1px solid #2c2f36" }}>
         <div className="kicker" style={{ color: "#6b7079", marginBottom: 7 }}>Eligible approvers</div>
         {(proposal.approvers ?? []).length === 0 ? (
           <div className="mono" style={{ fontSize: 10, color: "#8b909a" }}>none captured</div>
@@ -336,8 +342,9 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
   // ---------------------------------------------------------------- main
 
+  // No alignItems:start on the grid — the ink spine stretches to the full height of the page beside it.
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 18, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 18 }}>
       {spine}
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Header row: ORG · V{n} · status pill · COMPLEXITY dots (design layout) */}
