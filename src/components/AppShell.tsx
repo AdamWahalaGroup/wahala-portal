@@ -8,6 +8,7 @@ const NAV = [
   { key: "home", label: "Home", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "sales", label: "Opportunities", href: "/dashboard/sales" as string | null, staffOnly: true, adminOnly: false },
   { key: "proposals", label: "◆ Proposals", href: "/dashboard/proposals" as string | null, staffOnly: true, adminOnly: false },
+  { key: "contacts", label: "Contacts", href: "/dashboard/contacts" as string | null, staffOnly: true, adminOnly: false },
   { key: "accounts", label: "Accounts", href: "/dashboard/accounts" as string | null, staffOnly: true, adminOnly: false },
   { key: "projects", label: "Projects", href: "/dashboard" as string | null, staffOnly: false, adminOnly: false },
   { key: "files", label: "Files", href: null, staffOnly: false, adminOnly: false },

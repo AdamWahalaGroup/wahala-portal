@@ -384,6 +384,22 @@ export function NewOpportunityModal({
   );
 }
 
+/** "+ New contact" for the Contacts page (server component) — button + modal. */
+export function NewContactButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer", flex: "none" }}
+      >
+        + New contact
+      </button>
+      {open && <NewContactModal onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
 /** "+ Start opportunity" from a contact page — opens the modal with the contact fixed. */
 export function StartOpportunityButton({
   contact,
@@ -477,8 +493,17 @@ export function NewContactModal({ onClose }: { onClose: () => void }) {
           <p className="mono" style={{ fontSize: 10.5, color: "var(--muted)", wordBreak: "break-all", margin: "10px 0 0" }}>dev invite: {done.inviteLink}</p>
         )}
         <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 18 }}>
-          <button onClick={onClose} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            Done
+          <button
+            onClick={() => {
+              onClose();
+              // Creation never ends on a surface where the record can't be seen
+              // (HANDOFF-FIX-2026-07-09 §3) — land on the Contacts list.
+              router.push("/dashboard/contacts");
+              router.refresh();
+            }}
+            style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+          >
+            Done → Contacts
           </button>
         </div>
       </ModalShell>

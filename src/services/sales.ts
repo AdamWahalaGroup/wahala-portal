@@ -47,25 +47,39 @@ export type ContactLite = {
   email: string | null;
   organizationId: string | null;
   organizationName: string | null;
+  title: string | null;
+  source: string | null;
+  /** Deals where this contact is primary — the Contacts-page column. */
+  opportunityCount: number;
 };
 
 /** Every contact, for pickers (New-opportunity modal) and the Contacts page. */
 export async function listContactsLite(ctx: AuthContext): Promise<ContactLite[]> {
   assertStaff(ctx, "list_contacts");
   const db = getDb();
-  const rows = await db.select().from(schema.contacts).orderBy(schema.contacts.name);
+  const [rows, dealRows] = await Promise.all([
+    db.select().from(schema.contacts).orderBy(schema.contacts.name),
+    db.select({ primaryContactId: schema.deals.primaryContactId }).from(schema.deals),
+  ]);
   const orgIds = [...new Set(rows.map((c) => c.organizationId).filter((v): v is string => !!v))];
   const orgs =
     orgIds.length > 0
       ? await db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
       : [];
   const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
+  const oppCount = new Map<string, number>();
+  for (const d of dealRows) {
+    if (d.primaryContactId) oppCount.set(d.primaryContactId, (oppCount.get(d.primaryContactId) ?? 0) + 1);
+  }
   return rows.map((c) => ({
     id: c.id,
     name: c.name,
     email: c.email,
     organizationId: c.organizationId,
     organizationName: c.organizationId ? orgNames.get(c.organizationId) ?? null : null,
+    title: c.title,
+    source: c.source,
+    opportunityCount: oppCount.get(c.id) ?? 0,
   }));
 }
 

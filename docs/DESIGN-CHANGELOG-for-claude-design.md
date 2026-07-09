@@ -419,3 +419,27 @@ strip, spine polish) follows separately.
   probability-anchor system the board columns already show (≈N% close in each
   column header + the weighted pipeline stat). If design draws a dedicated
   weighted treatment, we'll match it.
+
+---
+
+# Update — 2026-07-09 (fix: Contacts top-level page — delta §4, HANDOFF-FIX)
+
+The restructure's §4 had been deferred to Round 2; production QA proved it isn't
+deferrable — created contacts were invisible. Shipped per the fix spec:
+
+- **Contacts** nav entry (staff, between ◆ Proposals and Accounts, no badge) →
+  `/dashboard/contacts`: intro line (exact copy), table per the prototype
+  (avatar + name with `{title} · {email}` sub-line / Company with a muted
+  "no account yet" — never blank / Opportunities count or `—` / Source /
+  chevron), whole row → the existing contact workspace. Real empty state.
+- **Post-create navigation:** the New-contact confirmation now reads
+  "Done → Contacts" and lands on the list — creation never ends on a surface
+  where the record can't be seen.
+- `listContactsLite` extended with title, source, and per-contact opportunity
+  count (grouped over `deals.primaryContactId`); pickers unaffected.
+
+Acceptance script re-run verbatim: inline-created contact shows with count 1;
+bare name-only contact shows with "no account yet" and `—`, row opens the
+workspace with + Start opportunity. The dedicated full-width
+`/dashboard/contacts/[id]` detail page from the prototype remains the Round-2
+ideal end state, as the fix note allows.
