@@ -1,8 +1,10 @@
 /**
  * PATCH /api/contacts/[id] — act on a contact:
- *   (no action)                — update the shared record (name/email/phone/title);
+ *   (no action)                — update the shared record (name/email/phone/title/source);
  *                                sales manager; edits propagate to every surface.
  *   { action: "assign", assignedToUserId } — handoff (any staff)
+ *   { action: "attach_account", organizationId|null } — attach/detach the current
+ *                                account (sales manager; links both ways)
  *   { action: "update", name?, companyNote?, email?, phone?, source?, notes? }
  *                              — enrich the record (any staff)
  * Qualify/pass are RETIRED (HANDOFF-DELTA-2026-07-09) — the pipeline is deals;
@@ -13,7 +15,7 @@ import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
 import { assignContact } from "@/services/sales";
 import { deleteContact } from "@/services/clients";
 import { updateContactFields } from "@/services/contact-workspace";
-import { updateContact } from "@/services/contacts";
+import { updateContact, attachContactToOrganization } from "@/services/contacts";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await assignContact(ctx, id, body.assignedToUserId ?? null);
       return NextResponse.json({ ok: true });
     }
+    if (body.action === "attach_account") {
+      await attachContactToOrganization(ctx, id, body.organizationId ?? null);
+      return NextResponse.json({ ok: true });
+    }
     if (body.action === "update") {
       await updateContactFields(ctx, id, {
         name: body.name,
@@ -53,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ ok: true });
     }
     if (body.action === undefined) {
-      await updateContact(ctx, id, { name: body.name, email: body.email, phone: body.phone, title: body.title });
+      await updateContact(ctx, id, { name: body.name, email: body.email, phone: body.phone, title: body.title, source: body.source });
       return NextResponse.json({ ok: true });
     }
     throw new ApiError(400, "validation", "action must be 'qualify', 'pass', 'assign', 'update', or omitted for a record edit.");

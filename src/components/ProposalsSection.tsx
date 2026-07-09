@@ -26,11 +26,14 @@ export function ProposalsSection({
   proposals,
   canManage,
   hasDiscovery,
+  readOnly = false,
 }: {
   dealId: string;
   proposals: Summary[];
   canManage: boolean;
   hasDiscovery: boolean;
+  /** Lost deals: existing proposals stay reachable, creation paths disappear. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -90,13 +93,13 @@ export function ProposalsSection({
       )}
 
       {live?.status === "declined" && (
-        <div style={{ background: "#FBE3E3", border: "1px solid #F4CFCF", borderRadius: 10, padding: "9px 12px", fontSize: 12, color: "#B91C1C", marginBottom: 10 }}>
-          v{live.version} was declined — start the next one below.{" "}
+        <div style={{ background: "#FBE3E3", border: "1px solid #F4CFCF", borderRadius: 10, padding: "9px 12px", fontSize: 12, color: "#B91C1C", marginBottom: readOnly ? 0 : 10 }}>
+          v{live.version} was declined{readOnly ? "." : " — start the next one below."}{" "}
           <Link href={`/dashboard/proposals/${live.id}`} style={{ color: "#B91C1C", fontWeight: 700 }}>Read it →</Link>
         </div>
       )}
 
-      {needsCreate && canManage && (
+      {needsCreate && canManage && !readOnly && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <button
             onClick={() => setSetupOpen(true)}
@@ -135,7 +138,7 @@ export function ProposalsSection({
         </div>
       )}
 
-      {needsCreate && !canManage && <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>No proposal yet.</p>}
+      {needsCreate && !canManage && !readOnly && <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>No proposal yet.</p>}
       {error && <p style={{ color: "#b00020", fontSize: 13, margin: "8px 0 0" }}>{error}</p>}
 
       {setupOpen && <ProposalSetupModal dealId={dealId} onClose={() => setSetupOpen(false)} />}

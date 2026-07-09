@@ -131,8 +131,10 @@ export type ContactDetail = {
   companyNote: string | null;
   organizationId: string | null;
   organizationName: string | null;
+  organizationStatus: string | null;
   email: string | null;
   phone: string | null;
+  title: string | null;
   source: string | null;
   notes: string | null;
   state: "to_qualify" | "qualified" | "passed";
@@ -147,16 +149,21 @@ export type ContactDetail = {
   files: ContactFileView[];
   /** Latest deal referencing this contact (the "View the deal →" link). */
   linkedDealId: string | null;
+  /** Portal state for the invite chip — derived from the users table by email. */
+  portal: "none" | "invited" | "active" | "disabled";
+  /** Every deal that starts from this contact (contact detail page). */
+  opportunities: { id: string; name: string; stage: string; valueCents: number }[];
 };
 
 export async function getContactDetail(ctx: AuthContext, contactId: string): Promise<ContactDetail> {
   const contact = await loadContact(ctx, contactId, "get_contact_detail");
   const db = getDb();
-  const [files, assignee, org, linkedDeal] = await Promise.all([
+  const [files, assignee, org, deals, portalUser] = await Promise.all([
     listContactFiles(ctx, contactId),
     contact.assignedToUserId ? db.query.users.findFirst({ where: eq(schema.users.id, contact.assignedToUserId) }) : null,
     contact.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, contact.organizationId) }) : null,
-    db.query.deals.findFirst({ where: eq(schema.deals.primaryContactId, contactId), orderBy: desc(schema.deals.createdAt) }),
+    db.select().from(schema.deals).where(eq(schema.deals.primaryContactId, contactId)).orderBy(desc(schema.deals.createdAt)),
+    contact.email ? db.query.users.findFirst({ where: eq(schema.users.email, contact.email.trim().toLowerCase()) }) : null,
   ]);
   return {
     id: contact.id,
@@ -164,8 +171,10 @@ export async function getContactDetail(ctx: AuthContext, contactId: string): Pro
     companyNote: contact.companyNote,
     organizationId: contact.organizationId,
     organizationName: org?.name ?? null,
+    organizationStatus: org?.status ?? null,
     email: contact.email,
     phone: contact.phone,
+    title: contact.title,
     source: contact.source,
     notes: contact.notes,
     state: contact.state,
@@ -178,7 +187,15 @@ export async function getContactDetail(ctx: AuthContext, contactId: string): Pro
     aiAnalyzedAt: contact.aiAnalyzedAt,
     createdAt: contact.createdAt,
     files,
-    linkedDealId: linkedDeal?.id ?? null,
+    linkedDealId: deals[0]?.id ?? null,
+    portal: portalUser
+      ? portalUser.status === "active"
+        ? "active"
+        : portalUser.status === "invited"
+          ? "invited"
+          : "disabled"
+      : "none",
+    opportunities: deals.map((d) => ({ id: d.id, name: d.name, stage: d.stage, valueCents: d.valueCents })),
   };
 }
 

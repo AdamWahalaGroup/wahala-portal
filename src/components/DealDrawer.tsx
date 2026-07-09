@@ -116,6 +116,9 @@ export function DealDrawer({
     }
   }
   const terminal = deal.stage === "won" || deal.stage === "lost";
+  const lost = deal.stage === "lost";
+  // Lost = read-only everywhere: the record is a post-mortem now, not a workspace.
+  const editable = canManage && !lost;
   const committed = deal.stage === "committed";
   // 4-step stepper over the funnel stages; won = all done, lost = closed out.
   const stepIdx = deal.stage === "won" ? FUNNEL_STAGES.length : (FUNNEL_STAGES as readonly DealStage[]).indexOf(deal.stage);
@@ -201,7 +204,23 @@ export function DealDrawer({
           ◆ born from paid discovery — spawned at project closeout
         </div>
       )}
-      {/* Proposal CTA — directly under the value (prototype layout) */}
+      {/* Lost leads with WHY — the post-mortem takes the prime slot under the value */}
+      {lost && (
+        <section style={{ background: "var(--white)", border: "1.5px solid #F4CFCF", borderRadius: 12, padding: 14, marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: postMortemMd ? 8 : 0 }}>
+            <span className="kicker" style={{ color: "#B91C1C" }}>Why we lost it</span>
+            <span className="mono" style={{ fontSize: 9, fontWeight: 800, background: "#FBE3E3", color: "#B91C1C", borderRadius: 5, padding: "2px 8px" }}>LOST</span>
+            <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, color: "var(--muted-line)" }}>auto post-mortem · read-only record</span>
+          </div>
+          {postMortemMd ? (
+            <SimpleMarkdown md={postMortemMd} size={12.5} />
+          ) : (
+            <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--muted)" }}>No post-mortem was generated — the loss reason lives in the deal history log.</p>
+          )}
+        </section>
+      )}
+
+      {/* Proposal CTA — directly under the value (prototype layout; read-only shortcut when lost) */}
       <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
 
       {/* Stage stepper over the open funnel */}
@@ -309,18 +328,6 @@ export function DealDrawer({
             {/* Stages-vs-gates explainer under the step chip (training mode) */}
             {process.trainingMode && !terminal && <StagesVsGatesCallout />}
 
-            {/* Post-mortem (frame 40) — auto-generated when the deal was lost */}
-            {deal.stage === "lost" && postMortemMd && (
-              <section style={{ background: "var(--white)", border: "1px solid #F4CFCF", borderRadius: 12, padding: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span className="kicker" style={{ color: "#B91C1C" }}>Post-mortem</span>
-                  <span className="mono" style={{ fontSize: 9, fontWeight: 800, background: "#FBE3E3", color: "#B91C1C", borderRadius: 5, padding: "2px 8px" }}>LOST</span>
-                  <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, color: "var(--muted-line)" }}>auto post-mortem</span>
-                </div>
-                <SimpleMarkdown md={postMortemMd} size={12.5} />
-              </section>
-            )}
-
             {/* Committed leads with the agreement package + handoff (frame 34);
                 every other open stage gets the next-step card — upgraded to a real
                 Google event when one exists (frame 42). */}
@@ -380,7 +387,7 @@ export function DealDrawer({
               <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div className="kicker">Meetings</div>
                 {pastMeetings.map((m) => (
-                  <MeetingCard key={m.id} meeting={m} canEdit={canManage} showAttendees={false} />
+                  <MeetingCard key={m.id} meeting={m} canEdit={editable} showAttendees={false} />
                 ))}
               </section>
             )}
@@ -424,7 +431,7 @@ export function DealDrawer({
 
             {/* Contact — shared, editable from here (edits apply everywhere) */}
             {contact && (
-              <ContactBlock contactId={contact.id} name={contact.name} orgName={org?.name ?? "no account yet"} email={contact.email} phone={contact.phone} canManage={canManage} />
+              <ContactBlock contactId={contact.id} name={contact.name} orgName={org?.name ?? "no account yet"} email={contact.email} phone={contact.phone} canManage={editable} />
             )}
 
             {/* Deal owner */}

@@ -2,7 +2,7 @@
  * Contacts — top-level people list (HANDOFF-FIX-2026-07-09, delta §4). People
  * first: a contact can stand alone, so this page is the ONLY guaranteed surface
  * for account-less, deal-less people — creation must always be visible here.
- * Row click opens the existing contact workspace (drawer over the board).
+ * Row click opens the full-width contact detail page (/dashboard/contacts/[id]).
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -77,7 +77,7 @@ export default async function ContactsPage() {
               return (
                 <Link
                   key={c.id}
-                  href={`/dashboard/sales/contacts/${c.id}`}
+                  href={`/dashboard/contacts/${c.id}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1.4fr 1fr 110px 110px 16px",

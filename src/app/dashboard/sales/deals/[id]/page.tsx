@@ -46,6 +46,8 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     zoomConfigured(),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
+  // Lost = read-only: no creation paths, no edits — the drawer leads with the post-mortem.
+  const lost = deal.stage === "lost";
 
   // v3: no proposal work on an unaccepted opportunity — accept into Discovery first.
   const proposalCtaNode = deal.stage === "new" ? (
@@ -66,13 +68,14 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
       }))}
       canManage={canManage}
       hasDiscovery={!!deal.discoveryMd}
+      readOnly={lost}
     />
   );
-  const discoveryNode = <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage} />;
+  const discoveryNode = <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage && !lost} />;
   const agreementsNode = room.available ? (
     <ContractRoom dealId={deal.id} orgId={org?.id ?? ""} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org?.name ?? contact?.name ?? "the new account"} />
   ) : null;
-  const fieldsNode = canManage ? (
+  const fieldsNode = canManage && !lost ? (
     <DealFieldsForm dealId={deal.id} name={deal.name} valueCents={deal.valueCents} notes={deal.notes} />
   ) : (
     <p style={{ margin: 0, fontSize: 14, color: "var(--ink-soft)", whiteSpace: "pre-wrap" }}>{deal.notes || "No notes yet."}</p>

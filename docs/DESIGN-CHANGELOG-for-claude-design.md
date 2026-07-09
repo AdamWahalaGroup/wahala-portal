@@ -472,3 +472,36 @@ Three founder-directed changes to the Opportunities surface and nav:
    with a ▾/▸ chevron at the right; collapsed = header row only, and it still
    works as a drag-drop target. State persists per browser (localStorage). List
    view: the green Won strip header toggles its deal rows the same way.
+
+# Update — 2026-07-09 (lost = read-only post-mortem · contact detail page)
+
+Two founder-directed rounds, shipped together:
+
+1. **Lost deals are a read-only record now.** Opening a lost deal's drawer:
+   - A red-bordered **"Why we lost it"** card takes the prime slot directly under
+     the name/value (LOST pill · "auto post-mortem · read-only record" caption),
+     rendering the auto post-mortem; if none was generated it says the reason
+     lives in the deal history. The old lower post-mortem section moved up here.
+   - **No creation paths anywhere**: "◆ Rough out a draft" / "+ Blank proposal"
+     are gone (an existing proposal keeps its read-only "View full proposal →"
+     shortcut; a declined one keeps "Read it →" without the "start the next one
+     below" nudge). Contact block, deal record, discovery distill, and meeting
+     cards all render read-only. Stage actions/footer were already hidden for
+     terminal stages.
+
+2. **Contact detail page** — `/dashboard/contacts/[id]`, per the founder's
+   screenshot of the v3 Contacts detail screen. Contacts-list rows now land here
+   (the drawer workspace at /dashboard/sales/contacts/[id] still exists for the
+   dump/scout tooling). Layout: ink motto strip ("people first — …"), ← Contacts
+   breadcrumb, avatar + name + company + mono "via {source} · ✉ invited to the
+   portal" subline, "+ Start opportunity" (always available). Two columns:
+   - **Details — edits apply everywhere**: Name / Email / Role / Source inputs
+     with an explicit Save (shared record; PATCH /api/contacts/[id]).
+   - **Portal access**: state pill (Not on the portal / Invited — no login yet /
+     On the portal / Access disabled) + **Resend invite** (re-sends the magic
+     link) or **Invite to portal** when eligible; mono caption explains the state.
+   - **Company**: account select — attaching links both ways (sets the current
+     account AND a contact_companies row; new `action: "attach_account"`);
+     "Open {account} →" link; detach = "no account yet".
+   - **Opportunities** card: every deal starting from this contact — stage dot
+     (green won / red lost / cobalt open), name → deal drawer, stage · value.
