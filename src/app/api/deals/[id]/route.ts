@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson } from "@/lib/api";
-import { setDealStage, updateDeal } from "@/services/sales";
+import { setDealStage, updateDeal, deleteDeal } from "@/services/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.stage !== undefined) {
       await setDealStage(ctx, id, body.stage, body.reason, { override: !!body.override });
     }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return handleApiError(e);
+  }
+}
+
+/** DEV TOOL — hard-delete the deal + everything under it (admin only). */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await requireAuth();
+    const { id } = await params;
+    await deleteDeal(ctx, id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleApiError(e);

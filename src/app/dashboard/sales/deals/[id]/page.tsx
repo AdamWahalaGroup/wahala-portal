@@ -122,6 +122,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         agreementsNode={agreementsNode}
         fieldsNode={fieldsNode}
         canManage={canManage}
+        isAdmin={ctx.isAdmin}
       />
     </SalesDrawer>
   );

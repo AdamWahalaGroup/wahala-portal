@@ -603,6 +603,46 @@ export async function setDeposit(
   ]);
 }
 
+/**
+ * DEV TOOL — hard-delete a deal and everything hanging off it (proposals +
+ * options, discovery package, calls, process events, contract checklist,
+ * deal-scoped agreements, deal audit rows; meetings keep their calendar mirror
+ * but lose the link). Admin only, for redoing walkthroughs with the same data.
+ * The PRODUCT path stays "Mark lost with a reason" — these buttons come out
+ * once the system settles.
+ */
+export async function deleteDeal(ctx: AuthContext, dealId: string): Promise<void> {
+  if (!ctx.isAdmin) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_deal", resource: `deal:${dealId}`, reason: "not_admin" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin can delete a deal.");
+  }
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (deal.projectId) {
+    throw new StageError("INVALID_STATE", "This deal already created a project — delete the account (dev tool) or archive it instead.");
+  }
+
+  const proposalIds = (
+    await db.select({ id: schema.proposals.id }).from(schema.proposals).where(eq(schema.proposals.dealId, dealId))
+  ).map((p) => p.id);
+
+  const statements = [
+    ...(proposalIds.length > 0 ? [db.delete(schema.proposalOptions).where(inArray(schema.proposalOptions.proposalId, proposalIds))] : []),
+    db.delete(schema.proposals).where(eq(schema.proposals.dealId, dealId)),
+    db.delete(schema.discoveryPackages).where(eq(schema.discoveryPackages.dealId, dealId)),
+    db.delete(schema.dealCalls).where(eq(schema.dealCalls.dealId, dealId)),
+    db.delete(schema.processEvents).where(eq(schema.processEvents.dealId, dealId)),
+    db.delete(schema.contractItems).where(eq(schema.contractItems.dealId, dealId)),
+    db.delete(schema.agreements).where(eq(schema.agreements.dealId, dealId)),
+    db.update(schema.meetings).set({ dealId: null }).where(eq(schema.meetings.dealId, dealId)),
+    db.delete(schema.auditLog).where(and(eq(schema.auditLog.entityType, "deal"), eq(schema.auditLog.entityId, dealId))),
+    db.delete(schema.deals).where(eq(schema.deals.id, dealId)),
+  ];
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+  securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "delete_deal", resource: `deal:${dealId}`, reason: "admin_hard_delete" });
+}
+
 // ---------------------------------------------------------------- deal detail
 
 export type DealHistoryItem = {

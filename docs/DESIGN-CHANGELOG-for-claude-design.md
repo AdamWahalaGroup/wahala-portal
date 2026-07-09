@@ -580,3 +580,15 @@ Implements the 09b delta in full — **Proposal out is event-driven, not a butto
 - §4 Discovery "Next step" copy now ends "…Sending it moves this deal to Proposal
   out." The board-drag and drawer-move nudge triggers are deleted (frame 39
   trigger superseded per the delta's supersession map).
+
+# Update — 2026-07-09 (DEV TOOL: hard-delete a deal from the drawer)
+
+Temporary, deliberately quiet chrome (same pattern as the contact/account dev
+deletes): admins get a grey mono "🗑 delete" in the deal drawer's title row at
+ANY stage. Confirming hard-deletes the deal + proposals/options, discovery
+package, logged calls, process events, and the agreement checklist; meetings
+keep their calendar mirror but lose the deal link; the contact and account stay.
+Deals that already created a project are refused (use the account dev tools).
+This exists so walkthroughs can be redone on the same data — **the product path
+remains "Mark lost with a reason"**, and these buttons come out once the system
+settles (do NOT design around them).

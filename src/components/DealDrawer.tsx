@@ -19,6 +19,7 @@ import { ScoreChip, STAGE_COLORS } from "@/components/SalesChips";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
 import { DealProcessPanel, ReadyPill, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
@@ -63,6 +64,7 @@ export function DealDrawer({
   agreementsNode,
   fieldsNode,
   canManage,
+  isAdmin = false,
 }: {
   deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null };
   org: { id: string; name: string; status: string } | null;
@@ -81,6 +83,8 @@ export function DealDrawer({
   agreementsNode: React.ReactNode;
   fieldsNode: React.ReactNode;
   canManage: boolean;
+  /** DEV TOOL — renders the hard-delete affordance (admin only; comes out later). */
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -166,6 +170,14 @@ export function DealDrawer({
       </span>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, letterSpacing: "-.02em", flex: 1, minWidth: 0 }}>{deal.name}</h1>
+        {isAdmin && (
+          <DangerDeleteButton
+            endpoint={`/api/deals/${deal.id}`}
+            title={`Delete ${deal.name}?`}
+            body="Hard-deletes the deal and everything under it — proposals, discovery package, calls, process history, agreement checklist. The contact and account stay. Dev tool only; the product path is Mark lost with a reason."
+            redirectTo="/dashboard/sales"
+          />
+        )}
         <Money cents={deal.valueCents} style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-.02em" }} />
       </div>
       <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
