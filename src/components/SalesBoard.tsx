@@ -795,8 +795,8 @@ export function SalesBoard({
     <div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="kicker">Opportunities</div>
-          <h1 style={{ margin: "6px 0 8px", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Pipeline</h1>
+          <div className="kicker">Leads</div>
+          <h1 style={{ margin: "6px 0 8px", fontSize: 25, fontWeight: 800, letterSpacing: "-.025em" }}>Opportunities</h1>
           {/* Filter chips — lenses over the one board (frame 29) */}
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {chip("all", "All")}

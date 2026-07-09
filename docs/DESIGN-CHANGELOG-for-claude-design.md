@@ -443,3 +443,13 @@ bare name-only contact shows with "no account yet" and `—`, row opens the
 workspace with + Start opportunity. The dedicated full-width
 `/dashboard/contacts/[id]` detail page from the prototype remains the Round-2
 ideal end state, as the fix note allows.
+
+---
+
+# Update — 2026-07-09 (founder copy call: board header)
+
+The Opportunities page header is now eyebrow **Leads** / h1 **Opportunities**
+(was Opportunities / Pipeline). Founder's direct instruction — note it uses
+"Leads" as the page eyebrow even though the restructure retired "lead" as a
+vocabulary term; if that conflicts with v3's intent, raise it with him rather
+than reverting.
