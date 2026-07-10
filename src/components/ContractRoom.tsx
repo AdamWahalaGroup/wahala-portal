@@ -138,21 +138,18 @@ export function ContractRoom({
   const done = rows.filter((a) => a.status === "signed").length + (depositPaid ? 1 : 0);
   const complete = done === total;
 
-  const doneRow = (title: string, sub: string, key: string, undo?: () => void, extra?: React.ReactNode) => (
-    <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBFBFC", border: "1px solid #EEF0F2", borderRadius: 10, padding: "10px 12px" }}>
-      <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
-        <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>{sub}</div>
-      </div>
-      {extra}
-      {canManage && undo && (
-        <button onClick={undo} disabled={busy !== null} className="mono" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
-          undo
-        </button>
-      )}
-    </div>
-  );
+  /** Status pill (founder call, 10 Jul): outline while pending, fills in place when done. */
+  const pillStyle = (tone: "plain" | "green" | "amber"): React.CSSProperties => ({
+    border: tone === "green" ? "1px solid #BFE6CC" : tone === "amber" ? "1px solid #FADCB4" : "1px solid #D7D9DF",
+    background: tone === "green" ? "#DCF5E3" : tone === "amber" ? "#FCEFDC" : "var(--white)",
+    color: tone === "green" ? "#15803D" : tone === "amber" ? "#B45309" : "var(--muted)",
+    borderRadius: 999,
+    padding: "4px 12px",
+    fontSize: 11.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    flex: "none",
+  });
 
   return (
     <section>
@@ -196,26 +193,21 @@ export function ContractRoom({
               )}
               {canManage && (
                 <div style={{ display: "flex", gap: 8, flex: "none", alignItems: "center" }}>
-                  {a.status === "needed" && (
-                    <button onClick={() => setAgreement(a, "sent")} disabled={busy !== null} style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Mark sent →
+                  {!signed && (
+                    <button
+                      onClick={() => setAgreement(a, a.status === "sent" ? "needed" : "sent")}
+                      disabled={busy !== null}
+                      title={a.status === "sent" ? "Sent — click to undo" : "Mark as sent"}
+                      style={pillStyle(a.status === "sent" ? "amber" : "plain")}
+                    >
+                      {a.status === "sent" ? "✓ Sent" : "Send"}
                     </button>
                   )}
                   <button
                     onClick={() => setAgreement(a, signed ? "needed" : "signed")}
                     disabled={busy !== null}
                     title={signed ? "Signed — click to undo" : "Mark as signed"}
-                    style={{
-                      border: signed ? "1px solid #BFE6CC" : "1px solid #D7D9DF",
-                      background: signed ? "#DCF5E3" : "var(--white)",
-                      color: signed ? "#15803D" : "var(--muted)",
-                      borderRadius: 999,
-                      padding: "4px 12px",
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      flex: "none",
-                    }}
+                    style={pillStyle(signed ? "green" : "plain")}
                   >
                     {signed ? "✓ Signed" : "Signed"}
                   </button>
@@ -230,55 +222,81 @@ export function ContractRoom({
           );
         })}
 
-        {/* Deposit — the blocking row */}
-        {depositPaid ? (
-          doneRow(`Deposit — ${fmt$(room.deposit.cents)}`, `paid ${fmtDate(room.deposit.paidAt!)}`, "deposit")
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FFF7ED", border: "1px solid #FADCB4", borderRadius: 10, padding: "10px 12px", flexWrap: "wrap" }}>
+        {/* Deposit — the blocking row. Same pill treatment; one row shape for unpaid
+            AND paid. Bookkeeping is one-way (no un-send/un-pay API), so filled pills
+            here don't toggle back. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: depositPaid ? "#FBFBFC" : "#FFF7ED",
+            border: depositPaid ? "1px solid #EEF0F2" : "1px solid #FADCB4",
+            borderRadius: 10,
+            padding: "10px 12px",
+            flexWrap: "wrap",
+          }}
+        >
+          {depositPaid ? (
+            <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
+          ) : (
             <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FCEFDC", color: "#B45309", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>⚠</span>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#B45309" }}>
-                Deposit invoice{depositSet ? ` — ${fmt$(room.deposit.cents)}` : ""}
-              </div>
-              <div className="mono" style={{ fontSize: 9.5, color: "#B45309" }}>
-                {room.deposit.sentAt ? `sent ${fmtDate(room.deposit.sentAt)} · waiting on client` : depositSet ? "not sent yet" : "set the amount to start the clock"}
-              </div>
+          )}
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: depositPaid ? "var(--ink)" : "#B45309" }}>
+              {depositPaid ? `Deposit — ${fmt$(room.deposit.cents)}` : `Deposit invoice${depositSet ? ` — ${fmt$(room.deposit.cents)}` : ""}`}
             </div>
-            {canManage && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flex: "none", flexWrap: "wrap" }}>
-                {!depositSet && (
-                  <>
-                    <input
-                      className="mono"
-                      style={{ border: "1px solid #FADCB4", borderRadius: 8, padding: "6px 8px", fontSize: 12, width: 90, background: "var(--white)" }}
-                      placeholder="$65,000"
-                      inputMode="numeric"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                    />
-                    <button
-                      onClick={() => amount && deposit({ amountCents: Math.round(parseFloat(amount) * 100) }, "dep-set")}
-                      disabled={busy !== null || !amount}
-                      style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                    >
-                      Set
-                    </button>
-                  </>
-                )}
-                {depositSet && !room.deposit.sentAt && (
-                  <button onClick={() => deposit({ markSent: true }, "dep-sent")} disabled={busy !== null} style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    Mark sent →
-                  </button>
-                )}
-                {depositSet && (
-                  <button onClick={() => deposit({ markPaid: true }, "dep-paid")} disabled={busy !== null} style={{ border: 0, background: "none", color: "#15803D", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    ✓ Paid
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="mono" style={{ fontSize: 9.5, color: depositPaid ? "var(--muted-line)" : "#B45309" }}>
+              {depositPaid
+                ? `paid ${fmtDate(room.deposit.paidAt!)}`
+                : room.deposit.sentAt
+                  ? `sent ${fmtDate(room.deposit.sentAt)} · waiting on client`
+                  : depositSet
+                    ? "not sent yet"
+                    : "set the amount to start the clock"}
+            </div>
           </div>
-        )}
+          {canManage && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flex: "none", flexWrap: "wrap" }}>
+              {!depositPaid && !depositSet && (
+                <>
+                  <input
+                    className="mono"
+                    style={{ border: "1px solid #FADCB4", borderRadius: 8, padding: "6px 8px", fontSize: 12, width: 90, background: "var(--white)" }}
+                    placeholder="$65,000"
+                    inputMode="numeric"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  />
+                  <button
+                    onClick={() => amount && deposit({ amountCents: Math.round(parseFloat(amount) * 100) }, "dep-set")}
+                    disabled={busy !== null || !amount}
+                    style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Set
+                  </button>
+                </>
+              )}
+              {!depositPaid && depositSet && (
+                room.deposit.sentAt ? (
+                  <span title={`sent ${fmtDate(room.deposit.sentAt)}`} style={{ ...pillStyle("amber"), cursor: "default" }}>✓ Sent</span>
+                ) : (
+                  <button onClick={() => deposit({ markSent: true }, "dep-sent")} disabled={busy !== null} title="Mark the invoice as sent" style={pillStyle("plain")}>
+                    Send
+                  </button>
+                )
+              )}
+              {depositSet &&
+                (depositPaid ? (
+                  <span title={`paid ${fmtDate(room.deposit.paidAt!)}`} style={{ ...pillStyle("green"), cursor: "default" }}>✓ Paid</span>
+                ) : (
+                  <button onClick={() => deposit({ markPaid: true }, "dep-paid")} disabled={busy !== null} title="Mark the deposit as paid" style={pillStyle("plain")}>
+                    Paid
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* When the deposit clears → project */}

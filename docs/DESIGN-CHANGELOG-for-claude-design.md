@@ -672,3 +672,21 @@ every status:
   stays in every state. The signed row keeps the quiet `#FBFBFC` tint and the
   "signed {date}" mono subline.
 - The deposit row is unchanged (it keeps its own paid/warning treatment).
+
+# Update — 2026-07-10 (Send/Sent + Paid join the pill treatment)
+
+Follow-on to the Signed pill: the whole agreement package now uses one pill
+language (`pillStyle` helper in ContractRoom — outline while pending, fills in
+place when done):
+
+- **Agreement rows:** "Mark sent →" text link is gone. An outline **Send** pill
+  fills amber **✓ Sent** in place; clicking the amber pill undoes back to
+  needed (a doc can bounce). Order on an open row: Send/Sent pill · Signed pill
+  · mono n/a.
+- **Deposit row keeps ONE shape** whether unpaid or paid (the grey doneRow swap
+  is gone): the ⚠ amber circle flips to a green ✓, the amber wash flips to the
+  quiet #FBFBFC tint, subline becomes "paid {date}". Outline **Send** → amber
+  **✓ Sent** (tooltip carries the sent date), outline **Paid** → green
+  **✓ Paid**. Deposit pills do NOT toggle back — the bookkeeping API is one-way
+  (markSent/markPaid); filled deposit pills render as static chips.
+- doneRow is fully retired from the contract room.
