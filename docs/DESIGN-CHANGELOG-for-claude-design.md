@@ -618,3 +618,14 @@ reconciled after PATCH + refresh. Fixed: after any structural change (recommende
 flag, option add/remove, rename) the server truth is merged back into the local
 copies — in-flight typed prices/notes are preserved. Toggling now flips the green
 card, the RECOMMENDED label, and the letter tile immediately, on the right option.
+
+# Update — 2026-07-10 (Mark recommended is optimistic now)
+
+Founder feedback: toggling Recommended took 2–3s — the UI waited for the PATCH
+round-trip AND a full server re-render (router.refresh) before painting. The
+toggle is now optimistic: the green card / RECOMMENDED label / letter tile flip
+instantly (mirroring the server's single-select + click-to-unmark semantics),
+the save lands in the background, and a failed save visibly reverts with the
+error line. The background refresh still truth-ups the page. Other controls
+keep the wait-for-server pattern for now — a broader perceived-latency pass
+(optimistic board drags etc.) is a known candidate, not yet scheduled.

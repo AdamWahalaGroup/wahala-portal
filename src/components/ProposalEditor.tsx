@@ -192,6 +192,23 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     return ok;
   }
 
+  /**
+   * Optimistic recommended toggle — the green flips NOW, the save lands in the
+   * background (2 server round-trips otherwise made this feel 2–3s sluggish).
+   * Mirrors setRecommendedOption's semantics: clicking the recommended option
+   * un-marks it; marking one un-marks the rest. A failed save visibly reverts.
+   */
+  function toggleRecommended(optionId: string) {
+    const prev = opts;
+    const wasRec = prev.find((o) => o.id === optionId)?.recommended ?? false;
+    setOpts((v) => v.map((o) => ({ ...o, recommended: o.id === optionId ? !wasRec : false })));
+    void (async () => {
+      const ok = await api(`/api/proposals/${proposal.id}/options/${optionId}`, "PATCH", { toggleRecommended: true });
+      if (!ok) setOpts(prev);
+      else router.refresh(); // background truth-up — the resync effect merges it without clobbering typing
+    })();
+  }
+
   // ---------------------------------------------------------------- send (09 Jul b: stage follows the proposal)
 
   // Sending is the ONLY forward path out of Discovery — the readiness nudge fires here now.
@@ -510,7 +527,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                 {/* Recommended — admin-chosen; clicking the green label toggles it OFF */}
                 {o.recommended ? (
                   <button
-                    onClick={() => (isDraft ? void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec") : undefined)}
+                    onClick={() => (isDraft ? toggleRecommended(o.id) : undefined)}
                     title={isDraft ? "Click to un-mark" : undefined}
                     className="kicker"
                     style={{ border: 0, background: "none", color: "#15803D", fontSize: 9.5, fontWeight: 800, letterSpacing: ".1em", cursor: isDraft ? "pointer" : "default", padding: 0, flex: "none" }}
@@ -519,7 +536,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                   </button>
                 ) : isDraft ? (
                   <button
-                    onClick={() => void structural(() => api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", { toggleRecommended: true }), "rec")}
+                    onClick={() => toggleRecommended(o.id)}
                     style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0, flex: "none" }}
                   >
                     Mark recommended
