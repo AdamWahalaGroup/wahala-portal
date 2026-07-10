@@ -166,26 +166,26 @@ export function ContractRoom({
       </div>
 
       <div style={{ display: "grid", gap: 7, marginTop: 10 }}>
-        {rows.map((a) =>
-          a.status === "signed" ? (
-            doneRow(
-              a.label,
-              [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed"),
-              a.id,
-              () => setAgreement(a, "needed"),
-              a.kind === "msa" && orgId ? (
-                <Link href={`/dashboard/accounts/${orgId}/msa`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
-                  View doc →
-                </Link>
-              ) : undefined,
-            )
-          ) : (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px" }}>
-              <span style={{ width: 20, height: 20, borderRadius: 999, border: "1.5px solid #D7D9DF", flex: "none" }} />
+        {/* One row shape for every status — the checkbox stays put and the Signed
+            PILL fills green in place (founder call, 10 Jul: the old green text
+            link read as already-signed, and signing swapped the whole row). */}
+        {rows.map((a) => {
+          const signed = a.status === "signed";
+          return (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: signed ? "#FBFBFC" : "var(--white)", border: signed ? "1px solid #EEF0F2" : "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px" }}>
+              {signed ? (
+                <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
+              ) : (
+                <span style={{ width: 20, height: 20, borderRadius: 999, border: "1.5px solid #D7D9DF", flex: "none" }} />
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13 }}>{a.label}</div>
                 <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
-                  {a.status === "sent" ? "sent · waiting on signature" : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
+                  {signed
+                    ? [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed")
+                    : a.status === "sent"
+                      ? "sent · waiting on signature"
+                      : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
                 </div>
               </div>
               {/* The MSA boilerplate auto-populates from the account — open, print, send. */}
@@ -201,17 +201,34 @@ export function ContractRoom({
                       Mark sent →
                     </button>
                   )}
-                  <button onClick={() => setAgreement(a, "signed")} disabled={busy !== null} style={{ border: 0, background: "none", color: "#15803D", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    ✓ Signed
+                  <button
+                    onClick={() => setAgreement(a, signed ? "needed" : "signed")}
+                    disabled={busy !== null}
+                    title={signed ? "Signed — click to undo" : "Mark as signed"}
+                    style={{
+                      border: signed ? "1px solid #BFE6CC" : "1px solid #D7D9DF",
+                      background: signed ? "#DCF5E3" : "var(--white)",
+                      color: signed ? "#15803D" : "var(--muted)",
+                      borderRadius: 999,
+                      padding: "4px 12px",
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      flex: "none",
+                    }}
+                  >
+                    {signed ? "✓ Signed" : "Signed"}
                   </button>
-                  <button onClick={() => setAgreement(a, "n_a")} disabled={busy !== null} className="mono" title="Not applicable to this deal" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
-                    n/a
-                  </button>
+                  {!signed && (
+                    <button onClick={() => setAgreement(a, "n_a")} disabled={busy !== null} className="mono" title="Not applicable to this deal" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
+                      n/a
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-          ),
-        )}
+          );
+        })}
 
         {/* Deposit — the blocking row */}
         {depositPaid ? (

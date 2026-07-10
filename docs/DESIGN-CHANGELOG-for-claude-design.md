@@ -654,3 +654,21 @@ there and bump the version):
   ("on file account-wide — SOW only from here").
 - Rendering is on-demand from live data — the executed copy (DocuSign round,
   pending Jason) remains the signed source of truth. No schema change.
+
+# Update — 2026-07-10 (agreement rows: Signed is a pill that fills in place)
+
+Founder QA on the Committed drawer's agreement package: the old "✓ Signed"
+GREEN TEXT action read as if the doc was already signed, and clicking it swapped
+the whole row for a different grey "done" shape. Reworked to ONE row shape for
+every status:
+
+- The left checkbox circle never moves — empty 1.5px `#D7D9DF` ring while open,
+  filled green ✓ (`#DCF5E3`/`#15803D`) once signed.
+- **"Signed" is a pill now**: neutral outline (white bg, `#D7D9DF` border, muted
+  text) while unsigned; clicking fills it green in place (`#DCF5E3` bg,
+  `#BFE6CC` border, "✓ Signed") — clicking the green pill undoes (tooltip says
+  so). No more disappearing row or separate "undo" text.
+- "Mark sent →" and "n/a" render only while unsigned; the MSA "View doc →" link
+  stays in every state. The signed row keeps the quiet `#FBFBFC` tint and the
+  "signed {date}" mono subline.
+- The deposit row is unchanged (it keeps its own paid/warning treatment).
