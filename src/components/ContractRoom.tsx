@@ -139,18 +139,22 @@ export function ContractRoom({
     return null;
   };
 
-  const rows = room.agreements.filter((a) => a.status !== "n_a");
+  // n/a rows stay VISIBLE (ghosted, at the bottom) so the call is reversible —
+  // they just drop out of the completion math (founder QA, 10 Jul: clicking
+  // n/a made the row vanish with no way back).
+  const active = room.agreements.filter((a) => a.status !== "n_a");
+  const rows = [...active, ...room.agreements.filter((a) => a.status === "n_a")];
   const depositSet = room.deposit.cents > 0;
   const depositPaid = !!room.deposit.paidAt;
-  const total = rows.length + 1; // + the deposit row
-  const done = rows.filter((a) => a.status === "signed").length + (depositPaid ? 1 : 0);
+  const total = active.length + 1; // + the deposit row
+  const done = active.filter((a) => a.status === "signed").length + (depositPaid ? 1 : 0);
   const complete = done === total;
 
   /** Status pill (founder call, 10 Jul): outline while pending, fills in place when done. */
-  const pillStyle = (tone: "plain" | "green" | "amber"): React.CSSProperties => ({
-    border: tone === "green" ? "1px solid #BFE6CC" : tone === "amber" ? "1px solid #FADCB4" : "1px solid #D7D9DF",
-    background: tone === "green" ? "#DCF5E3" : tone === "amber" ? "#FCEFDC" : "var(--white)",
-    color: tone === "green" ? "#15803D" : tone === "amber" ? "#B45309" : "var(--muted)",
+  const pillStyle = (tone: "plain" | "green" | "amber" | "grey"): React.CSSProperties => ({
+    border: tone === "green" ? "1px solid #BFE6CC" : tone === "amber" ? "1px solid #FADCB4" : tone === "grey" ? "1px solid #E2E3E8" : "1px solid #D7D9DF",
+    background: tone === "green" ? "#DCF5E3" : tone === "amber" ? "#FCEFDC" : tone === "grey" ? "#F1F2F4" : "var(--white)",
+    color: tone === "green" ? "#15803D" : tone === "amber" ? "#B45309" : tone === "grey" ? "#4B5159" : "var(--muted)",
     borderRadius: 999,
     padding: "4px 12px",
     fontSize: 11.5,
@@ -176,21 +180,26 @@ export function ContractRoom({
             link read as already-signed, and signing swapped the whole row). */}
         {rows.map((a) => {
           const signed = a.status === "signed";
+          const na = a.status === "n_a";
           return (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: signed ? "#FBFBFC" : "var(--white)", border: signed ? "1px solid #EEF0F2" : "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px" }}>
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: signed || na ? "#FBFBFC" : "var(--white)", border: na ? "1px dashed #E2E3E8" : signed ? "1px solid #EEF0F2" : "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px", opacity: na ? 0.75 : 1 }}>
               {signed ? (
                 <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
+              ) : na ? (
+                <span style={{ width: 20, height: 20, borderRadius: 999, border: "1.5px dashed #D7D9DF", color: "#C4C8CF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>–</span>
               ) : (
                 <span style={{ width: 20, height: 20, borderRadius: 999, border: "1.5px solid #D7D9DF", flex: "none" }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{a.label}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: na ? "var(--muted)" : "var(--ink)" }}>{a.label}</div>
                 <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
-                  {signed
-                    ? [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed")
-                    : a.status === "sent"
-                      ? "sent · waiting on signature"
-                      : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
+                  {na
+                    ? "not applicable to this deal — doesn't count toward the package"
+                    : signed
+                      ? [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed")
+                      : a.status === "sent"
+                        ? "sent · waiting on signature"
+                        : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
                 </div>
               </div>
               {/* Boilerplate docs auto-populate from the account — open, print, send. The
@@ -203,28 +212,41 @@ export function ContractRoom({
               )}
               {canManage && (
                 <div style={{ display: "flex", gap: 8, flex: "none", alignItems: "center" }}>
-                  {!signed && (
+                  {na ? (
                     <button
-                      onClick={() => setAgreement(a, a.status === "sent" ? "needed" : "sent")}
+                      onClick={() => setAgreement(a, "needed")}
                       disabled={busy !== null}
-                      title={a.status === "sent" ? "Sent — click to undo" : "Mark as sent"}
-                      style={pillStyle(a.status === "sent" ? "amber" : "plain")}
+                      title="Marked not applicable — click to bring it back"
+                      style={pillStyle("grey")}
                     >
-                      {a.status === "sent" ? "✓ Sent" : "Send"}
+                      n/a — restore
                     </button>
-                  )}
-                  <button
-                    onClick={() => setAgreement(a, signed ? "needed" : "signed")}
-                    disabled={busy !== null}
-                    title={signed ? "Signed — click to undo" : "Mark as signed"}
-                    style={pillStyle(signed ? "green" : "plain")}
-                  >
-                    {signed ? "✓ Signed" : "Signed"}
-                  </button>
-                  {!signed && (
-                    <button onClick={() => setAgreement(a, "n_a")} disabled={busy !== null} className="mono" title="Not applicable to this deal" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
-                      n/a
-                    </button>
+                  ) : (
+                    <>
+                      {!signed && (
+                        <button
+                          onClick={() => setAgreement(a, a.status === "sent" ? "needed" : "sent")}
+                          disabled={busy !== null}
+                          title={a.status === "sent" ? "Sent — click to undo" : "Mark as sent"}
+                          style={pillStyle(a.status === "sent" ? "amber" : "plain")}
+                        >
+                          {a.status === "sent" ? "✓ Sent" : "Send"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setAgreement(a, signed ? "needed" : "signed")}
+                        disabled={busy !== null}
+                        title={signed ? "Signed — click to undo" : "Mark as signed"}
+                        style={pillStyle(signed ? "green" : "plain")}
+                      >
+                        {signed ? "✓ Signed" : "Signed"}
+                      </button>
+                      {!signed && (
+                        <button onClick={() => setAgreement(a, "n_a")} disabled={busy !== null} className="mono" title="Not applicable to this deal" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
+                          n/a
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

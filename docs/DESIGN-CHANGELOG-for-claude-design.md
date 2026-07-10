@@ -767,3 +767,15 @@ renders in-portal (all v1.0, same pattern as the MSA/NDA):
   file) gets NO template link — its document is the proposal's SOW.
 - SimpleMarkdown learned pipe tables (for the rate card) — header row +
   bordered body, still dependency-free/injection-safe.
+
+# Update — 2026-07-10 (agreement package: n/a is reversible)
+
+Founder QA: clicking "n/a" on an agreement row (e.g. the NDA) made the row
+vanish with no way back. Now:
+
+- n/a rows STAY in the list — ghosted (75% opacity, dashed border, dashed "–"
+  circle), sorted below active rows, subline "not applicable to this deal —
+  doesn't count toward the package".
+- A filled grey **"n/a — restore"** pill brings the row back to needed — same
+  one-row-shape / pill-toggles-in-place language as Send/Sent and Signed.
+- The package counter (N / M) counts only active rows, unchanged.
