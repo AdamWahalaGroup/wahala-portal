@@ -185,9 +185,9 @@ export function ContractRoom({
                       : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
                 </div>
               </div>
-              {/* The MSA boilerplate auto-populates from the account — open, print, send. */}
-              {a.kind === "msa" && orgId && (
-                <Link href={`/dashboard/accounts/${orgId}/msa`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+              {/* MSA/NDA boilerplate auto-populates from the account — open, print, send. */}
+              {(a.kind === "msa" || a.kind === "nda") && orgId && (
+                <Link href={`/dashboard/accounts/${orgId}/${a.kind}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
                   View doc →
                 </Link>
               )}

@@ -163,32 +163,35 @@ export async function pendingDocsForDeal(ctx: AuthContext, organizationId: strin
   return rows.filter((r) => r.status !== "signed" && r.status !== "n_a").map((r) => r.label);
 }
 
-/**
- * Everything the MSA document page needs: the account, its MSA row (signed one
- * preferred), and the merge fields — Wahala rep = account owner, client rep =
- * the account's primary contact. Staff only.
- */
-export async function msaViewFor(
-  ctx: AuthContext,
-  organizationId: string,
-): Promise<{
+export type AgreementDocView = {
   orgName: string;
   status: "none" | "needed" | "sent" | "signed";
   signedAt: Date | null;
   wahalaRepName: string | null;
   clientRepName: string | null;
   clientRepTitle: string | null;
-} | null> {
-  assertStaff(ctx, "view_msa");
+};
+
+/**
+ * Everything an account-level document page (MSA, NDA) needs: the account, its
+ * row of that kind (signed one preferred), and the merge fields — Wahala rep =
+ * account owner, client rep = the account's primary contact. Staff only.
+ */
+export async function agreementDocViewFor(
+  ctx: AuthContext,
+  organizationId: string,
+  kind: "msa" | "nda",
+): Promise<AgreementDocView | null> {
+  assertStaff(ctx, `view_${kind}`);
   const db = getDb();
   const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
   if (!org) return null;
 
-  const msaRows = await db
+  const rows = await db
     .select()
     .from(schema.agreements)
-    .where(and(eq(schema.agreements.organizationId, organizationId), eq(schema.agreements.kind, "msa")));
-  const msa = msaRows.find((a) => a.status === "signed") ?? msaRows.find((a) => a.status !== "n_a") ?? null;
+    .where(and(eq(schema.agreements.organizationId, organizationId), eq(schema.agreements.kind, kind)));
+  const doc = rows.find((a) => a.status === "signed") ?? rows.find((a) => a.status !== "n_a") ?? null;
 
   const [owner, contacts] = await Promise.all([
     org.accountOwnerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, org.accountOwnerUserId) }) : null,
@@ -198,12 +201,17 @@ export async function msaViewFor(
 
   return {
     orgName: org.name,
-    status: msa ? (msa.status as "needed" | "sent" | "signed") : "none",
-    signedAt: msa?.signedAt ?? null,
+    status: doc ? (doc.status as "needed" | "sent" | "signed") : "none",
+    signedAt: doc?.signedAt ?? null,
     wahalaRepName: owner?.name ?? null,
     clientRepName: primary?.name ?? null,
     clientRepTitle: primary?.title ?? null,
   };
+}
+
+/** The MSA document page's view (kept for existing callers). */
+export async function msaViewFor(ctx: AuthContext, organizationId: string): Promise<AgreementDocView | null> {
+  return agreementDocViewFor(ctx, organizationId, "msa");
 }
 
 /** Used by account views: does this org have a signed MSA on file? */

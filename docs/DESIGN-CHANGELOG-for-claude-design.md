@@ -728,3 +728,21 @@ make it explicit. The nine controls:
 
 Passive/non-generative controls (View contract, ◆ paid discovery chip, autosaves)
 are unchanged — the suffix marks generation, not AI-produced content.
+
+# Update — 2026-07-10 (NDA boilerplate document, mirrors the MSA)
+
+Adam's standard mutual NDA (docs/Wahala_Group_Standard_Mutual_NDA.docx) is now
+template v1.0 in `src/domain/nda.ts` — same pattern as the MSA:
+
+- `/dashboard/accounts/{orgId}/nda` renders it on demand from live account data:
+  counterparty = account name, effective date = signedAt else today, Wahala
+  signer = account owner, client signer = primary contact. Blank lines for
+  fields we don't store (addresses). Print / save-PDF chrome, status banner
+  (needed / sent / signed / boilerplate preview).
+- The Mutual NDA row in the deal's agreement package and the Account page's
+  Agreements rail both gained the same "View doc →" / "doc →" links the MSA has.
+- Under the hood MsaDoc took a `kind` prop (msa | nda) and msaViewFor
+  generalized to `agreementDocViewFor(ctx, orgId, kind)` — a third account-level
+  doc would be ~30 lines.
+- Governing law Florida (consistent with the MSA); §10 hands confidentiality
+  off to the MSA when one is later signed, so the two never conflict.

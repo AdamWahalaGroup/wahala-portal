@@ -1,18 +1,41 @@
 "use client";
 
 /**
- * The rendered MSA (account-level umbrella contract) — boilerplate merged with
+ * A rendered account-level document (MSA or NDA) — boilerplate merged with
  * live account data, print-ready. The signed source of truth is the executed
  * copy (DocuSign round pending); this is the document you SEND. Status banner
  * mirrors the agreement row (needed / sent / signed / none seeded yet).
  */
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 
-const BANNER: Record<string, { bg: string; border: string; color: string; label: string }> = {
-  none: { bg: "#F1F2F4", border: "#E2E3E8", color: "#4B5159", label: "Not in a deal package yet — this is the boilerplate preview. The MSA row seeds when a deal reaches Committed." },
-  needed: { bg: "#FAFBFF", border: "#C9D0FB", color: "#2536C4", label: "Needed — send this for signature, then mark it sent on the deal's agreement package." },
-  sent: { bg: "#FFF7ED", border: "#FADCB4", color: "#B45309", label: "Sent — waiting on signature." },
-  signed: { bg: "#DCF5E3", border: "#BFE6CC", color: "#15803D", label: "Signed — on file account-wide; every later deal rides on it (SOW only)." },
+type Banner = { bg: string; border: string; color: string; label: string };
+
+const SHARED: Record<string, Omit<Banner, "label">> = {
+  none: { bg: "#F1F2F4", border: "#E2E3E8", color: "#4B5159" },
+  needed: { bg: "#FAFBFF", border: "#C9D0FB", color: "#2536C4" },
+  sent: { bg: "#FFF7ED", border: "#FADCB4", color: "#B45309" },
+  signed: { bg: "#DCF5E3", border: "#BFE6CC", color: "#15803D" },
+};
+
+const LABELS: Record<"msa" | "nda", { kicker: string; byStatus: Record<string, string> }> = {
+  msa: {
+    kicker: "Wahala Group · Master Services Agreement",
+    byStatus: {
+      none: "Not in a deal package yet — this is the boilerplate preview. The MSA row seeds when a deal reaches Committed.",
+      needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
+      sent: "Sent — waiting on signature.",
+      signed: "Signed — on file account-wide; every later deal rides on it (SOW only).",
+    },
+  },
+  nda: {
+    kicker: "Wahala Group · Mutual Non-Disclosure Agreement",
+    byStatus: {
+      none: "Not in a deal package yet — this is the boilerplate preview. The NDA row seeds when a deal reaches Committed.",
+      needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
+      sent: "Sent — waiting on signature.",
+      signed: "Signed — on file account-wide; discovery conversations are covered.",
+    },
+  },
 };
 
 export function MsaDoc({
@@ -20,13 +43,15 @@ export function MsaDoc({
   status,
   signedNote,
   templateVersion,
+  kind = "msa",
 }: {
   md: string;
   status: "none" | "needed" | "sent" | "signed";
   signedNote?: string | null;
   templateVersion: string;
+  kind?: "msa" | "nda";
 }) {
-  const b = BANNER[status];
+  const b: Banner = { ...SHARED[status], label: LABELS[kind].byStatus[status] };
   return (
     <div style={{ maxWidth: 820 }}>
       {/* Screen chrome — hidden when printing */}
@@ -45,7 +70,7 @@ export function MsaDoc({
 
       {/* The paper */}
       <div className="msa-paper" style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "42px 48px" }}>
-        <div className="kicker" style={{ fontSize: 10 }}>Wahala Group · Master Services Agreement</div>
+        <div className="kicker" style={{ fontSize: 10 }}>{LABELS[kind].kicker}</div>
         <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 4, marginBottom: 18 }}>
           template v{templateVersion}
         </div>
