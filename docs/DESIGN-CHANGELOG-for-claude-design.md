@@ -629,3 +629,28 @@ the save lands in the background, and a failed save visibly reverts with the
 error line. The background refresh still truth-ups the page. Other controls
 keep the wait-for-server pattern for now — a broader perceived-latency pass
 (optimistic board drags etc.) is a known candidate, not yet scheduled.
+
+# Update — 2026-07-10 (the MSA is a real document now)
+
+The founder's MSA boilerplate (docs/MSA.docx) is in the product as **template
+v1.0** (`src/domain/msa.ts` is the single legal source of truth — edits happen
+there and bump the version):
+
+- **Where it fits:** the MSA is the ACCOUNT-level umbrella — relationship terms
+  signed once per client. Money/scope stay in the per-deal proposal + SOW, which
+  ride on top (§1 order of precedence in the doc itself). This matches the
+  existing model: `msa` agreement rows are account-level, and repeat deals go
+  "MSA on file · SOW only".
+- **Auto-population:** `/dashboard/accounts/[orgId]/msa` renders the boilerplate
+  merged with live account data — client name in the preamble + signature block,
+  effective date (signedAt when signed, else today), Wahala signer = account
+  owner, client signer = the account's primary contact (+ title). Blank rule
+  lines where a field is unknown. Print / save-PDF button; print CSS strips the
+  chrome so it prints as a clean paper document.
+- **Surfaces:** the deal drawer's agreement package (seeds at Committed) shows
+  **View doc →** on the MSA row (needed/sent AND signed states); the Account
+  page's Agreements rail shows **doc →** on its MSA row. Status banner on the
+  doc mirrors the row: needed ("send this, then mark sent") / sent / signed
+  ("on file account-wide — SOW only from here").
+- Rendering is on-demand from live data — the executed copy (DocuSign round,
+  pending Jason) remains the signed source of truth. No schema change.

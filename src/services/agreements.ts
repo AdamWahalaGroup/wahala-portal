@@ -163,6 +163,49 @@ export async function pendingDocsForDeal(ctx: AuthContext, organizationId: strin
   return rows.filter((r) => r.status !== "signed" && r.status !== "n_a").map((r) => r.label);
 }
 
+/**
+ * Everything the MSA document page needs: the account, its MSA row (signed one
+ * preferred), and the merge fields — Wahala rep = account owner, client rep =
+ * the account's primary contact. Staff only.
+ */
+export async function msaViewFor(
+  ctx: AuthContext,
+  organizationId: string,
+): Promise<{
+  orgName: string;
+  status: "none" | "needed" | "sent" | "signed";
+  signedAt: Date | null;
+  wahalaRepName: string | null;
+  clientRepName: string | null;
+  clientRepTitle: string | null;
+} | null> {
+  assertStaff(ctx, "view_msa");
+  const db = getDb();
+  const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
+  if (!org) return null;
+
+  const msaRows = await db
+    .select()
+    .from(schema.agreements)
+    .where(and(eq(schema.agreements.organizationId, organizationId), eq(schema.agreements.kind, "msa")));
+  const msa = msaRows.find((a) => a.status === "signed") ?? msaRows.find((a) => a.status !== "n_a") ?? null;
+
+  const [owner, contacts] = await Promise.all([
+    org.accountOwnerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, org.accountOwnerUserId) }) : null,
+    db.select().from(schema.contacts).where(eq(schema.contacts.organizationId, organizationId)),
+  ]);
+  const primary = contacts.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0] ?? null;
+
+  return {
+    orgName: org.name,
+    status: msa ? (msa.status as "needed" | "sent" | "signed") : "none",
+    signedAt: msa?.signedAt ?? null,
+    wahalaRepName: owner?.name ?? null,
+    clientRepName: primary?.name ?? null,
+    clientRepTitle: primary?.title ?? null,
+  };
+}
+
 /** Used by account views: does this org have a signed MSA on file? */
 export async function msaOnFileFor(organizationId: string): Promise<boolean> {
   const db = getDb();

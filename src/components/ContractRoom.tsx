@@ -138,13 +138,14 @@ export function ContractRoom({
   const done = rows.filter((a) => a.status === "signed").length + (depositPaid ? 1 : 0);
   const complete = done === total;
 
-  const doneRow = (title: string, sub: string, key: string, undo?: () => void) => (
+  const doneRow = (title: string, sub: string, key: string, undo?: () => void, extra?: React.ReactNode) => (
     <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBFBFC", border: "1px solid #EEF0F2", borderRadius: 10, padding: "10px 12px" }}>
       <span style={{ width: 20, height: 20, borderRadius: 999, background: "#DCF5E3", color: "#15803D", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flex: "none" }}>✓</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
         <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>{sub}</div>
       </div>
+      {extra}
       {canManage && undo && (
         <button onClick={undo} disabled={busy !== null} className="mono" style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 10, cursor: "pointer" }}>
           undo
@@ -172,6 +173,11 @@ export function ContractRoom({
               [a.note, a.signedAt ? `signed ${fmtDate(a.signedAt)}` : null].filter(Boolean).join(" · ") || (a.accountLevel ? "account-level — reused by every deal" : "signed"),
               a.id,
               () => setAgreement(a, "needed"),
+              a.kind === "msa" && orgId ? (
+                <Link href={`/dashboard/accounts/${orgId}/msa`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+                  View doc →
+                </Link>
+              ) : undefined,
             )
           ) : (
             <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 10, padding: "10px 12px" }}>
@@ -182,6 +188,12 @@ export function ContractRoom({
                   {a.status === "sent" ? "sent · waiting on signature" : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
                 </div>
               </div>
+              {/* The MSA boilerplate auto-populates from the account — open, print, send. */}
+              {a.kind === "msa" && orgId && (
+                <Link href={`/dashboard/accounts/${orgId}/msa`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+                  View doc →
+                </Link>
+              )}
               {canManage && (
                 <div style={{ display: "flex", gap: 8, flex: "none", alignItems: "center" }}>
                   {a.status === "needed" && (

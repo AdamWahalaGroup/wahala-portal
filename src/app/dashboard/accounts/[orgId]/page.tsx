@@ -261,6 +261,11 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
                         {a.status === "signed" ? "✓" : "–"}
                       </span>
                       <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 0 }}>{a.label}</span>
+                      {a.kind === "msa" && (
+                        <Link href={`/dashboard/accounts/${orgId}/msa`} style={{ fontSize: 11.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+                          doc →
+                        </Link>
+                      )}
                       <span className="mono" style={{ fontSize: 10, color: "var(--muted-line)", flex: "none" }}>
                         {a.status === "signed" && a.signedAt ? fmtDate(a.signedAt) : a.note ?? a.status}
                       </span>
