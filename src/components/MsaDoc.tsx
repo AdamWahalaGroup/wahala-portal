@@ -17,7 +17,9 @@ const SHARED: Record<string, Omit<Banner, "label">> = {
   signed: { bg: "#DCF5E3", border: "#BFE6CC", color: "#15803D" },
 };
 
-const LABELS: Record<"msa" | "nda", { kicker: string; byStatus: Record<string, string> }> = {
+export type DocKind = "msa" | "nda" | "commercial_agreement" | "professional_services";
+
+const LABELS: Record<DocKind, { kicker: string; byStatus: Record<string, string> }> = {
   msa: {
     kicker: "Wahala Group · Master Services Agreement",
     byStatus: {
@@ -36,6 +38,24 @@ const LABELS: Record<"msa" | "nda", { kicker: string; byStatus: Record<string, s
       signed: "Signed — on file account-wide; discovery conversations are covered.",
     },
   },
+  commercial_agreement: {
+    kicker: "Wahala Group · Commercial Agreement",
+    byStatus: {
+      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Committed.",
+      needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
+      sent: "Sent — waiting on signature.",
+      signed: "Signed — standing pricing & payment terms; SOWs only state what differs.",
+    },
+  },
+  professional_services: {
+    kicker: "Wahala Group · Professional Services Terms",
+    byStatus: {
+      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Committed.",
+      needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
+      sent: "Sent — waiting on signature.",
+      signed: "Signed — standing delivery rules (acceptance, change orders, warranty); SOWs ride on them.",
+    },
+  },
 };
 
 export function MsaDoc({
@@ -49,7 +69,7 @@ export function MsaDoc({
   status: "none" | "needed" | "sent" | "signed";
   signedNote?: string | null;
   templateVersion: string;
-  kind?: "msa" | "nda";
+  kind?: DocKind;
 }) {
   const b: Banner = { ...SHARED[status], label: LABELS[kind].byStatus[status] };
   return (

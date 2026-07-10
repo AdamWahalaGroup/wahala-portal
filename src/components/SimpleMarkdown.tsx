@@ -14,6 +14,7 @@ function inline(text: string, keyBase: string): React.ReactNode[] {
 export function SimpleMarkdown({ md, size = 14 }: { md: string; size?: number }) {
   const blocks: React.ReactNode[] = [];
   let bullets: string[] = [];
+  let tableRows: string[][] = [];
   let key = 0;
 
   const flushBullets = () => {
@@ -30,14 +31,54 @@ export function SimpleMarkdown({ md, size = 14 }: { md: string; size?: number })
     bullets = [];
   };
 
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const [head, ...body] = tableRows;
+    blocks.push(
+      <table key={`t-${key++}`} style={{ borderCollapse: "collapse", margin: "6px 0 12px", width: "100%" }}>
+        <thead>
+          <tr>
+            {head.map((c, i) => (
+              <th key={i} style={{ textAlign: "left", fontSize: size - 1, padding: "6px 10px", borderBottom: "2px solid var(--border)", color: "var(--ink)" }}>
+                {inline(c, `th-${key}-${i}`)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((row, r) => (
+            <tr key={r}>
+              {row.map((c, i) => (
+                <td key={i} style={{ fontSize: size, padding: "6px 10px", borderBottom: "1px solid var(--border-soft)", color: "var(--ink-soft)" }}>
+                  {inline(c, `td-${key}-${r}-${i}`)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>,
+    );
+    tableRows = [];
+  };
+
   for (const rawLine of md.split("\n")) {
     const line = rawLine.trimEnd();
     const bullet = /^\s*[-*]\s+(.*)$/.exec(line);
     if (bullet) {
+      flushTable();
       bullets.push(bullet[1]);
       continue;
     }
+    const tableRow = /^\s*\|(.+)\|\s*$/.exec(line);
+    if (tableRow) {
+      flushBullets();
+      const cells = tableRow[1].split("|").map((c) => c.trim());
+      // Skip the |---|---| separator row.
+      if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) tableRows.push(cells);
+      continue;
+    }
     flushBullets();
+    flushTable();
     if (!line.trim()) continue;
     const h = /^(#{1,4})\s+(.*)$/.exec(line);
     if (h) {
@@ -64,5 +105,6 @@ export function SimpleMarkdown({ md, size = 14 }: { md: string; size?: number })
     }
   }
   flushBullets();
+  flushTable();
   return <div>{blocks}</div>;
 }

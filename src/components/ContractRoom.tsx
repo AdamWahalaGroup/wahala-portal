@@ -131,6 +131,14 @@ export function ContractRoom({
     }
   }
 
+  /** Boilerplate doc page slug for an agreement row; null = no template doc for it. */
+  const docSlugFor = (a: { kind: string; label: string }): string | null => {
+    if (a.kind === "msa" || a.kind === "nda") return a.kind;
+    if (a.kind === "professional_services") return "ps-terms";
+    if (a.kind === "commercial_agreement" && a.label !== "Statement of work") return "commercial";
+    return null;
+  };
+
   const rows = room.agreements.filter((a) => a.status !== "n_a");
   const depositSet = room.deposit.cents > 0;
   const depositPaid = !!room.deposit.paidAt;
@@ -185,9 +193,11 @@ export function ContractRoom({
                       : a.note ?? (a.accountLevel ? "account-level — signed once, reused" : "needed")}
                 </div>
               </div>
-              {/* MSA/NDA boilerplate auto-populates from the account — open, print, send. */}
-              {(a.kind === "msa" || a.kind === "nda") && orgId && (
-                <Link href={`/dashboard/accounts/${orgId}/${a.kind}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+              {/* Boilerplate docs auto-populate from the account — open, print, send. The
+                  commercial row relabeled "Statement of work" (MSA on file) is the proposal's
+                  SOW, not this boilerplate — no template link there. */}
+              {orgId && docSlugFor(a) && (
+                <Link href={`/dashboard/accounts/${orgId}/${docSlugFor(a)}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
                   View doc →
                 </Link>
               )}

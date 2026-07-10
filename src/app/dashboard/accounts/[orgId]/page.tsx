@@ -40,6 +40,14 @@ function initials(name: string): string {
 
 const fmtDate = (d: Date | string) => new Date(d).toLocaleDateString("en-US", { day: "2-digit", month: "short" });
 
+/** Boilerplate doc page slug for an agreement row; null = no template doc (e.g. the per-deal SOW). */
+function docSlug(a: { kind: string; label: string }): string | null {
+  if (a.kind === "msa" || a.kind === "nda") return a.kind;
+  if (a.kind === "professional_services") return "ps-terms";
+  if (a.kind === "commercial_agreement" && a.label !== "Statement of work") return "commercial";
+  return null;
+}
+
 export default async function AccountPage({ params }: { params: Promise<{ orgId: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect(LOGIN_PATH);
@@ -261,8 +269,8 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
                         {a.status === "signed" ? "✓" : "–"}
                       </span>
                       <span style={{ fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 0 }}>{a.label}</span>
-                      {(a.kind === "msa" || a.kind === "nda") && (
-                        <Link href={`/dashboard/accounts/${orgId}/${a.kind}`} style={{ fontSize: 11.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
+                      {docSlug(a) && (
+                        <Link href={`/dashboard/accounts/${orgId}/${docSlug(a)}`} style={{ fontSize: 11.5, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none", flex: "none" }}>
                           doc →
                         </Link>
                       )}

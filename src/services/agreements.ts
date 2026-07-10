@@ -167,31 +167,38 @@ export type AgreementDocView = {
   orgName: string;
   status: "none" | "needed" | "sent" | "signed";
   signedAt: Date | null;
+  /** When the account's MSA was signed — the [MSA Date] merge field on docs that ride on it. */
+  msaSignedAt: Date | null;
   wahalaRepName: string | null;
   clientRepName: string | null;
   clientRepTitle: string | null;
 };
 
+export type AgreementDocKind = "msa" | "nda" | "commercial_agreement" | "professional_services";
+
 /**
- * Everything an account-level document page (MSA, NDA) needs: the account, its
- * row of that kind (signed one preferred), and the merge fields — Wahala rep =
- * account owner, client rep = the account's primary contact. Staff only.
+ * Everything a boilerplate document page (MSA, NDA, Commercial Agreement, PS
+ * Terms) needs: the account, its row of that kind (signed one preferred), and
+ * the merge fields — Wahala rep = account owner, client rep = the account's
+ * primary contact. Staff only.
  */
 export async function agreementDocViewFor(
   ctx: AuthContext,
   organizationId: string,
-  kind: "msa" | "nda",
+  kind: AgreementDocKind,
 ): Promise<AgreementDocView | null> {
   assertStaff(ctx, `view_${kind}`);
   const db = getDb();
   const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
   if (!org) return null;
 
-  const rows = await db
-    .select()
-    .from(schema.agreements)
-    .where(and(eq(schema.agreements.organizationId, organizationId), eq(schema.agreements.kind, kind)));
-  const doc = rows.find((a) => a.status === "signed") ?? rows.find((a) => a.status !== "n_a") ?? null;
+  const all = await db.select().from(schema.agreements).where(eq(schema.agreements.organizationId, organizationId));
+  const pick = (k: AgreementDocKind) => {
+    const rows = all.filter((a) => a.kind === k);
+    return rows.find((a) => a.status === "signed") ?? rows.find((a) => a.status !== "n_a") ?? null;
+  };
+  const doc = pick(kind);
+  const msa = kind === "msa" ? doc : pick("msa");
 
   const [owner, contacts] = await Promise.all([
     org.accountOwnerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, org.accountOwnerUserId) }) : null,
@@ -203,6 +210,7 @@ export async function agreementDocViewFor(
     orgName: org.name,
     status: doc ? (doc.status as "needed" | "sent" | "signed") : "none",
     signedAt: doc?.signedAt ?? null,
+    msaSignedAt: msa?.status === "signed" ? msa.signedAt : null,
     wahalaRepName: owner?.name ?? null,
     clientRepName: primary?.name ?? null,
     clientRepTitle: primary?.title ?? null,

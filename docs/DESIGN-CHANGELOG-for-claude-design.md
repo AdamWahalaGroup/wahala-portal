@@ -746,3 +746,24 @@ template v1.0 in `src/domain/nda.ts` — same pattern as the MSA:
   doc would be ~30 lines.
 - Governing law Florida (consistent with the MSA); §10 hands confidentiality
   off to the MSA when one is later signed, so the two never conflict.
+
+# Update — 2026-07-10 (Commercial Agreement + Professional Services Terms docs)
+
+The remaining two standard templates are in — the full agreement stack now
+renders in-portal (all v1.0, same pattern as the MSA/NDA):
+
+- `/dashboard/accounts/{orgId}/commercial` — the standing pricing & payment
+  framework (rate card table, 10% deposit, 15% hardware handling, SaaS/API
+  billing, Net-30, 1.5%/mo late interest). ⚠ Ships with the source doc's
+  bracketed placeholder rates and its bold warning until the real rate card
+  lands in `src/domain/commercial-agreement.ts`.
+- `/dashboard/accounts/{orgId}/ps-terms` — the standing delivery rulebook
+  (5-day acceptance window, change-order process, standard exclusions, 60-day
+  warranty, Background IP, site access).
+- Both merge counterparty + effective date + **the account MSA's signed date**
+  (the "[MSA Date]" field — blank line until the MSA is signed).
+- "View doc →" / "doc →" links on their agreement-package and Agreements-rail
+  rows. Carve-out: a commercial row relabeled "Statement of work" (MSA on
+  file) gets NO template link — its document is the proposal's SOW.
+- SimpleMarkdown learned pipe tables (for the rate card) — header row +
+  bordered body, still dependency-free/injection-safe.
