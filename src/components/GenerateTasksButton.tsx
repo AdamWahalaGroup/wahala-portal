@@ -53,7 +53,7 @@ export function GenerateTasksButton({ stageId }: { stageId: string }) {
         }}
         title="AI breaks this phase's deliverables into internal tasks + subtasks for the delivery team"
       >
-        {busy ? "Breaking down (~20s)…" : "◆ Generate tasks"}
+        {busy ? "Breaking down (~20s)…" : "◆ Generate tasks with AI"}
       </button>
       {status && <span style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>{status}</span>}
       {error && <span style={{ fontSize: 12, color: "#b00020" }}>{error}</span>}

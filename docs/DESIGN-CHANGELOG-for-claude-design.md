@@ -711,3 +711,20 @@ Founder QA on the phase page's Tasks section, two gaps:
   gate is gone, with a confirm dialog added ("Delete … and its
   subtasks/notes?"). DEV TOOL, same as the deal/contact/account deletes: hard
   deletes come out later in favor of cancel-with-reasoning.
+
+# Update — 2026-07-10 ("with AI" on every AI-triggering button)
+
+Founder preference experiment: any button that fires an AI API call now says so
+in its label — "with AI" appended. The ◆ glyph stays as the AI marker; the words
+make it explicit. The nine controls:
+
+- ◆ Analyze this contact with AI / ◆ Re-run the scout with AI (contact scout)
+- ◆ Distill discovery with AI / ◆ Distill & merge with AI (discovery panel)
+- ◆ Ingest call with AI (package extractor)
+- ◆ Rough out a draft with AI (proposals card) + "Draft it with AI →" (setup modal)
+- ◆ Generate contract / SOW with AI (proposal editor)
+- ◆ Draft project with AI → and ↻ Re-draft from sources with AI (project draft flow)
+- ◆ Generate tasks with AI (phase page)
+
+Passive/non-generative controls (View contract, ◆ paid discovery chip, autosaves)
+are unchanged — the suffix marks generation, not AI-produced content.

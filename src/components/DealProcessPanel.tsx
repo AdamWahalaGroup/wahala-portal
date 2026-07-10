@@ -381,7 +381,7 @@ export function DealProcessPanel({
               disabled={busy || !form.title.trim() || !form.transcript.trim()}
               style={{ alignSelf: "flex-start", background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
             >
-              {busy ? "Extracting package fields (~20s)…" : "◆ Ingest call"}
+              {busy ? "Extracting package fields (~20s)…" : "◆ Ingest call with AI"}
             </button>
           </div>
         )}

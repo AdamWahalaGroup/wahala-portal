@@ -339,7 +339,7 @@ export function ContactScoutPanel({
         {score !== null && <ScoreChip score={score} verdict={verdict} size="lg" />}
         {canRun && (
           <button onClick={run} disabled={busy} style={btn("green", busy)}>
-            {busy ? "Scouting (web recon + read, ~40s)…" : analysisMd ? "◆ Re-run the scout" : "◆ Analyze this contact"}
+            {busy ? "Scouting (web recon + read, ~40s)…" : analysisMd ? "◆ Re-run the scout with AI" : "◆ Analyze this contact with AI"}
           </button>
         )}
         {analyzedAt && (

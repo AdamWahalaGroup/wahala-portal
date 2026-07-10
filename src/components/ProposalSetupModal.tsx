@@ -100,7 +100,7 @@ export function ProposalSetupModal({ dealId, onClose }: { dealId: string; onClos
             disabled={busy}
             style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: busy ? 0.6 : 1 }}
           >
-            {busy ? "Drafting (~20s)…" : "Draft it →"}
+            {busy ? "Drafting (~20s)…" : "Draft it with AI →"}
           </button>
         </div>
       </div>

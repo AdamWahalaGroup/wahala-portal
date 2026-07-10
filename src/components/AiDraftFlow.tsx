@@ -316,7 +316,7 @@ function Upload(props: {
               type="button"
               onClick={onDraft}
               style={{ padding: "10px 16px", fontSize: 14, fontWeight: 700, color: "var(--white)", background: "var(--ink)", border: "none", borderRadius: 10, cursor: "pointer" }}
-            >◆ Draft project →</button>
+            >◆ Draft project with AI →</button>
           </div>
         </div>
 
@@ -545,7 +545,7 @@ function Review(props: {
                 );
               })}
             </div>
-            <button type="button" onClick={onRedraft} disabled={submitting} style={{ marginTop: 10, fontSize: 12.5, fontWeight: 600, color: COBALT, background: COBALT_SOFT, border: `1px solid ${COBALT_BORDER}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>↻ Re-draft from sources</button>
+            <button type="button" onClick={onRedraft} disabled={submitting} style={{ marginTop: 10, fontSize: 12.5, fontWeight: 600, color: COBALT, background: COBALT_SOFT, border: `1px solid ${COBALT_BORDER}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>↻ Re-draft from sources with AI</button>
           </div>
 
           {usage && (

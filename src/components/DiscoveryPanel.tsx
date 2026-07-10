@@ -123,7 +123,7 @@ export function DiscoveryPanel({
                 opacity: !paste.trim() ? 0.5 : 1,
               }}
             >
-              {busy ? "Distilling… ~20s" : discoveryMd ? "◆ Distill & merge" : "◆ Distill discovery"}
+              {busy ? "Distilling… ~20s" : discoveryMd ? "◆ Distill & merge with AI" : "◆ Distill discovery with AI"}
             </button>
             <span style={{ fontSize: 12, color: "var(--muted)" }}>≈ $0.03 per pass</span>
           </div>

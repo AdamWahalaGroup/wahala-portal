@@ -718,7 +718,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                 disabled={busy === "contract"}
                 style={btn("plain", busy === "contract")}
               >
-                {busy === "contract" ? "Generating…" : "◆ Generate contract / SOW"}
+                {busy === "contract" ? "Generating…" : "◆ Generate contract / SOW with AI"}
               </button>
             )}
             {(proposal.status === "draft" || proposal.status === "sent") && (

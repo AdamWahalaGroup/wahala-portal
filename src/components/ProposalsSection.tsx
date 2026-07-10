@@ -114,7 +114,7 @@ export function ProposalsSection({
               cursor: "pointer",
             }}
           >
-            <div style={{ fontSize: 13.5, fontWeight: 800 }}>◆ Rough out a draft</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800 }}>◆ Rough out a draft with AI</div>
             <div className="mono" style={{ fontSize: 9.5, color: "#aeb2bb", marginTop: 4 }}>
               one question, then shapes + prose{hasDiscovery ? " grounded in discovery" : ""}
             </div>
