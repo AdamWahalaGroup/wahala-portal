@@ -157,10 +157,71 @@ export async function seedDealPackage(organizationId: string | null, dealId: str
   }
 }
 
-/** Package completeness for the Won-drag warning: pending docs by label. */
-export async function pendingDocsForDeal(ctx: AuthContext, organizationId: string, dealId: string): Promise<string[]> {
-  const { rows } = await listForDeal(ctx, organizationId, dealId);
-  return rows.filter((r) => r.status !== "signed" && r.status !== "n_a").map((r) => r.label);
+/**
+ * One-way sync: the contract/SOW DOCUMENT drives the deal's commercial/SOW
+ * agreement ROW (founder call, 10 Jul — the two were parallel bookkeeping that
+ * could disagree). Doc sent → row sent (only from needed); doc executed → row
+ * signed. Never walks a row backwards. DocuSign webhooks replace this later.
+ */
+export async function syncCommercialRowFromContract(
+  actorUserId: string,
+  organizationId: string | null,
+  dealId: string,
+  docStatus: "sent" | "executed",
+): Promise<void> {
+  if (!organizationId) return;
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(schema.agreements)
+    .where(and(eq(schema.agreements.organizationId, organizationId), eq(schema.agreements.dealId, dealId), eq(schema.agreements.kind, "commercial_agreement")));
+  const row = rows.find((a) => a.status !== "n_a");
+  if (!row) return;
+  const next: AgreementStatus | null =
+    docStatus === "executed" && row.status !== "signed" ? "signed" : docStatus === "sent" && row.status === "needed" ? "sent" : null;
+  if (!next) return;
+  await db.batch([
+    db
+      .update(schema.agreements)
+      .set({ status: next, signedAt: next === "signed" ? row.signedAt ?? new Date() : row.signedAt })
+      .where(eq(schema.agreements.id, row.id)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId,
+        actorUserId,
+        action: `agreement.${row.kind}_${next}`,
+        entityType: "deal",
+        entityId: dealId,
+        metadata: { agreementId: row.id, kind: row.kind, label: row.label, via: "contract_doc" },
+      }),
+    ),
+  ]);
+}
+
+/**
+ * The NDA belongs at Discovery, not Committed (founder call, 10 Jul) — it exists to
+ * protect the conversations about to happen. Idempotently seeds the account-level
+ * NDA row for a working deal and returns it; null when the deal has no account yet
+ * (account-less opportunity) or isn't in a working stage. `seedDealPackage` is
+ * hasAccountKind-guarded, so a row seeded here is simply inherited at Committed.
+ */
+export async function ensureNdaForDeal(ctx: AuthContext, dealId: string): Promise<AgreementRow | null> {
+  assertStaff(ctx, "ensure_nda");
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal?.organizationId) return null;
+  if (deal.stage === "new" || deal.stage === "lost") return null;
+  const rows = await db
+    .select()
+    .from(schema.agreements)
+    .where(and(eq(schema.agreements.organizationId, deal.organizationId), eq(schema.agreements.kind, "nda")));
+  const existing = rows.find((a) => a.status === "signed") ?? rows.find((a) => a.status !== "n_a") ?? rows[0] ?? null;
+  if (existing) return toRow(existing);
+  const [inserted] = await db
+    .insert(schema.agreements)
+    .values({ organizationId: deal.organizationId, dealId, kind: "nda", label: LABELS.nda!, status: "needed" })
+    .returning();
+  return toRow(inserted);
 }
 
 export type AgreementDocView = {

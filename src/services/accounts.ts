@@ -69,6 +69,8 @@ export type AccountView = {
   lifetimeWonCents: number;
   contacts: AccountContact[];
   openDeals: AccountDeal[];
+  /** Won/lost deals — the account's history, linkable (won first). */
+  closedDeals: { id: string; name: string; stage: "won" | "lost"; valueCents: number }[];
   agreements: AgreementRow[];
   timeline: AccountTimelineItem[];
   /** Projects annotated with kind + whether their closeout should prompt the next deal. */
@@ -216,6 +218,10 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
     lifetimeWonCents: wonDeals.reduce((n, d) => n + d.valueCents, 0),
     contacts,
     openDeals,
+    closedDeals: dealRows
+      .filter((d): d is typeof d & { stage: "won" | "lost" } => d.stage === "won" || d.stage === "lost")
+      .sort((a, b) => (a.stage === b.stage ? 0 : a.stage === "won" ? -1 : 1))
+      .map((d) => ({ id: d.id, name: d.name, stage: d.stage, valueCents: d.valueCents })),
     agreements,
     timeline,
     projects: hub.projects.map((p) => ({

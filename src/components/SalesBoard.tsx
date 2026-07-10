@@ -236,6 +236,12 @@ function KanbanView({ overview, canManage, filter, currentUserId, onMoved }: { o
       return;
     }
     if (target === "won") {
+      // Won happens automatically at Create project → — a drag-won with no project
+      // skips org activation and delivery entirely (founder eval, 10 Jul). Bounce.
+      if (deal && !deal.projectId) {
+        setInlineWarn(`${deal.name} isn't won by drag — open the deal and use Create project → (it marks the deal won and starts delivery).`);
+        return;
+      }
       // The package nudges, never blocks: warn when docs are open, then proceed.
       if (deal?.stage === "committed" && deal.docsDone !== null && deal.docsTotal !== null && deal.docsDone < deal.docsTotal) {
         if (!window.confirm(`Agreement package is ${deal.docsDone}/${deal.docsTotal} — win it anyway? (Create the project from the deal drawer.)`)) return;

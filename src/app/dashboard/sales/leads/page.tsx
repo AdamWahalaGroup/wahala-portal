@@ -8,5 +8,6 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default function LeadsIndexRedirect() {
-  redirect("/dashboard/sales?filter=to_qualify");
+  // "to_qualify" retired with triage — the new-opportunity filter is the successor.
+  redirect("/dashboard/sales?filter=new");
 }

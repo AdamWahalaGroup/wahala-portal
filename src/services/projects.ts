@@ -20,6 +20,8 @@ export type ProjectDetail = {
   accountOwner: { name: string } | null;
   leadEngineer: { name: string } | null;
   roster: { id: string; name: string; role: string }[];
+  /** The deal Create project → ran from (null for hand-made projects) — the staff back-link. */
+  originDeal: { id: string; name: string } | null;
 };
 
 /** A project + its people (owner / lead / roster), tenant-scoped. */
@@ -38,9 +40,10 @@ export async function getProjectDetail(ctx: AuthContext, id: string): Promise<Pr
     throw new StageError("NOT_FOUND", "Project not found.");
   }
 
-  const org = await db.query.organizations.findFirst({
-    where: eq(schema.organizations.id, project.organizationId),
-  });
+  const [org, originDeal] = await Promise.all([
+    db.query.organizations.findFirst({ where: eq(schema.organizations.id, project.organizationId) }),
+    db.query.deals.findFirst({ where: eq(schema.deals.projectId, id) }),
+  ]);
   const members = await db
     .select({ userId: schema.projectMembers.userId, role: schema.projectMembers.projectRole })
     .from(schema.projectMembers)
@@ -60,6 +63,7 @@ export async function getProjectDetail(ctx: AuthContext, id: string): Promise<Pr
     accountOwner: org?.accountOwnerUserId ? { name: nameById.get(org.accountOwnerUserId) ?? "—" } : null,
     leadEngineer: project.leadEngineerUserId ? { name: nameById.get(project.leadEngineerUserId) ?? "—" } : null,
     roster: members.map((m) => ({ id: m.userId, name: nameById.get(m.userId) ?? "—", role: m.role })),
+    originDeal: originDeal ? { id: originDeal.id, name: originDeal.name } : null,
   };
 }
 

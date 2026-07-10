@@ -14,6 +14,7 @@ import { scopedDb } from "@/db/scoped";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import type { StageStatus } from "@/domain/stage-machine";
+import { derivedProjectStatus, type DerivedProjectStatus } from "@/domain/project-status";
 import { STATUS_STYLES } from "@/lib/theme";
 
 const PAID_OR_BEYOND = new Set<StageStatus>(["paid", "in_progress", "delivered", "accepted"]);
@@ -36,7 +37,7 @@ export type AccountHub = {
   accountOwner: { id: string; name: string; email: string } | null;
   counts: { projects: number; stages: number };
   totals: { paidCents: number; acceptedCents: number; openCents: number };
-  projects: { id: string; name: string; workType: string | null; status: string; latestStatus: StageStatus | null }[];
+  projects: { id: string; name: string; workType: string | null; status: string; derived: DerivedProjectStatus; latestStatus: StageStatus | null }[];
   history: WorkHistoryItem[];
   clientPeople: HubPerson[];
   wahalaPeople: { id: string; name: string; role: string }[];
@@ -146,6 +147,8 @@ export async function getAccountHub(ctx: AuthContext, orgId: string): Promise<Ac
       name: p.name,
       workType: p.workType,
       status: p.status,
+      // Honest label — projects.status is dead bookkeeping (never leaves "discovery").
+      derived: derivedProjectStatus(orgStages.filter((s) => s.projectId === p.id).map((s) => s.status)),
       latestStatus: latest.get(p.id) ?? null,
     })),
     history,

@@ -82,7 +82,13 @@ export function AppShell({
         </div>
 
         <nav style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 2 }}>
-          {NAV.filter((item) => (!item.staffOnly || user.isStaff) && (!item.adminOnly || isAdmin)).map((item) => {
+          {NAV.filter(
+            (item) =>
+              (!item.staffOnly || user.isStaff) &&
+              (!item.adminOnly || isAdmin) &&
+              // Files is client-only for now — no dead "soon" label for staff.
+              !(item.key === "files" && user.isStaff),
+          ).map((item) => {
             const isActive = item.key === active || (item.key === "sales" && inSales) || (item.key === "settings" && inSettings);
             // Staff get the cross-client Projects index; clients keep their dashboard.
             // Clients get a REAL Files page (QA delta 07-08 §5 — no dead nav); staff's stays "soon".

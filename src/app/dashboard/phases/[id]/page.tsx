@@ -72,7 +72,7 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
       <AutoRefresh enabled={!["accepted", "rejected"].includes(stage.status)} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-          <Link href="/dashboard">Projects</Link> /{" "}
+          <Link href={ctx.isStaff ? "/dashboard/projects" : "/dashboard"}>Projects</Link> /{" "}
           <Link href={`/dashboard/projects/${stage.projectId}`}>Project</Link> / {stage.name}
         </div>
         <span

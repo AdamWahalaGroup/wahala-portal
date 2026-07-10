@@ -6,6 +6,7 @@
  * missing; "+ add" inline form) and the "+ New deal" header button with its small
  * name/value/contact dialog.
  */
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar } from "@/components/People";
@@ -71,7 +72,9 @@ function ContactRow({ contact, canManage }: { contact: RailContact; canManage: b
         <Avatar name={contact.name} size={32} variant={contact.isPrimary ? "owner" : "default"} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {contact.name}
+            <Link href={`/dashboard/contacts/${contact.id}`} title="Open the contact page" style={{ color: "inherit", textDecoration: "none" }}>
+              {contact.name} <span aria-hidden style={{ color: "var(--cobalt-text)", fontWeight: 800 }}>→</span>
+            </Link>
             {contact.isPrimary && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)" }}>primary</span>}
             {contact.title && <span className="mono" style={{ fontSize: 9, color: "var(--muted-line)" }}>{contact.title}</span>}
             {/* One row, one person, both facts — sales state and portal access are different axes */}

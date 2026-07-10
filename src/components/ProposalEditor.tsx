@@ -41,6 +41,7 @@ type Proposal = {
   /** 09 Jul b — send IS the advance; the readiness nudge fires on Send. */
   dealStage: string | null;
   dealReadiness: number | null;
+  organizationId: string | null;
   organizationName: string;
   version: number;
   status: "draft" | "sent" | "approved" | "declined" | "superseded";
@@ -381,7 +382,14 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
         {/* Header row: ORG · V{n} · status pill · COMPLEXITY dots (design layout) */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span className="kicker" style={{ fontSize: 10 }}>
-            {proposal.organizationName} · v{proposal.version}
+            {proposal.organizationId ? (
+              <Link href={`/dashboard/accounts/${proposal.organizationId}`} style={{ color: "inherit" }}>
+                {proposal.organizationName}
+              </Link>
+            ) : (
+              proposal.organizationName
+            )}
+            {" · "}v{proposal.version}
           </span>
           <ProposalStatusPill status={proposal.status} />
           <span className="kicker" style={{ fontSize: 9.5, marginLeft: 4 }}>Complexity</span>

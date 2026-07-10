@@ -7,6 +7,7 @@
  * that is itself the edit trigger ("⚠ add email"). Saves PATCH the contact and refresh,
  * so the change lands on every surface that references it.
  */
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -93,7 +94,11 @@ export function ContactBlock({
             {initials(name)}
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25 }}>{name}</div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.25 }}>
+              <Link href={`/dashboard/contacts/${contactId}`} title="Open the contact page" style={{ color: "inherit", textDecoration: "none" }}>
+                {name} <span aria-hidden style={{ color: "var(--cobalt-text)", fontWeight: 800 }}>→</span>
+              </Link>
+            </div>
             <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)" }}>{orgName}</div>
           </div>
           {canManage && !open && (

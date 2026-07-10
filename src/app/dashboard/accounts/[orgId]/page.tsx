@@ -199,6 +199,34 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
                 ))}
               </div>
             )}
+            {/* Won/lost deals are the account's history — linkable, not just timeline text. */}
+            {view.closedDeals.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="kicker" style={{ color: "var(--muted-line)" }}>History</div>
+                {view.closedDeals.map((d) => (
+                  <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", borderBottom: "1px solid var(--border-softer)" }}>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 8.5,
+                        fontWeight: 800,
+                        borderRadius: 999,
+                        padding: "1px 7px",
+                        flex: "none",
+                        background: d.stage === "won" ? "#DCF5E3" : "#FBE3E3",
+                        color: d.stage === "won" ? "#15803D" : "#B91C1C",
+                      }}
+                    >
+                      {d.stage.toUpperCase()}
+                    </span>
+                    <Link href={`/dashboard/sales/deals/${d.id}`} style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: "inherit", textDecoration: "none" }}>
+                      {d.name}
+                    </Link>
+                    <Money cents={d.valueCents} style={{ fontSize: 10.5, color: "var(--muted)", flex: "none" }} />
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Projects */}
@@ -209,8 +237,9 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
             ) : (
               <div style={{ marginTop: 6 }}>
                 {view.projects.map((p) => {
-                  const activeish = p.status === "active" || p.status === "completed";
-                  const done = p.status === "completed" || p.status === "archived";
+                  // Status derives from phases — projects.status never leaves "discovery".
+                  const activeish = p.derived.tone === "active" || p.derived.tone === "complete";
+                  const done = p.derived.tone === "complete";
                   return (
                     <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: "1px solid var(--border-softer)" }}>
                       <span style={{ width: 8, height: 8, borderRadius: 999, background: activeish ? "#16A34A" : "#C4C8CF", flex: "none" }} />
@@ -219,7 +248,7 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
                           {p.name}
                         </Link>
                         <div className="mono" style={{ fontSize: 10, color: "var(--muted)" }}>
-                          {p.status}
+                          {p.derived.label}
                           {p.kind === "paid_discovery" ? " · paid discovery" : ""}
                           {p.spawnedFromDealName ? ` · from ${p.spawnedFromDealName}` : ""}
                         </div>

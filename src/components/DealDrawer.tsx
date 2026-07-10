@@ -62,11 +62,12 @@ export function DealDrawer({
   proposalCtaNode,
   discoveryNode,
   agreementsNode,
+  ndaNode = null,
   fieldsNode,
   canManage,
   isAdmin = false,
 }: {
-  deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null };
+  deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null; projectId: string | null };
   org: { id: string; name: string; status: string } | null;
   owner: { name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
@@ -81,6 +82,8 @@ export function DealDrawer({
   /** DiscoveryPanel — renders after the process panel in the body. */
   discoveryNode: React.ReactNode;
   agreementsNode: React.ReactNode;
+  /** NDA strip (Discovery → Negotiating) — the paper that belongs BEFORE committed. */
+  ndaNode?: React.ReactNode;
   fieldsNode: React.ReactNode;
   canManage: boolean;
   /** DEV TOOL — renders the hard-delete affordance (admin only; comes out later). */
@@ -190,11 +193,24 @@ export function DealDrawer({
         ) : (
           <span>no account yet — born at Create project →</span>
         )}
-        {contact ? ` · ${contact.name}` : ""}
+        {contact ? (
+          <>
+            {" · "}
+            <Link href={`/dashboard/contacts/${contact.id}`}>{contact.name}</Link>
+          </>
+        ) : null}
         {owner ? ` · ${owner.name}` : ""}
         {" · "}
         {deal.daysInStage}d in stage
         {deal.stuck ? " ⚠ stuck" : ""}
+        {deal.projectId && (
+          <>
+            {" · "}
+            <Link href={`/dashboard/projects/${deal.projectId}`} style={{ color: "var(--cobalt-text)", fontWeight: 700 }}>
+              Project →
+            </Link>
+          </>
+        )}
       </div>
       {deal.origin === "spawned_from_project" && (
         <div className="mono" style={{ display: "inline-block", fontSize: 9.5, fontWeight: 700, background: "#EEF0FE", color: "#2536C4", border: "1px solid #DDE1FB", padding: "3px 9px", borderRadius: 6, marginTop: 8 }}>
@@ -219,6 +235,7 @@ export function DealDrawer({
 
       {/* Proposal CTA — directly under the value (prototype layout; read-only shortcut when lost) */}
       <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
+      {ndaNode && <div style={{ marginTop: 10 }}>{ndaNode}</div>}
 
       {/* Stage stepper over the open funnel */}
       <div style={{ display: "flex", marginTop: 18 }}>

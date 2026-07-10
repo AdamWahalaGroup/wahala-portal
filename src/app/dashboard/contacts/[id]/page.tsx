@@ -2,9 +2,9 @@
  * Contact detail — full-width page under the Contacts nav (Interactive v3 →
  * Contacts detail screen; founder screenshot 09 Jul). People first: dossier on
  * the left (details / portal access / company), opportunities on the right,
- * "+ Start opportunity" always available. The drawer-over-board workspace at
- * /dashboard/sales/contacts/[id] keeps the dump/scout tooling; this is the
- * durable home. Staff only.
+ * "+ Start opportunity" always available. The dump + AI scout report live here
+ * too (10 Jul merge — the old drawer workspace at /dashboard/sales/contacts/[id]
+ * now redirects here). One page per person. Staff only.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -17,6 +17,8 @@ import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/People";
 import { StartOpportunityButton } from "@/components/OpportunityModals";
 import { ContactDetailsCard, PortalAccessCard, CompanyCard } from "@/components/ContactDetailCards";
+import { ContactFilesPanel, ContactScoutPanel } from "@/components/ContactWorkspace";
+import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +69,18 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             {sub && (
               <div className="mono" style={{ fontSize: 11, color: "var(--muted-line)", marginTop: 4 }}>{sub}</div>
             )}
+            {contact.notes && (
+              <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 6, fontStyle: "italic" }}>&ldquo;{contact.notes}&rdquo;</div>
+            )}
           </div>
+          {ctx.isAdmin && (
+            <DangerDeleteButton
+              endpoint={`/api/contacts/${contact.id}`}
+              title={`Delete ${contact.name}?`}
+              body="Removes the contact record, its files, and account links. Deals keep their history but lose the contact link. This can't be undone."
+              redirectTo="/dashboard/contacts"
+            />
+          )}
           <StartOpportunityButton
             contact={{ id: contact.id, name: contact.name, organizationId: contact.organizationId, organizationName: contact.organizationName }}
             currentUserId={ctx.user.id}
@@ -127,6 +140,23 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </section>
+        </div>
+
+        {/* The dump + the scout report (merged from the old board-drawer workspace, 10 Jul) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 22 }}>
+          <ContactScoutPanel
+            contactId={contact.id}
+            analysisMd={contact.aiAnalysisMd}
+            score={contact.aiScore}
+            verdict={contact.aiVerdict}
+            analyzedAt={contact.aiAnalyzedAt}
+            canRun={canManage}
+          />
+          <ContactFilesPanel
+            contactId={contact.id}
+            files={contact.files.map((f) => ({ id: f.id, fileName: f.fileName, mimeType: f.mimeType, sizeBytes: f.sizeBytes, uploaderName: f.uploaderName }))}
+            canDelete={canManage}
+          />
         </div>
       </div>
     </AppShell>

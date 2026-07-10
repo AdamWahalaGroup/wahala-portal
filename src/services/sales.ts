@@ -344,6 +344,8 @@ export type DealItem = {
   paidDiscovery: boolean;
   /** Proposal-readiness snapshot (0–10) — drives the frame-39 nudge on advance. */
   readinessScore: number | null;
+  /** Set once Create project → ran — the board's won-drag guard reads it. */
+  projectId: string | null;
 };
 
 async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealItem[]> {
@@ -448,6 +450,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       msaOnFile: !!d.organizationId && msaOrgs.has(d.organizationId),
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
       readinessScore: d.readinessScore,
+      projectId: d.projectId,
     };
   });
 }
@@ -672,6 +675,8 @@ export type DealDetail = {
     depositPaidAt: Date | null;
     readinessScore: number | null;
     postMortemMd: string | null;
+    /** Set once Create project → ran — the drawer's Project → link. */
+    projectId: string | null;
   };
   /** Null until the account exists (account-less opportunity). */
   org: { id: string; name: string; status: string } | null;
@@ -773,6 +778,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       depositPaidAt: deal.depositPaidAt,
       readinessScore: deal.readinessScore,
       postMortemMd: deal.postMortemMd,
+      projectId: deal.projectId,
     },
     org: org ? { id: org.id, name: org.name, status: org.status } : null,
     owner: owner ? { id: owner.id, name: owner.name } : null,

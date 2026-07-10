@@ -441,8 +441,16 @@ export function ContractRoom({
               The AI writes the statement of work from {room.approvedProposal ? "the approved option + discovery" : "discovery and the deal notes (no signed proposal — one phase at the deal value)"} as a real project on the {orgName} account —
               the phases keep the signed names and amounts — and the deal is marked won. You&apos;ll land on the new project to review Phase 1.
               {confirm === "force" && <strong> The deposit hasn&apos;t cleared — this is an admin override.</strong>}
-              {!complete && confirm === "execute" && " Some agreements are still open — that's on you to chase."}
             </p>
+            {/* Name the unsigned paper (founder call, 10 Jul) — warn, never block. */}
+            {(() => {
+              const pending = rows.filter((a) => a.status !== "signed" && a.status !== "n_a").map((a) => a.label);
+              return pending.length > 0 ? (
+                <p style={{ margin: "10px 0 0", fontSize: 13, fontWeight: 600, color: "#B45309", background: "#FFF7ED", border: "1px solid #FADCB4", borderRadius: 8, padding: "8px 11px" }}>
+                  ⚠ Still unsigned: {pending.join(", ")}. The project starts without them — that&apos;s on you to chase.
+                </p>
+              ) : null;
+            })()}
             <div style={{ display: "flex", gap: 9, justifyContent: "flex-end", marginTop: 20 }}>
               <button onClick={() => setConfirm(null)} style={btn("plain", false)}>Cancel</button>
               <button onClick={() => execute(confirm === "force")} style={btn("green", false)}>

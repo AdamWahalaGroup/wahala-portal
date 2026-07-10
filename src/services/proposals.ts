@@ -984,6 +984,11 @@ export async function setContractStatus(ctx: AuthContext, proposalId: string, to
       }),
     ),
   ]);
+  // The doc drives the package row — sent/executed flow through, never backwards.
+  if (to === "sent" || to === "executed") {
+    const { syncCommercialRowFromContract } = await import("@/services/agreements");
+    await syncCommercialRowFromContract(ctx.user.id, p.organizationId, p.dealId, to);
+  }
 }
 
 /** Rebuild phases from the live option, preserving written text by phase name. Draft only. */

@@ -16,6 +16,7 @@ import { StageError } from "@/domain/stage-machine";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
+import { derivedProjectStatus } from "@/domain/project-status";
 import { Money } from "@/components/Money";
 import { PeopleCard, Avatar } from "@/components/People";
 import { NewStageButton } from "@/components/NewStageButton";
@@ -56,7 +57,24 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       accountOwner={ctx.isStaff ? null : accountOwner}
     >
       <div className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-        <Link href="/dashboard">Projects</Link> / {project.name}
+        {/* Clients have no projects list — their "Projects" is the home dashboard. */}
+        <Link href={ctx.isStaff ? "/dashboard/projects" : "/dashboard"}>Projects</Link>
+        {ctx.isStaff && (
+          <>
+            {" / "}
+            <Link href={`/dashboard/accounts/${project.organizationId}`}>{detail.organizationName}</Link>
+          </>
+        )}
+        {" / "}
+        {project.name}
+        {ctx.isStaff && detail.originDeal && (
+          <>
+            {" · "}
+            <Link href={`/dashboard/sales/deals/${detail.originDeal.id}`} style={{ color: "var(--cobalt-text)", fontWeight: 700 }}>
+              from deal: {detail.originDeal.name} →
+            </Link>
+          </>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
@@ -72,7 +90,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             textTransform: "capitalize",
           }}
         >
-          {project.status}
+          {derivedProjectStatus(stages.map((s) => s.status)).label}
         </span>
       </div>
       {project.description && <p style={{ margin: "8px 0 0", color: "var(--ink-soft)", fontSize: 14.5 }}>{project.description}</p>}

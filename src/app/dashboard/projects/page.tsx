@@ -12,6 +12,7 @@ import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Avatar } from "@/components/People";
 import type { StageStatus } from "@/domain/stage-machine";
+import { derivedProjectStatus } from "@/domain/project-status";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,9 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
   const ownerName = new Map(staff.map((s) => [s.id, s.name]));
   const latest = new Map<string, StageStatus>();
   for (const s of allStages) if (!latest.has(s.projectId)) latest.set(s.projectId, s.status as StageStatus);
+  // Display status derives from phases — projects.status is dead bookkeeping.
+  const stagesByProject = new Map<string, string[]>();
+  for (const s of allStages) stagesByProject.set(s.projectId, [...(stagesByProject.get(s.projectId) ?? []), s.status]);
 
   const matched = q
     ? projects.filter((p) => p.name.toLowerCase().includes(q) || (orgName.get(p.organizationId) ?? "").toLowerCase().includes(q))
@@ -172,7 +176,7 @@ export default async function StaffProjectsPage({ searchParams }: { searchParams
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
                         <div className="kicker" style={{ marginTop: 2 }}>
-                          {p.workType ?? p.status}
+                          {p.workType ?? derivedProjectStatus(stagesByProject.get(p.id) ?? []).label}
                         </div>
                       </div>
                       <div style={{ justifySelf: "start" }}>{st ? <StatusBadge status={st} /> : null}</div>

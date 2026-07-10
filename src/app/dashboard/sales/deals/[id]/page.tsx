@@ -10,6 +10,7 @@ import { getAuthContext } from "@/auth/context";
 import { getDealDetail } from "@/services/sales";
 import { listProposalsForDeal } from "@/services/proposals";
 import { getContractRoom } from "@/services/contract";
+import { ensureNdaForDeal } from "@/services/agreements";
 import { getDealProcess } from "@/services/process";
 import { meetingsForDeal, syncIfStale } from "@/services/meetings";
 import { zoomConfigured } from "@/services/integrations/zoom";
@@ -22,6 +23,7 @@ import { DealFieldsForm } from "@/components/DealEditor";
 import { DiscoveryPanel } from "@/components/DiscoveryPanel";
 import { ProposalsSection } from "@/components/ProposalsSection";
 import { ContractRoom } from "@/components/ContractRoom";
+import { NdaStrip } from "@/components/NdaStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +39,14 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   });
   const { deal, org, owner, contact, provenance } = detail;
   await syncIfStale(ctx); // keep meeting times/attendee responses fresh (Google's truth)
-  const [proposals, room, process, meetings, connection, zoomReady] = await Promise.all([
+  const [proposals, room, process, meetings, connection, zoomReady, nda] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
     getContractRoom(ctx, deal.id),
     getDealProcess(ctx, deal.id),
     meetingsForDeal(ctx, deal.id),
     calendarConnection(ctx.user.id),
     zoomConfigured(),
+    ensureNdaForDeal(ctx, deal.id),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
   // Lost = read-only: no creation paths, no edits — the drawer leads with the post-mortem.
@@ -72,6 +75,12 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     />
   );
   const discoveryNode = <DiscoveryPanel dealId={deal.id} discoveryMd={deal.discoveryMd} canManage={canManage && !lost} />;
+  // NDA at Discovery (10 Jul): protects the conversations about to happen. Committed
+  // onward the full agreement package (ContractRoom) owns the row — no double render.
+  const ndaNode =
+    nda && org && ["discovery", "proposal_out", "negotiating"].includes(deal.stage) ? (
+      <NdaStrip agreement={{ id: nda.id, status: nda.status, signedAt: nda.signedAt?.toISOString() ?? null }} orgId={org.id} canManage={canManage && !lost} />
+    ) : null;
   const agreementsNode = room.available ? (
     <ContractRoom dealId={deal.id} orgId={org?.id ?? ""} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org?.name ?? contact?.name ?? "the new account"} />
   ) : null;
@@ -84,7 +93,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   return (
     <SalesDrawer routeEcho={`sales / deal / ${deal.name}`}>
       <DealDrawer
-        deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck, origin: deal.origin, subStatus: deal.subStatus }}
+        deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck, origin: deal.origin, subStatus: deal.subStatus, projectId: deal.projectId }}
         org={org ? { id: org.id, name: org.name, status: org.status } : null}
         owner={owner ? { name: owner.name } : null}
         contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
@@ -120,6 +129,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         proposalCtaNode={proposalCtaNode}
         discoveryNode={discoveryNode}
         agreementsNode={agreementsNode}
+        ndaNode={ndaNode}
         fieldsNode={fieldsNode}
         canManage={canManage}
         isAdmin={ctx.isAdmin}

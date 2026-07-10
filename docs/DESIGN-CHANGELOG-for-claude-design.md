@@ -779,3 +779,44 @@ vanish with no way back. Now:
 - A filled grey **"n/a — restore"** pill brings the row back to needed — same
   one-row-shape / pill-toggles-in-place language as Send/Sent and Signed.
 - The package counter (N / M) counts only active rows, unchanged.
+
+# Update — 2026-07-10 (system evaluation round: navigation spine + process seams)
+
+Founder asked for a veteran-sales evaluation of opportunity → won → project.
+Verdict: the architecture is right (sales nudges, delivery gates); the fixes
+are seams and navigation. Fifteen changes shipped:
+
+**Navigation spine** — the chain now walks backwards:
+- Deal drawer: contact name links to the contact page (header + Contact card);
+  "Project →" appears in the meta line once the project exists.
+- Account page: contact rows link to contact pages; a "History" list under
+  Open deals shows won/lost deals with links (was timeline text only).
+- Project page: breadcrumb goes to /dashboard/projects (was Home) and gained
+  the account link + "from deal: {name} →" back to the originating deal.
+  Phase page breadcrumb fixed the same way.
+- Proposal editor: the org name in the kicker links to the account.
+- Stale /dashboard/sales/leads redirect now targets a real filter (?filter=new);
+  staff nav dropped the dead "Files (soon)" label; dead BackButton deleted.
+
+**Process seams:**
+- **NDA at Discovery** — the deal drawer (Discovery → Negotiating, account
+  present) shows a Mutual NDA strip: status subline, View doc →, Send/Signed
+  pills. Seeds lazily (`ensureNdaForDeal`); the Committed package inherits the
+  row, so an early signature shows as already done. Rationale: the NDA protects
+  discovery conversations — at Committed it protected nothing.
+- **Create project → names unsigned paper** — the confirm dialog lists the
+  still-unsigned docs ("⚠ Still unsigned: Master services agreement, …").
+  Warn, never block. (Dead pendingDocsForDeal helper replaced.)
+- **SOW doc drives the agreement row (one-way)** — marking the contract doc
+  sent/executed flips the deal's commercial/SOW row to sent/signed. The two
+  contract systems can no longer disagree. DocuSign webhooks replace this later.
+- **Won-by-drag guarded** — dragging a project-less deal to Won bounces with
+  "use Create project →" (it marks the deal won and starts delivery); the drag
+  path skipped org activation + project creation entirely.
+- **Contact pages merged** — the dump + AI scout report moved onto
+  /dashboard/contacts/[id] (with the notes quote + admin delete); the old
+  drawer workspace at /dashboard/sales/contacts/[id] redirects there. One page
+  per person.
+- **Honest project status** — labels derive from phases (setting up / quoting /
+  active / complete) on the projects list, project page, and account rail;
+  projects.status was dead bookkeeping stuck at "discovery" forever.
