@@ -176,7 +176,8 @@ export default async function StagePage({ params }: { params: Promise<{ id: stri
               deliverables={lineItems.map((li) => ({ id: li.id, description: li.description }))}
               stageId={stage.id}
               canManage={canManageTasks}
-              canDelete={canManageTasks && stage.status === "draft"}
+              // Dev tool: delete regardless of stage status while we're rebuilding data.
+              canDelete={canManageTasks}
             />
           </section>
 

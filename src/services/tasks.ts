@@ -289,14 +289,14 @@ async function loadTaskForManage(ctx: AuthContext, taskId: string) {
   return task;
 }
 
-/** Delete a task (admin/lead) — only before the quote is sent (stage still draft). */
+/**
+ * Delete a task (admin/lead), any stage status. DEV TOOL — hard delete while
+ * building; the product path will be cancel-with-reasoning once the delete
+ * affordances come out.
+ */
 export async function deleteTask(ctx: AuthContext, taskId: string): Promise<void> {
   const task = await loadTaskForManage(ctx, taskId);
   const db = getDb();
-  const stage = task.stageId ? await db.query.stages.findFirst({ where: eq(schema.stages.id, task.stageId) }) : null;
-  if (!stage || stage.status !== "draft") {
-    throw new StageError("INVALID_STATE", "Tasks can only be deleted before the quote is sent.");
-  }
   await db.batch([
     db.delete(schema.taskAssignments).where(eq(schema.taskAssignments.taskId, taskId)),
     db.delete(schema.taskSubtasks).where(eq(schema.taskSubtasks.taskId, taskId)),
@@ -304,6 +304,28 @@ export async function deleteTask(ctx: AuthContext, taskId: string): Promise<void
     db.delete(schema.tasks).where(eq(schema.tasks.id, taskId)),
     db.insert(schema.auditLog).values(
       buildAudit({ organizationId: task.organizationId, actorUserId: ctx.user.id, action: "task.deleted", entityType: "task", entityId: taskId, metadata: { title: task.title } }),
+    ),
+  ]);
+}
+
+/** Flip a task between client-visible and internal. Admin/lead only. */
+export async function setTaskVisibility(ctx: AuthContext, taskId: string, visibility: string): Promise<void> {
+  if (visibility !== "client_visible" && visibility !== "internal") {
+    throw new StageError("VALIDATION", "Unknown visibility.");
+  }
+  const task = await loadTaskForManage(ctx, taskId);
+  const db = getDb();
+  await db.batch([
+    db.update(schema.tasks).set({ visibility, updatedAt: new Date() }).where(eq(schema.tasks.id, taskId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: task.organizationId,
+        actorUserId: ctx.user.id,
+        action: "task.visibility",
+        entityType: "task",
+        entityId: taskId,
+        metadata: { title: task.title, visibility },
+      }),
     ),
   ]);
 }

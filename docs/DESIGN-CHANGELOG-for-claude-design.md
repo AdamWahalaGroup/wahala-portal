@@ -696,3 +696,18 @@ place when done):
 Founder QA: no visible way back from the contract/SOW page. The mono breadcrumb's
 deal-name link existed but wasn't discoverable — a cobalt "← Back to proposal"
 link now sits directly under the breadcrumb, above the document.
+
+# Update — 2026-07-10 (Tasks: visibility toggle + delete any task)
+
+Founder QA on the phase page's Tasks section, two gaps:
+
+- **Visibility is now editable after creation.** For admins/leads, the static
+  Client-visible / Internal-only marker on each task row is a clickable pill
+  (same colors, trailing ⇄ glyph, tooltip explains the flip). One click flips
+  client_visible ↔ internal via `PATCH /api/tasks/:id`; audit-logged
+  (`task.visibility`). Clients still see the static marker.
+- **Tasks can be deleted at any stage status.** The 🗑 affordance (and the
+  service) previously refused past draft ("before the quote is sent") — that
+  gate is gone, with a confirm dialog added ("Delete … and its
+  subtasks/notes?"). DEV TOOL, same as the deal/contact/account deletes: hard
+  deletes come out later in favor of cancel-with-reasoning.

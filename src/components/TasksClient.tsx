@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { VisibilityMarker } from "@/components/VisibilityMarker";
+import { VISIBILITY } from "@/lib/theme";
 
 type Subtask = { id: string; title: string; done: boolean };
 type Note = { id: string; author: string; body: string; createdAt: string | Date };
@@ -283,7 +284,32 @@ function TaskRow({
             ) : (
               <StatusPill status={task.status} />
             )}
-            <VisibilityMarker visibility={task.visibility} />
+            {canManage ? (
+              <button
+                type="button"
+                onClick={() => call(`/api/tasks/${task.id}`, "PATCH", { visibility: task.visibility === "internal" ? "client_visible" : "internal" })}
+                title={task.visibility === "internal" ? "Internal only — click to show to the client" : "Client-visible — click to make internal"}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: VISIBILITY[task.visibility].bg,
+                  color: VISIBILITY[task.visibility].text,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  cursor: "pointer",
+                }}
+              >
+                {task.visibility === "internal" ? "⊘ " : ""}
+                {VISIBILITY[task.visibility].label} ⇄
+              </button>
+            ) : (
+              <VisibilityMarker visibility={task.visibility} />
+            )}
             {task.changes.length > 0 && (
               <span style={{ fontSize: 10.5, fontWeight: 700, color: "#b45309", background: "#fff7ed", border: "1px solid #fadcb4", borderRadius: 999, padding: "1px 7px" }}>
                 ⚡ {task.changes.length} change{task.changes.length === 1 ? "" : "s"}
@@ -301,7 +327,7 @@ function TaskRow({
         {canDelete && (
           <button
             type="button"
-            onClick={() => call(`/api/tasks/${task.id}`, "DELETE")}
+            onClick={() => window.confirm(`Delete "${task.title}" and its subtasks/notes? This can't be undone.`) && call(`/api/tasks/${task.id}`, "DELETE")}
             title="Delete task"
             aria-label="Delete task"
             style={{ background: "transparent", border: "none", color: "var(--muted-line)", cursor: "pointer", fontSize: 14, flex: "none", marginTop: 2 }}
