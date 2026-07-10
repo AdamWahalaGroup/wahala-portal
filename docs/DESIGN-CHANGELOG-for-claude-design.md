@@ -690,3 +690,9 @@ place when done):
   **✓ Paid**. Deposit pills do NOT toggle back — the bookkeeping API is one-way
   (markSent/markPaid); filled deposit pills render as static chips.
 - doneRow is fully retired from the contract room.
+
+# Update — 2026-07-10 (SOW page: explicit "← Back to proposal")
+
+Founder QA: no visible way back from the contract/SOW page. The mono breadcrumb's
+deal-name link existed but wasn't discoverable — a cobalt "← Back to proposal"
+link now sits directly under the breadcrumb, above the document.

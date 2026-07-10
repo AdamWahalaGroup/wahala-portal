@@ -43,6 +43,13 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         <Link href="/dashboard/proposals" style={{ color: "inherit" }}>Proposals</Link> /{" "}
         <Link href={`/dashboard/proposals/${p.id}`} style={{ color: "inherit" }}>{p.dealName}</Link> / contract
       </div>
+      {/* The mono breadcrumb alone wasn't discoverable (founder QA, 10 Jul) — explicit way back. */}
+      <Link
+        href={`/dashboard/proposals/${p.id}`}
+        style={{ display: "inline-block", margin: "10px 0 4px", fontSize: 13, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}
+      >
+        ← Back to proposal
+      </Link>
       <ContractDoc
         proposalId={p.id}
         organizationName={p.organizationName}
