@@ -820,3 +820,31 @@ are seams and navigation. Fifteen changes shipped:
 - **Honest project status** — labels derive from phases (setting up / quoting /
   active / complete) on the projects list, project page, and account rail;
   projects.status was dead bookkeeping stuck at "discovery" forever.
+
+# Update — 2026-07-12 (AGENT LAYER Round 1 — on the `agent-layer` branch, NOT deployed)
+
+The next big part begins. Full design in docs/AGENT-LAYER-DESIGN.md (read that
+first — it's the shared vocabulary: pulse / MMA / suggestion box / budget /
+park). R1 ships the grounded pulse:
+
+- **Money meter:** every AI call is persisted to `ai_runs` (agent, tokens, cost,
+  trigger) and rolls into `deals.agentSpendCents`. The drawer shows
+  "agents $0.03 of $30.00" — budget = max($2, 0.4% × value × stage-anchor).
+- **Fit score (0–10)** — "value to the business" (form/fit/function/Wahala
+  value), AI-scored by the new `deal_pulse` agent with a rationale tooltip;
+  chips on the drawer, list view, and Home.
+- **Priority** = fit × value × stage-anchor × momentum (reschedules and silence
+  drag it down; `meetings.rescheduleCount` now tracks reschedules). Recomputed
+  hourly by a new cron tick; the AI pass runs daily (budget-gated, ≤3
+  suggestions/deal, skips + notifies when a deal's budget is spent).
+- **Suggestion box** on the deal drawer: dashed cobalt card, "✓ Did it / ✕"
+  per suggestion; owner gets an in-app notification when new ones land.
+- **Home "Work this next"** — top 5 open deals by priority with the one next
+  step. The list view now orders each stage section by priority.
+- Admin can run the pulse on demand: POST /api/admin/pulse.
+- Live smoke on fixtures: 12 deals scored (fit 3–10, sensible spread),
+  20 grounded suggestions, total AI cost $0.0028.
+
+NOT deployed — branch review with Jason first. Migration 0026 pending on prod
++ demo; cron needs `wrangler secret put OPENAI_API_KEY -c cron/wrangler.jsonc`
+at merge time.

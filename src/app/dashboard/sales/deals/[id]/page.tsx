@@ -11,6 +11,9 @@ import { getDealDetail } from "@/services/sales";
 import { listProposalsForDeal } from "@/services/proposals";
 import { getContractRoom } from "@/services/contract";
 import { ensureNdaForDeal } from "@/services/agreements";
+import { listSuggestionsForDeal } from "@/services/suggestions";
+import { getSlaSettings } from "@/services/sla-settings";
+import { dealBudgetCents } from "@/domain/priority";
 import { getDealProcess } from "@/services/process";
 import { meetingsForDeal, syncIfStale } from "@/services/meetings";
 import { zoomConfigured } from "@/services/integrations/zoom";
@@ -24,6 +27,7 @@ import { DiscoveryPanel } from "@/components/DiscoveryPanel";
 import { ProposalsSection } from "@/components/ProposalsSection";
 import { ContractRoom } from "@/components/ContractRoom";
 import { NdaStrip } from "@/components/NdaStrip";
+import { SuggestionsCard } from "@/components/SuggestionsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +43,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   });
   const { deal, org, owner, contact, provenance } = detail;
   await syncIfStale(ctx); // keep meeting times/attendee responses fresh (Google's truth)
-  const [proposals, room, process, meetings, connection, zoomReady, nda] = await Promise.all([
+  const [proposals, room, process, meetings, connection, zoomReady, nda, suggestions, sla] = await Promise.all([
     listProposalsForDeal(ctx, deal.id),
     getContractRoom(ctx, deal.id),
     getDealProcess(ctx, deal.id),
@@ -47,6 +51,8 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     calendarConnection(ctx.user.id),
     zoomConfigured(),
     ensureNdaForDeal(ctx, deal.id),
+    listSuggestionsForDeal(ctx, deal.id),
+    getSlaSettings(),
   ]);
   const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
   // Lost = read-only: no creation paths, no edits — the drawer leads with the post-mortem.
@@ -81,6 +87,15 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     nda && org && ["discovery", "proposal_out", "negotiating"].includes(deal.stage) ? (
       <NdaStrip agreement={{ id: nda.id, status: nda.status, signedAt: nda.signedAt?.toISOString() ?? null }} orgId={org.id} canManage={canManage && !lost} />
     ) : null;
+  // The suggestion box — the pulse's concrete next actions (empty → renders nothing).
+  const suggestionsNode = (
+    <SuggestionsCard
+      suggestions={suggestions.map((s) => ({ id: s.id, title: s.title, bodyMd: s.bodyMd, createdAt: s.createdAt.toISOString() }))}
+      canManage={canManage && !lost}
+    />
+  );
+  // Money meter: what the agents have spent vs this deal's budget.
+  const budgetCents = dealBudgetCents(deal.valueCents, sla.probabilityAnchors[deal.stage] ?? null);
   const agreementsNode = room.available ? (
     <ContractRoom dealId={deal.id} orgId={org?.id ?? ""} room={room} canManage={canManage} isAdmin={ctx.isAdmin} orgName={org?.name ?? contact?.name ?? "the new account"} />
   ) : null;
@@ -94,6 +109,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
     <SalesDrawer routeEcho={`sales / deal / ${deal.name}`}>
       <DealDrawer
         deal={{ id: deal.id, name: deal.name, valueCents: deal.valueCents, stage: deal.stage, daysInStage: deal.daysInStage, stuck: deal.stuck, origin: deal.origin, subStatus: deal.subStatus, projectId: deal.projectId }}
+        agent={{ fitScore: deal.fitScore, fitRationaleMd: deal.fitRationaleMd, spendCents: deal.agentSpendCents, budgetCents }}
         org={org ? { id: org.id, name: org.name, status: org.status } : null}
         owner={owner ? { name: owner.name } : null}
         contact={contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone } : null}
@@ -130,6 +146,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         discoveryNode={discoveryNode}
         agreementsNode={agreementsNode}
         ndaNode={ndaNode}
+        suggestionsNode={suggestionsNode}
         fieldsNode={fieldsNode}
         canManage={canManage}
         isAdmin={ctx.isAdmin}

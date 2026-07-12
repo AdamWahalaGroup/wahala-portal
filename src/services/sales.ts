@@ -346,6 +346,9 @@ export type DealItem = {
   readinessScore: number | null;
   /** Set once Create project → ran — the board's won-drag guard reads it. */
   projectId: string | null;
+  /** Agent layer: business-fit 0–10 + the derived priority (Home queue / list sort). */
+  fitScore: number | null;
+  priorityScore: number | null;
 };
 
 async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealItem[]> {
@@ -451,6 +454,8 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
       readinessScore: d.readinessScore,
       projectId: d.projectId,
+      fitScore: d.fitScore,
+      priorityScore: d.priorityScore,
     };
   });
 }
@@ -638,6 +643,7 @@ export async function deleteDeal(ctx: AuthContext, dealId: string): Promise<void
     db.delete(schema.processEvents).where(eq(schema.processEvents.dealId, dealId)),
     db.delete(schema.contractItems).where(eq(schema.contractItems.dealId, dealId)),
     db.delete(schema.agreements).where(eq(schema.agreements.dealId, dealId)),
+    db.delete(schema.suggestions).where(eq(schema.suggestions.dealId, dealId)),
     db.update(schema.meetings).set({ dealId: null }).where(eq(schema.meetings.dealId, dealId)),
     db.delete(schema.auditLog).where(and(eq(schema.auditLog.entityType, "deal"), eq(schema.auditLog.entityId, dealId))),
     db.delete(schema.deals).where(eq(schema.deals.id, dealId)),
@@ -677,6 +683,11 @@ export type DealDetail = {
     postMortemMd: string | null;
     /** Set once Create project → ran — the drawer's Project → link. */
     projectId: string | null;
+    /** Agent layer: fit chip + money meter (docs/AGENT-LAYER-DESIGN.md). */
+    fitScore: number | null;
+    fitRationaleMd: string | null;
+    priorityScore: number | null;
+    agentSpendCents: number;
   };
   /** Null until the account exists (account-less opportunity). */
   org: { id: string; name: string; status: string } | null;
@@ -779,6 +790,10 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       readinessScore: deal.readinessScore,
       postMortemMd: deal.postMortemMd,
       projectId: deal.projectId,
+      fitScore: deal.fitScore,
+      fitRationaleMd: deal.fitRationaleMd,
+      priorityScore: deal.priorityScore,
+      agentSpendCents: deal.agentSpendCents,
     },
     org: org ? { id: org.id, name: org.name, status: org.status } : null,
     owner: owner ? { id: owner.id, name: owner.name } : null,

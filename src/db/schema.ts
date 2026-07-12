@@ -326,6 +326,16 @@ export const deals = sqliteTable(
     readinessScore: real("readiness_score"),
     // Auto post-mortem written when the deal is dropped on Lost (frame 40).
     postMortemMd: text("post_mortem_md"),
+    // Agent layer (docs/AGENT-LAYER-DESIGN.md): fit = "value to the business"
+    // 0–10, AI-scored by the deal pulse with a shown rationale, manually
+    // overridable. priorityScore is DERIVED (fit × value × anchor × momentum)
+    // but denormalized so the Home queue / list view sort without recompute.
+    // agentSpendCents = running total of ai_runs cost — the budget meter.
+    fitScore: real("fit_score"),
+    fitRationaleMd: text("fit_rationale_md"),
+    fitScoredAt: integer("fit_scored_at", { mode: "timestamp" }),
+    priorityScore: real("priority_score"),
+    agentSpendCents: real("agent_spend_cents").notNull().default(0),
     // Rough deal value for pipeline totals — a gut number, NOT a quote. Quoting
     // stays on stages/phases where the price authority rules live.
     valueCents: integer("value_cents").notNull().default(0),
@@ -461,6 +471,9 @@ export const meetings = sqliteTable(
     videoProvider: text("video_provider", { enum: VIDEO_PROVIDERS }),
     startUrl: text("start_url"), // Zoom host link (portal-scheduled only)
     status: text("status", { enum: MEETING_STATUSES }).notNull().default("upcoming"),
+    // Momentum signal (agent layer): bumped on every reschedule — "missed
+    // meetings should absolutely drop the opportunity lower."
+    rescheduleCount: integer("reschedule_count").notNull().default(0),
     /** Auto-match suggestion for the inbox ("looks like Harbor Point — domain match"). */
     suggestedOrganizationId: text("suggested_organization_id"),
     suggestionReason: text("suggestion_reason"),
@@ -866,7 +879,7 @@ export const auditLog = sqliteTable("audit_log", {
 });
 
 // ---- Notifications (in-app nudges from the scheduled SLA job; staff-facing) ----
-export const NOTIFICATION_KINDS = ["deal_stuck", "proposal_followup", "lead_overdue"] as const;
+export const NOTIFICATION_KINDS = ["deal_stuck", "proposal_followup", "lead_overdue", "suggestion", "budget_exhausted"] as const;
 export const notifications = sqliteTable(
   "notifications",
   {
@@ -883,6 +896,49 @@ export const notifications = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("notifications_user_idx").on(t.userId, t.readAt)],
+);
+
+// ---- AI runs (agent layer, docs/AGENT-LAYER-DESIGN.md) ----
+// Every AI call, persisted: the money meter behind per-deal budgets. costCents
+// is the same local estimate DraftUsage carries — approximate, but consistent.
+export const AI_RUN_TRIGGERS = ["user", "cron", "webhook"] as const;
+export const aiRuns = sqliteTable(
+  "ai_runs",
+  {
+    id: pk(),
+    agentKey: text("agent_key").notNull(), // registry key (lead_scout, deal_pulse, …)
+    trigger: text("trigger", { enum: AI_RUN_TRIGGERS }).notNull().default("user"),
+    dealId: text("deal_id"), // no FK: runs outlive dev-deleted deals
+    contactId: text("contact_id"),
+    organizationId: text("organization_id"),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costCents: real("cost_cents").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("ai_runs_deal_idx").on(t.dealId), index("ai_runs_agent_idx").on(t.agentKey, t.createdAt)],
+);
+
+// ---- Suggestions (the suggestion box — how agents talk to humans) ----
+// Agents write concrete next actions here; humans do or dismiss. Agents never
+// act on the outside world themselves.
+export const SUGGESTION_STATUSES = ["open", "done", "dismissed"] as const;
+export const suggestions = sqliteTable(
+  "suggestions",
+  {
+    id: pk(),
+    dealId: text("deal_id").notNull().references(() => deals.id),
+    organizationId: text("organization_id"),
+    agentKey: text("agent_key").notNull(),
+    title: text("title").notNull(),
+    bodyMd: text("body_md"),
+    status: text("status", { enum: SUGGESTION_STATUSES }).notNull().default("open"),
+    resolvedByUserId: text("resolved_by_user_id").references(() => users.id),
+    resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("suggestions_deal_idx").on(t.dealId, t.status)],
 );
 
 // ---- relations (for Drizzle's query API) ----

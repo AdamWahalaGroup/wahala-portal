@@ -232,6 +232,7 @@ export async function handleTranscriptCompleted(
         deal,
         { title: meeting.title, transcriptMd: transcript, recordedAt, durationMin },
         meeting.createdByUserId ?? meeting.syncedByUserId,
+        "webhook",
       );
       await db.update(schema.meetings).set({ status: "digest_ready", callId, transcriptMd: null }).where(eq(schema.meetings.id, meeting.id));
       return { outcome: "ingested" };

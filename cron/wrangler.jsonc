@@ -8,12 +8,14 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
 
-  // Daily at 13:00 UTC (~9am ET). The dynamic adminDigest cadence (off/monday/daily)
-  // is enforced inside runNudges, so a single daily trigger honours whatever the admin set.
-  "triggers": { "crons": ["0 13 * * *"] },
+  // Daily 13:00 UTC (~9am ET): pulse AI pass + nudges/digest. Hourly: the free
+  // deterministic pulse tick (momentum/priority). index.ts branches on controller.cron.
+  "triggers": { "crons": ["0 13 * * *", "30 * * * *"] },
 
   // EMAIL_FROM must be on the domain onboarded to Email Sending (wahala-services.com).
-  "vars": { "EMAIL_FROM": "login@wahala-services.com" },
+  // OPENAI_API_KEY is a SECRET: wrangler secret put OPENAI_API_KEY -c cron/wrangler.jsonc
+  // (until set, the pulse AI pass is silently off; the tick still runs).
+  "vars": { "EMAIL_FROM": "login@wahala-services.com", "AI_DRAFT_MODEL": "gpt-4o-mini" },
 
   // Same D1 database + Email binding as the main app (a Worker can share bindings).
   "d1_databases": [

@@ -183,6 +183,13 @@
       "when": 1783597780874,
       "tag": "0025_massive_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1783886905431,
+      "tag": "0026_glorious_ultimatum",
+      "breakpoints": true
     }
   ]
 }

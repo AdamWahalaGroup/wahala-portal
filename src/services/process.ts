@@ -35,6 +35,7 @@ import {
 } from "@/domain/process";
 import { getDraftProvider, type DraftUsage } from "@/services/ai/provider";
 import { resolveAgentConfig } from "@/services/ai/agent-config";
+import { recordAiRun } from "@/services/ai/usage";
 
 type ProcessEventKind = (typeof schema.PROCESS_EVENT_KINDS)[number];
 
@@ -171,6 +172,7 @@ export async function ingestCallCore(
   deal: typeof schema.deals.$inferSelect,
   input: { title: string; transcriptMd: string; recordedAt?: string | Date; durationMin?: number | null },
   actorUserId: string | null,
+  trigger: "user" | "webhook" = "user",
 ): Promise<{ callId: string; readiness: number; fieldsExtracted: number; usage: DraftUsage }> {
   const title = input.title?.trim();
   const transcript = input.transcriptMd?.trim();
@@ -234,6 +236,7 @@ export async function ingestCallCore(
     readinessScore: readiness,
     metadata: { callId, title, fieldsImproved: output.fieldsImproved },
   });
+  await recordAiRun(db, { agentKey: "package_extractor", trigger, dealId, organizationId: deal.organizationId, ...usage });
 
   return { callId, readiness, fieldsExtracted: output.fieldsImproved, usage };
 }

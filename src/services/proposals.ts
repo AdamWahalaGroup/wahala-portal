@@ -32,6 +32,7 @@ import {
 } from "@/domain/proposal-math";
 import { assertSalesManager } from "@/services/sales";
 import { draftProposalProse } from "@/services/ai/proposal";
+import { recordAiRun } from "@/services/ai/usage";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 import type { DraftUsage } from "@/services/ai/provider";
@@ -477,6 +478,7 @@ export async function roughDraftProposal(
       }),
     ),
   ]);
+  if (usage) await recordAiRun(db, { agentKey: "proposal", dealId, organizationId: deal.organizationId, ...usage });
   return { proposalId, usage };
 }
 

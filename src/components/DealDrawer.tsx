@@ -63,6 +63,8 @@ export function DealDrawer({
   discoveryNode,
   agreementsNode,
   ndaNode = null,
+  suggestionsNode = null,
+  agent = null,
   fieldsNode,
   canManage,
   isAdmin = false,
@@ -84,6 +86,10 @@ export function DealDrawer({
   agreementsNode: React.ReactNode;
   /** NDA strip (Discovery → Negotiating) — the paper that belongs BEFORE committed. */
   ndaNode?: React.ReactNode;
+  /** The suggestion box (deal pulse) — renders nothing when empty. */
+  suggestionsNode?: React.ReactNode;
+  /** Agent layer chips: fit score + the money meter (docs/AGENT-LAYER-DESIGN.md). */
+  agent?: { fitScore: number | null; fitRationaleMd: string | null; spendCents: number; budgetCents: number } | null;
   fieldsNode: React.ReactNode;
   canManage: boolean;
   /** DEV TOOL — renders the hard-delete affordance (admin only; comes out later). */
@@ -212,6 +218,35 @@ export function DealDrawer({
           </>
         )}
       </div>
+      {agent && (agent.fitScore !== null || agent.spendCents > 0) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          {agent.fitScore !== null && (
+            <span
+              className="mono"
+              title={agent.fitRationaleMd ?? "Business-fit score from the deal pulse (form/fit/function)"}
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                borderRadius: 999,
+                padding: "2px 9px",
+                background: agent.fitScore >= 7 ? "#DCF5E3" : agent.fitScore >= 4 ? "#FCEFDC" : "#FBE3E3",
+                color: agent.fitScore >= 7 ? "#15803D" : agent.fitScore >= 4 ? "#B45309" : "#B91C1C",
+                cursor: "help",
+              }}
+            >
+              fit {agent.fitScore}/10
+            </span>
+          )}
+          <span
+            className="mono"
+            title="What the AI agents have spent on this deal vs its budget (scales with value × stage)"
+            style={{ fontSize: 10, color: agent.spendCents >= agent.budgetCents ? "#B45309" : "var(--muted-line)", cursor: "help" }}
+          >
+            agents ${(agent.spendCents / 100).toFixed(2)} of ${(agent.budgetCents / 100).toFixed(2)}
+            {agent.spendCents >= agent.budgetCents ? " · budget spent" : ""}
+          </span>
+        </div>
+      )}
       {deal.origin === "spawned_from_project" && (
         <div className="mono" style={{ display: "inline-block", fontSize: 9.5, fontWeight: 700, background: "#EEF0FE", color: "#2536C4", border: "1px solid #DDE1FB", padding: "3px 9px", borderRadius: 6, marginTop: 8 }}>
           ◆ born from paid discovery — spawned at project closeout
@@ -235,6 +270,7 @@ export function DealDrawer({
 
       {/* Proposal CTA — directly under the value (prototype layout; read-only shortcut when lost) */}
       <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
+      {suggestionsNode && <div style={{ marginTop: 10 }}>{suggestionsNode}</div>}
       {ndaNode && <div style={{ marginTop: 10 }}>{ndaNode}</div>}
 
       {/* Stage stepper over the open funnel */}

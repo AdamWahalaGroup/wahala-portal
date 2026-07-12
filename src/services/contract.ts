@@ -20,6 +20,7 @@ import { createMagicToken } from "@/auth/magic-link";
 import { sendInviteEmail } from "@/auth/email";
 import { isDevAuth } from "@/auth/server-env";
 import type { DraftUsage } from "@/services/ai/provider";
+import { recordAiRun } from "@/services/ai/usage";
 
 export type ContractRoom = {
   available: boolean; // an approved proposal exists (or the deal already reached committed/won)
@@ -274,6 +275,7 @@ export async function executeContract(
     files: [],
     pastedText: sources.join("\n\n---\n\n"),
   });
+  await recordAiRun(db, { agentKey: "project_draft", dealId: deal.id, organizationId, ...usage });
 
   // Force the skeleton: names + amounts from the proposal, deliverables from the AI
   // (merged by position; a single-phase deal absorbs everything the AI drafted).

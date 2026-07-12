@@ -74,6 +74,14 @@ export const AGENT_DEFS: AgentDef[] = [
     defaultModel: aiDraftModel,
     supportsReasoning: true,
   },
+  {
+    key: "deal_pulse",
+    label: "Deal pulse (fit + suggestions)",
+    description:
+      "The per-deal conductor: runs on the daily cron, scores business FIT 0–10 (form/fit/function/Wahala value) and drops ≤3 concrete suggestions in the deal's suggestion box. Budget-capped per deal.",
+    defaultModel: aiDraftModel,
+    supportsReasoning: true,
+  },
 ];
 
 export type AgentConfig = {

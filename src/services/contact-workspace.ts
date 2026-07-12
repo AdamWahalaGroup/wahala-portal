@@ -17,6 +17,7 @@ import { assertSalesManager } from "@/services/sales";
 import { webRecon, scoutLead } from "@/services/ai/lead-scout";
 import { securityLog } from "@/lib/security-log";
 import type { DraftPart, DraftUsage } from "@/services/ai/provider";
+import { recordAiRun } from "@/services/ai/usage";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB per file (upload cap, same as project files)
 const AI_IMAGE_CAP = 4 * 1024 * 1024; // per-file caps for what gets FED to the model
@@ -309,6 +310,7 @@ export async function analyzeContact(
   }).where(eq(schema.contacts.id, contactId));
   // No audit row: audit_log requires an organization id and triage contacts may be
   // pre-account. aiAnalyzedAt + the stored markdown are the record of the run.
+  await recordAiRun(db, { agentKey: "lead_scout", contactId, organizationId: contact.organizationId, ...totalUsage });
 
   return { analysisMd: result.analysisMd, score: result.score, verdict: result.verdict, usage: totalUsage, webUsed: !!recon };
 }

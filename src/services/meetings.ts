@@ -8,7 +8,7 @@
  * work" suppresses and teaches the matcher. Zoom is an optional layer — the
  * no-Zoom degraded state is the launch reality.
  */
-import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -410,7 +410,13 @@ export async function rescheduleMeeting(ctx: AuthContext, meetingId: string, sta
   }
   await db
     .update(schema.meetings)
-    .set({ startsAt, endsAt: new Date(startsAt.getTime() + mins * 60_000), status: "upcoming" })
+    .set({
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + mins * 60_000),
+      status: "upcoming",
+      // Momentum signal: reschedules drag the deal's priority down.
+      rescheduleCount: sql`${schema.meetings.rescheduleCount} + 1`,
+    })
     .where(eq(schema.meetings.id, meetingId));
 }
 

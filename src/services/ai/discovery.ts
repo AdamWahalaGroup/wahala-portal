@@ -18,6 +18,7 @@ import { STAGE_META } from "@/domain/sales";
 import { assertSalesManager } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
+import { recordAiRun } from "./usage";
 import { resolveAgentConfig } from "./agent-config";
 
 type DiscoveryOutput = { discoveryMd: string };
@@ -97,6 +98,7 @@ export async function generateDiscovery(
       }),
     ),
   ]);
+  await recordAiRun(db, { agentKey: "discovery", dealId, organizationId: deal.organizationId, ...usage });
 
   return { discoveryMd, usage };
 }

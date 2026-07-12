@@ -113,6 +113,23 @@ function DealRow({ deal, canManage, onMoved }: { deal: DealItem; canManage: bool
           {deal.ownerName ? ` · owner ${deal.ownerName}` : ""}
         </div>
       </div>
+      {deal.fitScore !== null && (
+        <span
+          className="mono"
+          title="Business-fit score from the deal pulse (form / fit / function)"
+          style={{
+            fontSize: 9.5,
+            fontWeight: 800,
+            borderRadius: 999,
+            padding: "2px 8px",
+            flex: "none",
+            background: deal.fitScore >= 7 ? "#DCF5E3" : deal.fitScore >= 4 ? "#FCEFDC" : "#FBE3E3",
+            color: deal.fitScore >= 7 ? "#15803D" : deal.fitScore >= 4 ? "#B45309" : "#B91C1C",
+          }}
+        >
+          fit {deal.fitScore}
+        </span>
+      )}
       {deal.valueCents > 0 && <Money cents={deal.valueCents} style={{ fontWeight: 700, fontSize: 14, flex: "none" }} />}
       <DaysTag days={deal.daysInStage} stuck={deal.stuck} />
       {canManage ? (
@@ -648,9 +665,12 @@ function ListView({ overview, canManage, onMoved }: { overview: SalesOverview; c
                   <p style={{ color: "var(--muted-line)", fontSize: 13, margin: "0 0 2px 20px" }}>—</p>
                 ) : (
                   <div style={{ display: "grid", gap: 8 }}>
-                    {col.deals.map((d) => (
-                      <DealRow key={d.id} deal={d} canManage={canManage} onMoved={onMoved} />
-                    ))}
+                    {/* List view orders by the pulse's priority (kanban stays hand-ordered). */}
+                    {[...col.deals]
+                      .sort((a, b) => (b.priorityScore ?? -1) - (a.priorityScore ?? -1))
+                      .map((d) => (
+                        <DealRow key={d.id} deal={d} canManage={canManage} onMoved={onMoved} />
+                      ))}
                   </div>
                 )}
               </div>
