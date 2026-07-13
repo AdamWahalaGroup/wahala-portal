@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, PACKAGE_FIELDS, type PackageFields } from "./process";
+import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;
@@ -28,7 +28,11 @@ describe("applyManualField", () => {
 
 describe("nextCallPrompts", () => {
   it("has a non-empty prompt for all 10 fields", () => {
-    for (const key of PACKAGE_FIELDS) expect(ASK_PROMPTS[key].length).toBeGreaterThan(10);
+    for (const key of PACKAGE_FIELDS) {
+      expect(ASK_PROMPTS[key].length).toBeGreaterThan(10);
+      expect(PACKAGE_FIELD_GUIDANCE[key].meaning.length).toBeGreaterThan(30);
+      expect(PACKAGE_FIELD_GUIDANCE[key].why.length).toBeGreaterThan(30);
+    }
   });
 
   it("excludes ok fields and keeps PACKAGE_FIELDS order", () => {
