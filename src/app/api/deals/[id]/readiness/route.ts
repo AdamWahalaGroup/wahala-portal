@@ -1,5 +1,5 @@
 /**
- * GET  /api/deals/[id]/readiness — proposal-ready check (frame 39): score, failed
+ * GET  /api/deals/[id]/readiness — solution-clarity and buying-path send check
  *      package checks with verbatim transcript quotes, and the recommendation.
  * POST /api/deals/[id]/readiness — log a nudge outcome:
  *      { outcome: "fired" | "acted" | "overridden" }

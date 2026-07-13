@@ -2,7 +2,7 @@
  * Process service (TRAINING-AND-SCORECARD.md, frames 38–41) — the ONE process
  * model, rendered three ways:
  *   forward  → guidance (training mode: goal rail, package card, next best action)
- *   at a move → nudges (frame 39: proposal-ready check; overrides logged, never blocked)
+ *   at send   → evidence coaching (solution clarity + buying path; overrides logged, never blocked)
  *   backward → measurement (frame 40 post-mortem, frame 41 scorecard)
  *
  * Everything measurable comes from the append-only process_events table — no
@@ -25,7 +25,7 @@ import {
   nextBestActions,
   journeyIndex,
   JOURNEY,
-  PACKAGE_FIELDS,
+  SOLUTION_CLARITY_FIELDS,
   PROPOSAL_READY_AT,
   FOLLOWUP_EXPECTED_DAYS,
   PACKAGE_FIELD_LABELS,
@@ -34,6 +34,8 @@ import {
   type PackageFields,
   type PackageFieldStatus,
   type NextAction,
+  type BuyingPath,
+  buyingPathFrom,
 } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
@@ -90,7 +92,7 @@ export async function recordProcessEvent(input: {
   });
 }
 
-// ---------------------------------------------------------------- package + readiness
+// ---------------------------------------------------------------- package + solution clarity
 
 async function loadPackage(dealId: string): Promise<PackageFields> {
   const row = await getDb().query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
@@ -106,6 +108,7 @@ export type DealProcess = {
   journeyIndex: number;
   goal: string;
   nextActions: NextAction[];
+  buyingPath: BuyingPath;
   calls: {
     id: string;
     title: string;
@@ -128,7 +131,8 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
     db.query.users.findFirst({ where: eq(schema.users.id, ctx.user.id) }),
     db.select({ status: schema.proposals.status, complexityScore: schema.proposals.complexityScore }).from(schema.proposals).where(eq(schema.proposals.dealId, dealId)),
   ]);
-  const readiness = deal.readinessScore;
+  const readiness = readinessFrom(fields);
+  const buyingPath = buyingPathFrom(deal);
   const open = proposals.filter((p) => p.status !== "superseded" && p.status !== "declined");
   const proposalStatus = open.some((p) => p.status === "approved")
     ? ("approved" as const)
@@ -145,7 +149,8 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
     fields,
     journey: JOURNEY,
     journeyIndex: journeyIndex(deal.stage),
-    goal: goalFor(deal.stage, readiness, daysInStage(deal.stageEnteredAt, new Date())),
+    goal: goalFor(deal.stage, readiness, daysInStage(deal.stageEnteredAt, new Date()), buyingPath.status),
+    buyingPath,
     nextActions: nextBestActions({
       stage: deal.stage,
       readiness,
@@ -153,6 +158,7 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
       proposalStatus,
       complexityScore: open[0]?.complexityScore ?? null,
       depositPaid: !!deal.depositPaidAt,
+      buyingPathStatus: buyingPath.status,
     }),
     calls: calls.map((c) => ({
       id: c.id,
@@ -188,9 +194,9 @@ const discoveryAnalysisSchema = {
     packageFields: {
       type: "object",
       additionalProperties: false,
-      required: [...PACKAGE_FIELDS],
+      required: [...SOLUTION_CLARITY_FIELDS],
       properties: Object.fromEntries(
-        PACKAGE_FIELDS.map((k) => [
+        SOLUTION_CLARITY_FIELDS.map((k) => [
           k,
           {
             type: "object",
@@ -308,7 +314,7 @@ export async function ingestCallCore(
   const analysis = normalizeDiscoveryAnalysis({
     ...output,
     discoveryMd: output.discoveryMd.trim(),
-    fieldsImproved: Math.max(0, Math.min(PACKAGE_FIELDS.length, Math.round(output.fieldsImproved))),
+    fieldsImproved: Math.max(0, Math.min(SOLUTION_CLARITY_FIELDS.length, Math.round(output.fieldsImproved))),
   });
   const recommended = recommendedDiscoverySelection(deal, previous, analysis);
   const callId = crypto.randomUUID();
@@ -518,7 +524,7 @@ export async function applyCallReview(
         action: "deal.discovery_review_applied",
         entityType: "deal_call",
         entityId: callId,
-        metadata: { selection, acceptedEvidence, readiness: selection.packageFields.length ? packageResult.readiness : deal.readinessScore },
+        metadata: { selection, acceptedEvidence, solutionClarity: packageResult.readiness },
       }),
     ),
   ];
@@ -533,7 +539,7 @@ export async function applyCallReview(
     );
   }
   await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
-  const readiness = selection.packageFields.length ? packageResult.readiness : deal.readinessScore;
+  const readiness = packageResult.readiness;
   await recordProcessEvent({
     organizationId: deal.organizationId,
     dealId,
@@ -580,7 +586,7 @@ export async function setPackageField(
   input: { status: string; evidence?: string },
 ): Promise<{ readiness: number; field: PackageField }> {
   assertSalesManager(ctx, "set_package_field");
-  if (!(schema.PACKAGE_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown package field.");
+  if (!(SOLUTION_CLARITY_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown solution-clarity field.");
   if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
   const evidence = input.evidence?.trim().slice(0, 500) || null;
 
@@ -627,28 +633,38 @@ export type ReadinessCheck = {
   score: number;
   tone: "green" | "amber" | "red";
   ready: boolean;
+  readyToDraft: boolean;
+  readyToSend: boolean;
+  buyingPath: BuyingPath;
   failed: { field: string; label: string; status: string; evidence: string | null }[];
   recommendation: string;
 };
 
-/** Is this deal proposal-ready? Feeds both the modal (training on) and the inline warning. */
+/** Check separate draft and send evidence thresholds for proposal coaching. */
 export async function readinessCheck(ctx: AuthContext, dealId: string): Promise<ReadinessCheck> {
   assertStaff(ctx, "readiness_check");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const fields = await loadPackage(dealId);
-  const score = deal.readinessScore ?? readinessFrom(fields);
+  const score = readinessFrom(fields);
   const failed = failedChecks(fields);
-  const needsDecisionMaker = failed.some((f) => f.field === "decision_makers");
+  const buyingPath = buyingPathFrom(deal);
+  const readyToDraft = score >= PROPOSAL_READY_AT;
+  const readyToSend = readyToDraft && buyingPath.status === "confirmed";
   return {
     score,
     tone: readinessTone(score),
-    ready: score >= PROPOSAL_READY_AT,
+    ready: readyToSend,
+    readyToDraft,
+    readyToSend,
+    buyingPath,
     failed,
-    recommendation: needsDecisionMaker
-      ? "Stay in Discovery — book a working session WITH the decision maker in the room, and send a pre-meeting questionnaire covering the open fields."
-      : "Stay in Discovery — one more call closing the open fields below, then draft the proposal.",
+    recommendation: !readyToDraft
+      ? "Keep the draft, then close the open solution gaps so scope and price are defensible."
+      : buyingPath.status !== "confirmed"
+        ? "The solution is clear enough to draft. Before sending, confirm the economic buyer, decision process, compelling event, champion, and funded path."
+        : "Solution clarity and the buying path support sending the proposal.",
   };
 }
 
@@ -663,13 +679,14 @@ export async function recordNudgeOutcome(
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const fields = await loadPackage(dealId);
   await recordProcessEvent({
     organizationId: deal.organizationId,
     dealId,
     ownerUserId: deal.ownerUserId,
     actorUserId: ctx.user.id,
     kind: outcome === "fired" ? "nudge_fired" : outcome === "acted" ? "nudge_acted" : "nudge_overridden",
-    readinessScore: deal.readinessScore,
+    readinessScore: readinessFrom(fields),
     metadata: metadata ?? null,
   });
 }
@@ -722,24 +739,23 @@ export async function generatePostMortem(dealId: string, actorUserId: string | n
   const timeline: string[] = [`- **captured** — ${fmt(deal.createdAt)}`];
   for (const m of moves) {
     const label = (s: string | null) => (s && s in STAGE_META ? STAGE_META[s as DealStage].label : (s ?? "?"));
-    timeline.push(`- **${label(m.fromStep)} → ${label(m.toStep)}** — ${fmt(m.createdAt)}${m.readinessScore !== null ? ` · readiness ${m.readinessScore}/10` : ""}`);
+    timeline.push(`- **${label(m.fromStep)} → ${label(m.toStep)}** — ${fmt(m.createdAt)}${m.readinessScore !== null ? ` · solution clarity ${m.readinessScore}/10` : ""}`);
     if (m.toStep === "proposal_out" && m.readinessScore !== null && m.readinessScore < PROPOSAL_READY_AT) {
-      timeline.push(`  ⚠ advanced below proposal-ready (${m.readinessScore}/${PROPOSAL_READY_AT} expected)`);
+      timeline.push(`  ⚠ proposal sent below solution-clarity threshold (${m.readinessScore}/${PROPOSAL_READY_AT} expected)`);
     }
   }
 
   // Findings: cause → consequence → counterfactual, max 3, from real divergences.
   const findings: string[] = [];
-  const dm = fields.decision_makers?.status ?? "missing";
-  if (dm !== "ok") {
+  if (!deal.economicBuyer?.trim()) {
     findings.push(
-      `**Decision maker never identified.** The proposal went to whoever answered${fields.decision_makers?.evidence ? ` (“${fields.decision_makers.evidence}”)` : ""} → nobody inside the account had to say yes → a working session with the named decision maker before drafting would have surfaced the real buyer or disqualified the deal early.`,
+      `**Economic buyer never identified.** The proposal went out without knowing who could authorize the money → nobody inside the account had to say yes → confirming the economic buyer before sending would have surfaced the real buying path or disqualified the deal early.`,
     );
   }
   const advBelow = moves.find((m) => m.toStep === "proposal_out" && m.readinessScore !== null && m.readinessScore < PROPOSAL_READY_AT);
   if (advBelow) {
     findings.push(
-      `**Advanced at ${advBelow.readinessScore}/10 readiness** (expected ≥ ${PROPOSAL_READY_AT}). The proposal was written on a thin package → it argued price instead of the customer's own pain → holding one more discovery call would have either armed the proposal or saved the effort.`,
+      `**Proposal sent at ${advBelow.readinessScore}/10 solution clarity** (expected ≥ ${PROPOSAL_READY_AT}). The proposal was written on thin solution evidence → it argued price instead of the customer's own pain → holding one more discovery call would have either armed the proposal or saved the effort.`,
     );
   }
   if (overrides.length > 0) {
@@ -780,7 +796,7 @@ export async function generatePostMortem(dealId: string, actorUserId: string | n
     ownerUserId: deal.ownerUserId,
     actorUserId,
     kind: "postmortem_created",
-    readinessScore: deal.readinessScore,
+    readinessScore: readinessFrom(fields),
     metadata: { findings: findings.length, reason },
   });
 }
@@ -796,7 +812,7 @@ export type ScorecardRow = {
   won: number;
   lost: number;
   winRatePct: number | null;
-  /** Avg readiness snapshot on FORWARD moves (null = no moves logged). */
+  /** Avg solution-clarity snapshot on forward moves (null = no moves logged). */
   readinessAtAdvance: number | null;
   /** acted / (acted + overridden), percent. */
   nudgeResponsePct: number | null;
@@ -897,8 +913,8 @@ export function scorecardSignals(rows: ScorecardRow[]): { tone: "amber" | "green
   if (low && out.length < 2) {
     out.push({
       tone: "amber",
-      title: `${low.name} — advancing below proposal-ready`,
-      body: `Average readiness at advance is ${low.readinessAtAdvance}/10 (expected ≥ ${PROPOSAL_READY_AT}). Suggest one more discovery call per deal before drafting.`,
+      title: `${low.name} — low solution clarity at advance`,
+      body: `Average solution clarity at advance is ${low.readinessAtAdvance}/10 (expected ≥ ${PROPOSAL_READY_AT}). Ask which missing solution evidence would make scope and price safer.`,
     });
   }
   const strong = rows.find((r) => r.readinessAtAdvance !== null && r.readinessAtAdvance >= PROPOSAL_READY_AT && (r.nudgeResponsePct ?? 0) >= 85);
@@ -906,7 +922,7 @@ export function scorecardSignals(rows: ScorecardRow[]): { tone: "amber" | "green
     out.push({
       tone: "green",
       title: `${strong.name} — top process health`,
-      body: `${strong.readinessAtAdvance}/10 readiness at advance · ${strong.nudgeResponsePct}% nudge response.${strong.trainingMode ? " Suggest turning training mode off next month." : " Worth sharing their discovery routine at the Monday meeting."}`,
+      body: `${strong.readinessAtAdvance}/10 solution clarity at advance · ${strong.nudgeResponsePct}% nudge response.${strong.trainingMode ? " Suggest turning training mode off next month." : " Worth sharing their discovery routine at the Monday meeting."}`,
     });
   }
   return out.slice(0, 2);

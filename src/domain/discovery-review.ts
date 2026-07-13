@@ -13,11 +13,12 @@ import {
   type NextActionCourt,
 } from "./deal-operating-model";
 import {
-  PACKAGE_FIELDS,
+  SOLUTION_CLARITY_FIELDS,
   readinessFrom,
   type PackageField,
   type PackageFieldKey,
   type PackageFields,
+  type SolutionClarityFieldKey,
 } from "./process";
 
 export const DISCOVERY_REVIEW_STATUSES = ["pending", "applied", "dismissed"] as const;
@@ -51,7 +52,7 @@ export type EvidenceSuggestion<T extends string = string> = {
 
 export type DiscoveryAnalysis = {
   discoveryMd: string;
-  packageFields: Record<PackageFieldKey, PackageField>;
+  packageFields: Record<SolutionClarityFieldKey, PackageField> & Partial<Record<PackageFieldKey, PackageField>>;
   fieldsImproved: number;
   qualification: {
     champion: EvidenceSuggestion;
@@ -80,7 +81,7 @@ export type DiscoveryAnalysis = {
 
 export type DiscoveryReviewSelection = {
   applyDiscoveryMd: boolean;
-  packageFields: PackageFieldKey[];
+  packageFields: SolutionClarityFieldKey[];
   qualificationFields: QualificationReviewField[];
   commercialFields: CommercialReviewField[];
   applyFollowUp: boolean;
@@ -113,8 +114,8 @@ export function isCommercialReviewField(value: string): value is CommercialRevie
   return (COMMERCIAL_REVIEW_FIELDS as readonly string[]).includes(value);
 }
 
-export function isPackageFieldKey(value: string): value is PackageFieldKey {
-  return (PACKAGE_FIELDS as readonly string[]).includes(value);
+export function isPackageFieldKey(value: string): value is SolutionClarityFieldKey {
+  return (SOLUTION_CLARITY_FIELDS as readonly string[]).includes(value);
 }
 
 export function sanitizeDiscoverySelection(input: unknown): DiscoveryReviewSelection {
@@ -150,8 +151,8 @@ const rank = { missing: 0, partial: 1, ok: 2 } as const;
 
 export function mergeReviewedPackage(
   current: PackageFields,
-  proposed: Record<PackageFieldKey, PackageField>,
-  selected: PackageFieldKey[],
+  proposed: DiscoveryAnalysis["packageFields"],
+  selected: SolutionClarityFieldKey[],
 ): { fields: PackageFields; readiness: number; fieldsImproved: number } {
   const fields: PackageFields = { ...current };
   let fieldsImproved = 0;
@@ -183,7 +184,7 @@ export function recommendedDiscoverySelection(
   packageFields: PackageFields,
   analysis: DiscoveryAnalysis,
 ): DiscoveryReviewRecommendation {
-  const packageSelection = PACKAGE_FIELDS.filter((key) => {
+  const packageSelection = SOLUTION_CLARITY_FIELDS.filter((key) => {
     const before = packageFields[key]?.status ?? "missing";
     return rank[analysis.packageFields[key].status] > rank[before];
   });

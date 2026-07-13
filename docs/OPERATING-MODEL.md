@@ -41,8 +41,8 @@ postmortems in one account thread.
 One Deal represents one potential commercial engagement. It owns or links to:
 
 - account, contacts, owner, and provenance;
-- qualification evidence;
-- discovery and solution-readiness evidence;
+- buying-path evidence;
+- discovery and solution-clarity evidence;
 - one explicit agreed follow-up or scheduled next meeting;
 - meetings, activity, and grounded AI suggestions;
 - proposals and commercial options;
@@ -55,8 +55,8 @@ One Deal represents one potential commercial engagement. It owns or links to:
 
 | Signal | Question it answers |
 |---|---|
-| Qualification validity | Is there a real, winnable buying motion? |
-| Solution readiness | Do we understand enough to scope and price responsibly? |
+| Buying path | Can this customer credibly champion, approve, and fund the purchase? |
+| Solution clarity | Do we understand enough to scope and price responsibly? |
 | Wahala fit | Is this attractive work for Wahala? |
 | Engagement health | Is the relationship active and reciprocal? |
 | Action urgency | What commitment needs attention now? |

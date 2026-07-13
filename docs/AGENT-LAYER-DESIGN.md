@@ -19,7 +19,7 @@ client communication and commercial actions.
 
 Discovery uses one evidence-ingestion workflow. A transcript or set of meeting
 notes produces a pending analysis containing a proposed long-form memo,
-Discovery Package evidence, qualification evidence, commercial
+Solution-clarity evidence, buying-path evidence, commercial
 classifications, and—only with explicit source evidence—a proposed agreed
 follow-up. The Deal does not change until a staff member reviews the proposal
 and applies selected items. Commercial classifications and follow-ups are
@@ -44,18 +44,23 @@ boundary; adding more agent names does not grant more authority.
 
 ## Independent signals
 
-1. **Discovery readiness (0–10)** measures how complete and evidenced the
-   discovery package is. It is not win probability.
-2. **Wahala fit (0–10)** estimates whether the work is attractive to Wahala,
+1. **Solution clarity (0–10)** measures how complete and evidenced the eight
+   solution fields are. It answers whether Wahala can scope and price
+   responsibly; it is not win probability.
+2. **Buying path (Unverified / Developing / Confirmed)** tracks champion,
+   economic buyer, compelling event, decision process, and funding path. It
+   answers whether the customer can credibly purchase; it is not folded into
+   solution clarity.
+3. **Wahala fit (0–10)** estimates whether the work is attractive to Wahala,
    considering technical fit, client quality, delivery risk, margin potential,
    and reusable IP. AI supplies a rationale and a human may override it.
-3. **Engagement health** is deterministic. It reflects human touches, silence,
+4. **Engagement health** is deterministic. It reflects human touches, silence,
    and meeting reschedules. The database currently retains the internal field
    name `momentumScore` for compatibility.
-4. **Action urgency** is deterministic. Missing, overdue, and due-today agreed
+5. **Action urgency** is deterministic. Missing, overdue, and due-today agreed
    follow-ups rise above future follow-ups. A scheduled meeting counts when no
    separate action is recorded.
-5. **Portfolio attractiveness** combines fit, value, and a stage anchor. It is a
+6. **Portfolio attractiveness** combines fit, value, and a stage anchor. It is a
    relative attention signal, not forecast probability.
 
 The Home queue sorts action urgency first and portfolio attractiveness only as a
@@ -117,7 +122,8 @@ agent fleet.
 - `deal_calls`: source transcript or notes, proposed discovery analysis, review
   status, reviewer, review time, and count of accepted evidence items.
 - `discovery_packages`: only the reviewed evidence accepted as current Deal
-  truth; its completeness determines solution readiness.
+  truth; the eight solution fields determine solution clarity. Buying-path
+  evidence remains on the Deal for compatibility.
 
 The canonical authority boundary remains in
 [`OPERATING-MODEL.md`](OPERATING-MODEL.md); the current queue and qualification

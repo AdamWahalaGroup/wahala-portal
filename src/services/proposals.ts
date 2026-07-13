@@ -15,6 +15,7 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { needsEngineeringReview } from "@/domain/sales";
+import { buyingPathFrom, readinessFrom, type BuyingPathStatus, type PackageFields } from "@/domain/process";
 import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
 import {
   buildOptionShapes,
@@ -56,9 +57,10 @@ export type ProposalDetail = {
   dealId: string;
   dealName: string;
   dealValueCents: number;
-  /** Send-time readiness nudge (09 Jul b delta — the nudge moved to Send). */
+  /** Send-time solution-clarity and buying-path coaching. */
   dealStage: string | null;
   dealReadiness: number | null;
+  dealBuyingPathStatus: BuyingPathStatus;
   discoveryNote: string | null;
   organizationId: string | null;
   organizationName: string;
@@ -284,10 +286,11 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
   const db = getDb();
   const p = await loadProposal(proposalId);
   assertStaffScoped(ctx, p.organizationId, "get_proposal");
-  const [deal, org, options] = await Promise.all([
+  const [deal, org, options, discoveryPackage] = await Promise.all([
     db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) }),
     p.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }) : null,
     loadOptions(proposalId),
+    db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, p.dealId) }),
   ]);
   // Account-less deal: the header/public page carry the CONTACT's name instead.
   const headerContact = !org && deal?.primaryContactId
@@ -300,7 +303,8 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     dealName: deal?.name ?? "Deal",
     dealValueCents: deal?.valueCents ?? 0,
     dealStage: deal?.stage ?? null,
-    dealReadiness: deal?.readinessScore ?? null,
+    dealReadiness: readinessFrom((discoveryPackage?.fields ?? {}) as PackageFields),
+    dealBuyingPathStatus: deal ? buyingPathFrom(deal).status : "unverified",
     discoveryNote: deal?.discoveryNote ?? null,
     organizationId: p.organizationId,
     organizationName: org?.name ?? headerContact?.name ?? "Unknown",

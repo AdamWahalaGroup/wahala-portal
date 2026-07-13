@@ -193,14 +193,15 @@ staff member accepts it.
 Use terse prose/bullets. Preserve still-valid prior facts. Mark every inference
 "(inferred)". Never convert an inference into a fact.
 
-2) packageFields — all ten readiness fields: business_profile, current_workflow,
-pain_points, budget_posture, decision_makers, success_metrics, mvp_priorities,
-timeline, customer_terminology, deferred_scope. For each return status ok/partial/
-missing, one short evidence line, and a source pointer. New evidence may improve a
-field; do not downgrade a prior field merely because this source omitted it.
-fieldsImproved is the count that moved upward.
+2) packageFields — the eight solution-clarity fields: business_profile,
+current_workflow, pain_points, success_metrics, mvp_priorities, timeline,
+customer_terminology, and deferred_scope. For each return status ok/partial/
+missing, one short evidence line, and a source pointer. Timeline here means
+delivery dates, dependencies, and constraints—not the buying decision process.
+New evidence may improve a field; do not downgrade a prior field merely because
+this source omitted it. fieldsImproved is the count that moved upward.
 
-3) qualification — propose champion, economicBuyer, compellingEvent,
+3) qualification (the buying path) — propose champion, economicBuyer, compellingEvent,
 decisionProcess, budgetStatus, and budgetEvidence. Every item has suggested,
 value, evidence, and source. Use suggested=false and value="" without concrete
 support. A friendly contact is not a champion. An economic buyer must have stated
