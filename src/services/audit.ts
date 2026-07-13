@@ -1,5 +1,6 @@
 /**
- * Audit trail helper — accountability is the product (PLAN.md §4, §9).
+ * Audit trail helper — accountability is a core operating principle
+ * (docs/OPERATING-MODEL.md).
  *
  * Returns the row values for an `audit_log` insert so callers can include it in
  * the same `db.batch([...])` as the state change, keeping "what happened" and

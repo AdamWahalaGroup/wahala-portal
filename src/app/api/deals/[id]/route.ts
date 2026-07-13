@@ -6,6 +6,14 @@
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson } from "@/lib/api";
 import { setDealStage, updateDeal, deleteDeal } from "@/services/sales";
+import type {
+  BudgetStatus,
+  DataSensitivity,
+  DeliveryModel,
+  EngagementType,
+  IpDisposition,
+  NextActionCourt,
+} from "@/domain/deal-operating-model";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +30,47 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       notes?: string;
       discoveryMd?: string;
       subStatus?: string | null;
+      engagementType?: EngagementType | null;
+      deliveryModel?: DeliveryModel | null;
+      ipDisposition?: IpDisposition;
+      dataSensitivity?: DataSensitivity;
+      supportExpectation?: string | null;
+      expectedCloseAt?: string | null;
+      nextAction?: string | null;
+      nextActionDueAt?: string | null;
+      nextActionCourt?: NextActionCourt;
+      champion?: string | null;
+      economicBuyer?: string | null;
+      compellingEvent?: string | null;
+      decisionProcess?: string | null;
+      budgetStatus?: BudgetStatus;
+      budgetEvidence?: string | null;
     }>(req);
 
-    if (body.name !== undefined || body.valueCents !== undefined || body.notes !== undefined || body.discoveryMd !== undefined || body.subStatus !== undefined) {
-      await updateDeal(ctx, id, { name: body.name, valueCents: body.valueCents, notes: body.notes, discoveryMd: body.discoveryMd, subStatus: body.subStatus });
+    const fields = {
+      name: body.name,
+      valueCents: body.valueCents,
+      notes: body.notes,
+      discoveryMd: body.discoveryMd,
+      subStatus: body.subStatus,
+      engagementType: body.engagementType,
+      deliveryModel: body.deliveryModel,
+      ipDisposition: body.ipDisposition,
+      dataSensitivity: body.dataSensitivity,
+      supportExpectation: body.supportExpectation,
+      expectedCloseAt: body.expectedCloseAt,
+      nextAction: body.nextAction,
+      nextActionDueAt: body.nextActionDueAt,
+      nextActionCourt: body.nextActionCourt,
+      champion: body.champion,
+      economicBuyer: body.economicBuyer,
+      compellingEvent: body.compellingEvent,
+      decisionProcess: body.decisionProcess,
+      budgetStatus: body.budgetStatus,
+      budgetEvidence: body.budgetEvidence,
+    };
+    if (Object.values(fields).some((value) => value !== undefined)) {
+      await updateDeal(ctx, id, fields);
     }
     if (body.stage !== undefined) {
       await setDealStage(ctx, id, body.stage, body.reason, { override: !!body.override });

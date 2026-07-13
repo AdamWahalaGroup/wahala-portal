@@ -1,12 +1,20 @@
 # Wahala Portal
 
-Internal **CRM + client portal** for **Wahala Group**, a services firm (marketed as software development, but work-agnostic). It runs client relationships and delivers work end-to-end: **staged, pay-as-you-go**, with a dedicated owner per client and transparent, real-time communication.
+Internal **CRM + client portal** for **Wahala Group**, an engineering consulting
+company. It runs product licensing/handoff, modernization, custom builds, paid
+discovery, advisory, and support from first opportunity through delivery.
 
-> 📋 Build plan: [`docs/PLAN.md`](docs/PLAN.md) · Phase 0 setup: [`docs/PHASE-0.md`](docs/PHASE-0.md) · Decisions brief: [`docs/DECISIONS-for-Jason.md`](docs/DECISIONS-for-Jason.md)
+Start with [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md),
+[`docs/SALES-PROCESS.md`](docs/SALES-PROCESS.md), and
+[`docs/ROADMAP.md`](docs/ROADMAP.md). [`docs/README.md`](docs/README.md) is the
+index for all maintained documentation.
 
 ## Core model
 
-- **Project → Stages → Tasks** — Stage = the piece the client pays for (itemized, prepaid; no work before payment); Task = the internal work the Lead Engineer assigns to 1…N engineers (± AI tools).
+- **Account → Contacts → Deals → Projects** — an opportunity is a Deal at `new`;
+  “deals in progress” is a view of its open stages.
+- **Project → Stages → Tasks** — a one-shot engagement has one paid Stage; a
+  phased engagement has several.
 - **Account Owner** (relationship) + **Lead Engineer** (delivery) — one person on small projects, a team on large ones (roster scales 1…N).
 - Clients see **live status, who's doing what, and their own "on you" action items**. Internal-only: meeting recordings, AI digests, cost/margin, anything flagged private.
 
@@ -19,26 +27,38 @@ Internal **CRM + client portal** for **Wahala Group**, a services firm (marketed
 | Database | Cloudflare D1 (SQLite) + Drizzle |
 | Auth | Cloudflare **magic-link** (Cloudflare Email + KV sessions) — no external IdP |
 | Files / media | Cloudflare R2 (with client/internal visibility flag) |
-| Payments | Stripe (hosted checkout + webhooks) |
-| AI (internal, Phase 2) | Anthropic Claude via Cloudflare AI Gateway; Whisper (Workers AI) for transcription |
+| Payments | Manual marks today; hosted checkout/webhooks are roadmap work |
+| AI | Internal, human-gated drafts/suggestions; current runtime uses OpenAI APIs |
 
 ## Status
 
-Phase 0 skeleton aligned to [`docs/PHASE-0.md`](docs/PHASE-0.md) (Workers/OpenNext + D1/Drizzle + KV + R2 + Cloudflare Email + Stripe wiring). Not yet `npm install`ed/built.
+Internal-pilot application with the sales funnel, discovery, proposals,
+agreements, project delivery, client portal, and bounded Deal Pulse implemented.
+It is not yet the authoritative system for binding signatures or reconciled
+payments.
 
 ## Getting started
 
-➡️ **[`docs/PHASE-0.md`](docs/PHASE-0.md)** — scaffold, create D1/KV/R2/Email, wire Stripe, run migrations, run dev.
+```sh
+npm install
+npm run db:migrate:local
+npm run dev
+npx tsc --noEmit
+npm test
+npm run lint
+npx opennextjs-cloudflare build
+```
 
-The data model (the centerpiece) lives in [`src/db/schema.ts`](src/db/schema.ts); see [`docs/PLAN.md`](docs/PLAN.md) §7–§8 for context.
+See [`docs/SETUP.md`](docs/SETUP.md) for local configuration, migrations,
+Cloudflare bindings, and deployment order. The data model lives in
+[`src/db/schema.ts`](src/db/schema.ts).
 
-## Open decision
-
-- The **dollar threshold** above which a quote needs Wahala Admin sign-off (and whether it governs *issuing* a quote vs the client *accepting* one).
+See [`AGENTS.md`](AGENTS.md) for repository invariants and verification commands
+used by Codex and other contributors.
 
 ## Repo layout
 
-- `docs/` — build plan, Phase 0 guide, decisions
+- `docs/` — current business, sales, architecture, setup, and roadmap guidance
 - `src/db/` — Drizzle schema (the data model) + D1 client
 - `src/app/`, `src/middleware.ts` — Next.js app (magic-link auth flow built in Phase 1)
 - `wrangler.jsonc`, `open-next.config.ts`, `next.config.ts`, `drizzle.config.ts` — Cloudflare/OpenNext/Drizzle config

@@ -1,5 +1,5 @@
 /**
- * Agreements — the agreement package (CRM-RESTRUCTURE.md, frame 34). Successor to
+ * Agreements — the agreement package (see docs/SALES-PROCESS.md). Successor to
  * contract_items: MSA/NDA are ACCOUNT-level docs (deal_id kept only for provenance),
  * the commercial agreement / PS terms are per-deal. Once the account's MSA is signed,
  * later deals seed a SOW-only package — the fast lane ("MSA on file · SOW only").

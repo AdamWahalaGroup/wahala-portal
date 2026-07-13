@@ -45,7 +45,7 @@ const ROLE_CAPABILITIES: Record<StageAction, UserRole[]> = {
   start_work: ["wahala_admin", "lead_engineer"],
   resume_work: ["wahala_admin", "lead_engineer"],
   deliver: ["wahala_admin", "lead_engineer"],
-  // Payment: confirmed by Stripe webhook (system path); admins may mark paid manually
+  // Payment: currently recorded manually by admins; provider integration is future work.
   mark_paid: ["wahala_admin"],
   // Client side: approve/reject a quote, formally accept, or ask for revision
   approve_quote: ["client_admin", "client_billing"],

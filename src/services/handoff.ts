@@ -14,6 +14,7 @@ import { generateTaskBreakdown } from "@/services/ai/taskgen";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 import type { DraftUsage } from "@/services/ai/provider";
+import { recordAiRun } from "@/services/ai/usage";
 
 /**
  * AI-break one phase's deliverables into internal tasks. Admin or the project's
@@ -57,6 +58,7 @@ export async function generateTasksForStage(
     projectContextMd: project?.aiContextMd ?? null,
     clientMemoryMd: org?.aiContextMd ?? null,
   });
+  await recordAiRun(db, { agentKey: "taskgen", organizationId: stage.organizationId, ...usage });
 
   const statements: BatchItem<"sqlite">[] = [];
   for (const t of tasks) {

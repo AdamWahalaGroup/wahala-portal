@@ -101,7 +101,7 @@ export function nextCallPrompts(fields: PackageFields): { field: PackageFieldKey
 }
 
 // ---------------------------------------------------------------- explain copy
-// Source of truth = the glossary in docs/brain_storming/synthesis.md. Render the
+// Source of truth = docs/SALES-PROCESS.md. Render the
 // SAME strings everywhere (callouts in training mode, tooltips when it's off).
 
 export const EXPLAIN = {
@@ -119,7 +119,7 @@ export const JOURNEY: { key: string; label: string }[] = [
   { key: "discovery", label: "discovery" },
   { key: "proposal_out", label: "proposal out" },
   { key: "negotiating", label: "negotiating" },
-  { key: "committed", label: "committed" },
+  { key: "committed", label: "contracting" },
   { key: "won", label: "won" },
 ];
 
@@ -162,7 +162,7 @@ export function nextBestActions(input: {
   complexityScore: number | null;
   depositPaid: boolean;
 }): NextAction[] {
-  const { stage, readiness, hasDiscoveryMd, proposalStatus, complexityScore, depositPaid } = input;
+  const { stage, readiness, proposalStatus, complexityScore, depositPaid } = input;
   const list = (items: [string, boolean][]): NextAction[] => items.map(([text, active], i) => ({ n: i + 1, text, active }));
 
   if (stage === "discovery") {
@@ -184,14 +184,14 @@ export function nextBestActions(input: {
     return list([
       ["Follow up before the at-risk clock flags it — silence is a decision too.", proposalStatus === "sent"],
       ["Get a real answer: approve, decline, or a named objection to negotiate.", false],
-      ["On approval the deal moves to Committed automatically.", false],
+      ["On approval the deal moves to Contracting automatically.", false],
     ]);
   }
   if (stage === "negotiating") {
     return list([
       ["Name the open terms — redlines with counsel or verbal yes · terms open.", true],
       ["Keep the substatus current; it shows on the board card.", false],
-      ["Terms closed → Committed, where the agreement package seeds itself.", false],
+      ["Terms closed → Contracting, where the agreement package seeds itself.", false],
     ]);
   }
   if (stage === "committed") {

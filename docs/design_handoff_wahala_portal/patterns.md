@@ -1,6 +1,7 @@
-# Cross-cutting — architecture, behavior, constraints
+# Interface patterns and constraints
 
-> Part of the **Wahala Portal** design handoff — see [handoff index](README.md). Visual reference: the labeled frames in `Wahala Portal.dc.html`.
+> Maintained interaction reference. The [operating model](../OPERATING-MODEL.md),
+> [sales process](../SALES-PROCESS.md), and server-side policies take precedence.
 
 ## Server Component vs Client Island
 | Component | Type |
@@ -12,25 +13,25 @@
 | LineItemEditor (quote builder) | **island** |
 | AcceptanceChecklist, FileUpload, MessageComposer | **island** |
 
-Pages (`/login`, `/dashboard`, `/dashboard/projects/:id`,
-`/dashboard/phases/:id`) are **RSC**: they fetch from D1, compute the action set,
-and stream HTML. Islands render only what they're handed.
+Prefer server components for data loading and initial rendering. Use client
+components only for interactions that require browser state. Authorization and
+the legal action set remain server-computed regardless of component type.
 
 ---
 
 ## Interactions & Behavior
-- **Phase lifecycle (state machine):** `draft → quoted → approved → paid →
-  in_progress → delivered → accepted`. Branches: `quoted → rejected → (re-draft)
-  draft`; `delivered → needs_revision → in_progress`. (Deals run a separate,
-  unrelated lifecycle — the 5-stage pipeline in `CRM-RESTRUCTURE.md`. Don't
-  confuse the two: **Phase** = project delivery unit, **Stage** = deal pipeline
-  step.)
+- **Phase lifecycle (state machine):** upfront billing follows `draft → quoted →
+  approved → paid → in_progress → delivered → accepted`. On-delivery billing
+  starts work after approval and requires payment before acceptance. Rejection,
+  redraft, and revision are explicit branches. Deals run the separate New →
+  Discovery → Proposal out → Negotiating → Contracting lifecycle. **Phase** is a
+  delivery unit; **Stage** is a Deal disposition.
 - **Action set is server-computed** from role + state (+ threshold). The UI renders
   exactly that set — never invent or client-side-gate actions.
 - **Confirm steps** required for weighty actions: pay, accept, reject, request
   revision, send-over-threshold.
-- **Responsive:** staff screens are desktop/data-dense; the client
-  approve/pay/accept flows must be excellent on a **phone** (see frame 07).
+- **Responsive:** staff screens may be desktop/data-dense; client
+  approve/pay/accept flows must be excellent on a **phone**.
 - **States to implement per screen:** idle, loading, empty, error, and
   **no-permission**, plus role variants (staff vs each client role).
 
@@ -47,24 +48,23 @@ and stream HTML. Islands render only what they're handed.
   changes appear live — no manual refresh, no dedicated visual.
 
 ## Vocabulary (use consistently across the UI)
-- **Phase** = a project's fixed-price unit of delivery (paid before work) — this
-  is the object the old "Stage" name referred to. **Stage** now belongs
-  exclusively to the deal pipeline (`CRM-RESTRUCTURE.md`: Triage → Discovery →
-  Proposal out → Negotiating → Committed). **Phases belong to projects, Stages
+- **Phase** = a priced unit of project delivery with an explicit billing mode —
+  this is the object the old "Stage" name referred to. **Stage** now belongs
+  exclusively to the deal pipeline (New → Discovery → Proposal out →
+  Negotiating → Contracting). **Phases belong to projects, Stages
   belong to deals — never mix the two up in code, routes, or copy.**
 - **Deliverable** = a client-facing scope item (renamed from "line item"; amount
   optional/illustrative). Deliverables group under **Epics**. Internal **Tasks**
   hang under a deliverable and carry **Subtasks** (checklist) + **Notes**
   (worklog). A **Change order** is the client's/staff's "request a change"
   object with its own Requested→Quoted→Approved→Paid→Applied (or Declined) gate.
-- **Not yet built:** milestone billing (deposit + per-phase payment) is a future
-  phase — today a stage is still "pay in full before work" (admin "Mark paid").
-  Don't design final billing UI around the old per-line model.
+- **Payment state is currently administrative, not processor-confirmed.** Do not
+  design copy that implies reconciled payment or final accounting authority.
 
-## Non-negotiable functional constraints (§7)
+## Non-negotiable functional constraints
 1. **Role + state gating** — render only allowed actions (server returns the set).
-2. **Pay-gate is a wall** — never show start/deliver on an unpaid phase; make
-   **Paid** a clear, almost-celebrated threshold.
+2. **The configured payment gate is a wall** — upfront work cannot start unpaid;
+   on-delivery work cannot be accepted unpaid. Show the actual billing mode.
 3. **Threshold co-sign** — quotes over a configurable $ require a **Wahala admin**
    to send; surface "needs admin co-sign".
 4. **Visibility** — clients must **never** see internal-only items (recordings, AI
@@ -85,6 +85,8 @@ structure; status conveyed by **more than color** (always text + dot/icon).
 - No third-party images; file thumbnails are colored type tiles. There are striped
   placeholders nowhere in this set (all content is real UI).
 
-## Files
-- `Wahala Portal.dc.html` — the full design canvas (all 13 frames). Open in a
-  browser; zoom out to see everything, zoom in per frame for exact treatments.
+## Implementation note
+
+Prefer existing components and tokens in the application over recreating an old
+prototype. When a new pattern is genuinely durable, add it here in the same
+change as the implementation.

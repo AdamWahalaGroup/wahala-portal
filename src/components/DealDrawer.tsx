@@ -25,6 +25,7 @@ import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
+import { NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
 const SUB_STATUSES = ["redlines with counsel", "verbal yes · terms open"];
 
@@ -63,11 +64,26 @@ export function DealDrawer({
   discoveryNode,
   agreementsNode,
   ndaNode = null,
+  suggestionsNode = null,
+  agent = null,
   fieldsNode,
   canManage,
   isAdmin = false,
 }: {
-  deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null; projectId: string | null };
+  deal: {
+    id: string;
+    name: string;
+    valueCents: number;
+    stage: DealStage;
+    daysInStage: number;
+    stuck: boolean;
+    origin: string;
+    subStatus: string | null;
+    projectId: string | null;
+    nextAction: string | null;
+    nextActionDueAt: string | null;
+    nextActionCourt: NextActionCourt;
+  };
   org: { id: string; name: string; status: string } | null;
   owner: { name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
@@ -84,6 +100,10 @@ export function DealDrawer({
   agreementsNode: React.ReactNode;
   /** NDA strip (Discovery → Negotiating) — the paper that belongs BEFORE committed. */
   ndaNode?: React.ReactNode;
+  /** The suggestion box (deal pulse) — renders nothing when empty. */
+  suggestionsNode?: React.ReactNode;
+  /** Agent layer chips: fit score + the money meter (docs/AGENT-LAYER-DESIGN.md). */
+  agent?: { fitScore: number | null; fitRationaleMd: string | null; spendCents: number; budgetCents: number } | null;
   fieldsNode: React.ReactNode;
   canManage: boolean;
   /** DEV TOOL — renders the hard-delete affordance (admin only; comes out later). */
@@ -104,6 +124,11 @@ export function DealDrawer({
     .filter((m) => m.status === "upcoming" && new Date(m.startsAt).getTime() > Date.now() - 90 * 60_000)
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
   const pastMeetings = process.meetings.filter((m) => m !== nextMeeting).slice(0, 3);
+  const commitmentTiming = nextActionTiming({
+    nextAction: deal.nextAction,
+    nextActionDueAt: deal.nextActionDueAt ? new Date(deal.nextActionDueAt) : null,
+    now: new Date(),
+  });
 
   async function reschedule(meetingId: string) {
     if (!rescheduleWhen) return;
@@ -212,6 +237,35 @@ export function DealDrawer({
           </>
         )}
       </div>
+      {agent && (agent.fitScore !== null || agent.spendCents > 0) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          {agent.fitScore !== null && (
+            <span
+              className="mono"
+              title={agent.fitRationaleMd ?? "Business-fit score from the deal pulse (form/fit/function)"}
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                borderRadius: 999,
+                padding: "2px 9px",
+                background: agent.fitScore >= 7 ? "#DCF5E3" : agent.fitScore >= 4 ? "#FCEFDC" : "#FBE3E3",
+                color: agent.fitScore >= 7 ? "#15803D" : agent.fitScore >= 4 ? "#B45309" : "#B91C1C",
+                cursor: "help",
+              }}
+            >
+              fit {agent.fitScore}/10
+            </span>
+          )}
+          <span
+            className="mono"
+            title="What the AI agents have spent on this deal vs its budget (scales with value × stage)"
+            style={{ fontSize: 10, color: agent.spendCents >= agent.budgetCents ? "#B45309" : "var(--muted-line)", cursor: "help" }}
+          >
+            agents ${(agent.spendCents / 100).toFixed(2)} of ${(agent.budgetCents / 100).toFixed(2)}
+            {agent.spendCents >= agent.budgetCents ? " · budget spent" : ""}
+          </span>
+        </div>
+      )}
       {deal.origin === "spawned_from_project" && (
         <div className="mono" style={{ display: "inline-block", fontSize: 9.5, fontWeight: 700, background: "#EEF0FE", color: "#2536C4", border: "1px solid #DDE1FB", padding: "3px 9px", borderRadius: 6, marginTop: 8 }}>
           ◆ born from paid discovery — spawned at project closeout
@@ -235,6 +289,7 @@ export function DealDrawer({
 
       {/* Proposal CTA — directly under the value (prototype layout; read-only shortcut when lost) */}
       <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
+      {suggestionsNode && <div style={{ marginTop: 10 }}>{suggestionsNode}</div>}
       {ndaNode && <div style={{ marginTop: 10 }}>{ndaNode}</div>}
 
       {/* Stage stepper over the open funnel */}
@@ -362,7 +417,17 @@ export function DealDrawer({
               !terminal && (
                 <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
                   <div className="kicker" style={{ marginBottom: 6 }}>Next step</div>
-                  {nextMeeting ? (
+                  {deal.nextAction ? (
+                    <>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
+                      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                        <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: commitmentTiming.tone === "red" ? "#FBE3E3" : commitmentTiming.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: commitmentTiming.tone === "red" ? "#B91C1C" : commitmentTiming.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
+                          {commitmentTiming.label}
+                        </span>
+                        <span className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>court: {NEXT_ACTION_COURT_LABELS[deal.nextActionCourt]}</span>
+                      </div>
+                    </>
+                  ) : nextMeeting ? (
                     <>
                       <MeetingCard meeting={nextMeeting} canEdit={canManage} />
                       {rescheduling === nextMeeting.id && (
@@ -375,7 +440,10 @@ export function DealDrawer({
                       )}
                     </>
                   ) : (
-                    <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)" }}>{nextStepFor(deal.stage)}</p>
+                    <>
+                      <p style={{ margin: 0, fontSize: 13.5, color: "#B91C1C", fontWeight: 700 }}>No dated commitment recorded.</p>
+                      <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "var(--ink-soft)" }}>Stage guidance: {nextStepFor(deal.stage)}</p>
+                    </>
                   )}
                   <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                     {canManage && nextMeeting && (

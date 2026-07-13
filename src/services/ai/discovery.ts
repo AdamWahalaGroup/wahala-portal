@@ -1,5 +1,5 @@
 /**
- * Discovery Package generator (R2 — docs/brain_storming/synthesis.md).
+ * Discovery Package generator (see docs/SALES-PROCESS.md).
  *
  * Paste a call transcript / meeting notes onto a deal and the model distills the
  * Discovery Package: the structured record of Jason's Phase 1 — business profile,
@@ -18,6 +18,7 @@ import { STAGE_META } from "@/domain/sales";
 import { assertSalesManager } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
+import { recordAiRun } from "./usage";
 import { resolveAgentConfig } from "./agent-config";
 
 type DiscoveryOutput = { discoveryMd: string };
@@ -97,6 +98,7 @@ export async function generateDiscovery(
       }),
     ),
   ]);
+  await recordAiRun(db, { agentKey: "discovery", dealId, organizationId: deal.organizationId, ...usage });
 
   return { discoveryMd, usage };
 }

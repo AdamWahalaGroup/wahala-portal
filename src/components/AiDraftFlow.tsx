@@ -10,6 +10,7 @@
 
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 type Org = { id: string; name: string };
 
@@ -311,7 +312,7 @@ function Upload(props: {
             <span className="mono">≈ $0.03–0.05 per draft · lightweight model</span>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <a href="/dashboard/projects/new" style={{ padding: "10px 14px", fontSize: 13.5, fontWeight: 600, color: "var(--muted)", textDecoration: "none" }}>Start blank instead</a>
+            <Link href="/dashboard/projects/new" style={{ padding: "10px 14px", fontSize: 13.5, fontWeight: 600, color: "var(--muted)", textDecoration: "none" }}>Start blank instead</Link>
             <button
               type="button"
               onClick={onDraft}
@@ -527,7 +528,7 @@ function Review(props: {
               style={{ width: "100%", padding: 12, fontSize: 11.5, border: "none", background: "#FBFBFC", outline: "none", resize: "vertical", lineHeight: 1.5 }}
             />
             <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border-soft)", fontSize: 11.5, color: "var(--muted)" }}>
-              Saved with the project as the agent's memory — future AI actions start from this, so they stay cheap and on-context.
+              Saved with the project as the agent&apos;s memory — future AI actions start from this, so they stay cheap and on-context.
             </div>
           </div>
 
@@ -635,7 +636,7 @@ function MissingInfoCallout({ memo, onRedraft, disabled }: { memo: string; onRed
         </span>
       </div>
       <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45 }}>
-        The AI listed things it couldn't answer from the source docs. Type your answers directly into the memo below — right under each question, or next to any gap — and click <strong>↻ Re-draft with your answers</strong>. The model will read your edits and incorporate them.
+        The AI listed things it couldn&apos;t answer from the source docs. Type your answers directly into the memo below — right under each question, or next to any gap — and click <strong>↻ Re-draft with your answers</strong>. The model will read your edits and incorporate them.
       </p>
       <button
         type="button"

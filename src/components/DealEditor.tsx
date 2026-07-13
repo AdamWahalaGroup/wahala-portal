@@ -6,12 +6,32 @@
  */
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  BUDGET_STATUSES,
+  BUDGET_STATUS_LABELS,
+  DATA_SENSITIVITIES,
+  DATA_SENSITIVITY_LABELS,
+  DELIVERY_MODELS,
+  DELIVERY_MODEL_LABELS,
+  ENGAGEMENT_TYPES,
+  ENGAGEMENT_TYPE_LABELS,
+  IP_DISPOSITIONS,
+  IP_DISPOSITION_LABELS,
+  NEXT_ACTION_COURTS,
+  NEXT_ACTION_COURT_LABELS,
+  type BudgetStatus,
+  type DataSensitivity,
+  type DeliveryModel,
+  type EngagementType,
+  type IpDisposition,
+  type NextActionCourt,
+} from "@/domain/deal-operating-model";
 
 const STAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "discovery", label: "Discovery" },
   { value: "proposal_out", label: "Proposal out" },
   { value: "negotiating", label: "Negotiating" },
-  { value: "committed", label: "Committed" },
+  { value: "committed", label: "Contracting" },
   { value: "won", label: "Won 🎉" },
   { value: "lost", label: "Lost" },
 ];
@@ -25,6 +45,23 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
 };
+
+const sectionStyle: React.CSSProperties = {
+  border: "1px solid var(--border-soft)",
+  borderRadius: 10,
+  padding: 12,
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+function dateOnly(value: string | null): string {
+  return value ? value.slice(0, 10) : "";
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <div className="kicker" style={{ marginBottom: 5 }}>{children}</div>;
+}
 
 async function patchDeal(dealId: string, body: unknown): Promise<string | null> {
   try {
@@ -83,11 +120,41 @@ export function DealFieldsForm({
   name,
   valueCents,
   notes,
+  engagementType,
+  deliveryModel,
+  ipDisposition,
+  dataSensitivity,
+  supportExpectation,
+  expectedCloseAt,
+  nextAction,
+  nextActionDueAt,
+  nextActionCourt,
+  champion,
+  economicBuyer,
+  compellingEvent,
+  decisionProcess,
+  budgetStatus,
+  budgetEvidence,
 }: {
   dealId: string;
   name: string;
   valueCents: number;
   notes: string | null;
+  engagementType: EngagementType | null;
+  deliveryModel: DeliveryModel | null;
+  ipDisposition: IpDisposition;
+  dataSensitivity: DataSensitivity;
+  supportExpectation: string | null;
+  expectedCloseAt: string | null;
+  nextAction: string | null;
+  nextActionDueAt: string | null;
+  nextActionCourt: NextActionCourt;
+  champion: string | null;
+  economicBuyer: string | null;
+  compellingEvent: string | null;
+  decisionProcess: string | null;
+  budgetStatus: BudgetStatus;
+  budgetEvidence: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -97,6 +164,21 @@ export function DealFieldsForm({
     name,
     value: valueCents > 0 ? String(valueCents / 100) : "",
     notes: notes ?? "",
+    engagementType: engagementType ?? "",
+    deliveryModel: deliveryModel ?? "",
+    ipDisposition,
+    dataSensitivity,
+    supportExpectation: supportExpectation ?? "",
+    expectedCloseAt: dateOnly(expectedCloseAt),
+    nextAction: nextAction ?? "",
+    nextActionDueAt: dateOnly(nextActionDueAt),
+    nextActionCourt,
+    champion: champion ?? "",
+    economicBuyer: economicBuyer ?? "",
+    compellingEvent: compellingEvent ?? "",
+    decisionProcess: decisionProcess ?? "",
+    budgetStatus,
+    budgetEvidence: budgetEvidence ?? "",
   });
 
   async function save(e: React.FormEvent) {
@@ -108,6 +190,21 @@ export function DealFieldsForm({
       name: form.name,
       valueCents: form.value ? Math.round(parseFloat(form.value) * 100) : 0,
       notes: form.notes,
+      engagementType: form.engagementType || null,
+      deliveryModel: form.deliveryModel || null,
+      ipDisposition: form.ipDisposition,
+      dataSensitivity: form.dataSensitivity,
+      supportExpectation: form.supportExpectation,
+      expectedCloseAt: form.expectedCloseAt || null,
+      nextAction: form.nextAction,
+      nextActionDueAt: form.nextActionDueAt || null,
+      nextActionCourt: form.nextActionCourt,
+      champion: form.champion,
+      economicBuyer: form.economicBuyer,
+      compellingEvent: form.compellingEvent,
+      decisionProcess: form.decisionProcess,
+      budgetStatus: form.budgetStatus,
+      budgetEvidence: form.budgetEvidence,
     });
     if (err) setError(err);
     else {
@@ -119,22 +216,108 @@ export function DealFieldsForm({
 
   return (
     <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <section style={sectionStyle}>
+        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Commercial shape</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <FieldLabel>Deal name</FieldLabel>
+            <input style={inputStyle} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
+          </div>
+          <div>
+            <FieldLabel>Estimated value ($)</FieldLabel>
+            <input style={inputStyle} inputMode="numeric" placeholder="Gut range anchor, not a quote" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))} />
+          </div>
+          <div>
+            <FieldLabel>Expected close</FieldLabel>
+            <input type="date" style={inputStyle} value={form.expectedCloseAt} onChange={(e) => setForm((f) => ({ ...f, expectedCloseAt: e.target.value }))} />
+          </div>
+          <div>
+            <FieldLabel>Engagement type</FieldLabel>
+            <select style={inputStyle} value={form.engagementType} onChange={(e) => setForm((f) => ({ ...f, engagementType: e.target.value as EngagementType | "" }))}>
+              <option value="">Unclassified</option>
+              {ENGAGEMENT_TYPES.map((value) => <option key={value} value={value}>{ENGAGEMENT_TYPE_LABELS[value]}</option>)}
+            </select>
+          </div>
+          <div>
+            <FieldLabel>Delivery model</FieldLabel>
+            <select style={inputStyle} value={form.deliveryModel} onChange={(e) => setForm((f) => ({ ...f, deliveryModel: e.target.value as DeliveryModel | "" }))}>
+              <option value="">Unclassified</option>
+              {DELIVERY_MODELS.map((value) => <option key={value} value={value}>{DELIVERY_MODEL_LABELS[value]}</option>)}
+            </select>
+          </div>
+          <div>
+            <FieldLabel>IP disposition</FieldLabel>
+            <select style={inputStyle} value={form.ipDisposition} onChange={(e) => setForm((f) => ({ ...f, ipDisposition: e.target.value as IpDisposition }))}>
+              {IP_DISPOSITIONS.map((value) => <option key={value} value={value}>{IP_DISPOSITION_LABELS[value]}</option>)}
+            </select>
+          </div>
+          <div>
+            <FieldLabel>Data sensitivity</FieldLabel>
+            <select style={inputStyle} value={form.dataSensitivity} onChange={(e) => setForm((f) => ({ ...f, dataSensitivity: e.target.value as DataSensitivity }))}>
+              {DATA_SENSITIVITIES.map((value) => <option key={value} value={value}>{DATA_SENSITIVITY_LABELS[value]}</option>)}
+            </select>
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <FieldLabel>Support expectation</FieldLabel>
+            <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
+          </div>
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, borderColor: "#C9D0FB", background: "#FAFBFF" }}>
+        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Next mutual commitment</div>
+        <div>
+          <FieldLabel>Specific action</FieldLabel>
+          <input style={inputStyle} placeholder="Who will do what next?" value={form.nextAction} onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          <div>
+            <FieldLabel>Due date</FieldLabel>
+            <input type="date" style={inputStyle} value={form.nextActionDueAt} onChange={(e) => setForm((f) => ({ ...f, nextActionDueAt: e.target.value }))} />
+          </div>
+          <div>
+            <FieldLabel>Whose court?</FieldLabel>
+            <select style={inputStyle} value={form.nextActionCourt} onChange={(e) => setForm((f) => ({ ...f, nextActionCourt: e.target.value as NextActionCourt }))}>
+              {NEXT_ACTION_COURTS.map((value) => <option key={value} value={value}>{NEXT_ACTION_COURT_LABELS[value]}</option>)}
+            </select>
+          </div>
+        </div>
+        <p className="mono" style={{ margin: 0, fontSize: 9.5, color: "var(--muted-line)" }}>The deal owner remains accountable for follow-up even when the ball is elsewhere.</p>
+      </section>
+
+      <section style={sectionStyle}>
+        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Qualification evidence</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          <div>
+            <FieldLabel>Champion</FieldLabel>
+            <input style={inputStyle} placeholder="Who wants this internally?" value={form.champion} onChange={(e) => setForm((f) => ({ ...f, champion: e.target.value }))} />
+          </div>
+          <div>
+            <FieldLabel>Economic buyer</FieldLabel>
+            <input style={inputStyle} placeholder="Who can authorize the spend?" value={form.economicBuyer} onChange={(e) => setForm((f) => ({ ...f, economicBuyer: e.target.value }))} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <FieldLabel>Compelling event</FieldLabel>
+            <textarea style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit" }} placeholder="Why act now, and what happens if they do nothing?" value={form.compellingEvent} onChange={(e) => setForm((f) => ({ ...f, compellingEvent: e.target.value }))} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <FieldLabel>Decision process</FieldLabel>
+            <textarea style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit" }} placeholder="Approvals, legal, procurement, evaluation, and timing" value={form.decisionProcess} onChange={(e) => setForm((f) => ({ ...f, decisionProcess: e.target.value }))} />
+          </div>
+          <div>
+            <FieldLabel>Budget status</FieldLabel>
+            <select style={inputStyle} value={form.budgetStatus} onChange={(e) => setForm((f) => ({ ...f, budgetStatus: e.target.value as BudgetStatus }))}>
+              {BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}
+            </select>
+          </div>
+          <div>
+            <FieldLabel>Budget evidence</FieldLabel>
+            <input style={inputStyle} placeholder="Authority, range, or funding path" value={form.budgetEvidence} onChange={(e) => setForm((f) => ({ ...f, budgetEvidence: e.target.value }))} />
+          </div>
+        </div>
+      </section>
       <div>
-        <div className="kicker" style={{ marginBottom: 5 }}>Deal name</div>
-        <input style={inputStyle} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
-      </div>
-      <div>
-        <div className="kicker" style={{ marginBottom: 5 }}>Estimated value ($)</div>
-        <input
-          style={inputStyle}
-          inputMode="numeric"
-          placeholder="Gut number, not a quote"
-          value={form.value}
-          onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))}
-        />
-      </div>
-      <div>
-        <div className="kicker" style={{ marginBottom: 5 }}>Notes</div>
+        <FieldLabel>Notes</FieldLabel>
         <textarea
           style={{ ...inputStyle, minHeight: 110, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
           placeholder="What we know, what they said, what's next…"

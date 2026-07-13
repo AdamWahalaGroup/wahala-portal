@@ -1,9 +1,10 @@
 /**
- * Stage service — orchestrates the pay-as-you-go lifecycle (PLAN.md §1, §5).
+ * Stage service — orchestrates the guarded delivery lifecycle
+ * (docs/OPERATING-MODEL.md).
  *
  * Every mutation flows through one path: load (tenant-scoped) → authorize (policy)
- * → assert legal transition + pay-gate (state machine) → write state + audit in a
- * single batch. This is the server-side chokepoint where the invariants hold:
+ * → assert legal transition + pay-gate (state machine) → compare-and-swap state
+ * → best-effort audit. This is the server-side chokepoint where the invariants hold:
  *   • no delivery before payment   • no cross-tenant action   • everything logged.
  */
 import { and, eq, inArray, sql } from "drizzle-orm";

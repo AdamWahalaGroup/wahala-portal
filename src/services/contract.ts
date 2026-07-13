@@ -1,5 +1,5 @@
 /**
- * Contract room (R4 — docs/brain_storming/synthesis.md). "The contract is a phase,
+ * Contract room (see docs/SALES-PROCESS.md). "The contract is a phase,
  * not a single object": once a proposal is approved, this is where the commercials
  * checklist (MSA, NDA, insurance) gets tracked, the client contact gets a portal
  * account, and the contract EXECUTES — the AI writes the SOW as a real project
@@ -20,6 +20,7 @@ import { createMagicToken } from "@/auth/magic-link";
 import { sendInviteEmail } from "@/auth/email";
 import { isDevAuth } from "@/auth/server-env";
 import type { DraftUsage } from "@/services/ai/provider";
+import { recordAiRun } from "@/services/ai/usage";
 
 export type ContractRoom = {
   available: boolean; // an approved proposal exists (or the deal already reached committed/won)
@@ -195,7 +196,7 @@ export async function executeContract(
   // approved proposal makes the SOW richer, it isn't a precondition (prototype 07-08:
   // no proposal means the project is born as one phase at the deal value).
   if (!approved && !["committed", "won"].includes(deal.stage)) {
-    throw new StageError("INVALID_STATE", "Create project needs an approved proposal or a Committed deal.");
+    throw new StageError("INVALID_STATE", "Create project needs an approved proposal or a deal in Contracting.");
   }
   // "Deposit clears → project": the one money-gate on the sales side. Admins may
   // force (logged via the normal audit trail); everyone else waits for the deposit.
@@ -274,6 +275,7 @@ export async function executeContract(
     files: [],
     pastedText: sources.join("\n\n---\n\n"),
   });
+  await recordAiRun(db, { agentKey: "project_draft", dealId: deal.id, organizationId, ...usage });
 
   // Force the skeleton: names + amounts from the proposal, deliverables from the AI
   // (merged by position; a single-phase deal absorbs everything the AI drafted).

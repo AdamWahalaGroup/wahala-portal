@@ -233,7 +233,7 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
           <section style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "16px 18px" }}>
             <div className="kicker">Projects</div>
             {view.projects.length === 0 ? (
-              <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--muted-line)" }}>None yet — a Committed deal&apos;s deposit creates one.</p>
+              <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--muted-line)" }}>None yet — a deal in Contracting creates one after its deposit.</p>
             ) : (
               <div style={{ marginTop: 6 }}>
                 {view.projects.map((p) => {
@@ -273,7 +273,7 @@ export default async function AccountPage({ params }: { params: Promise<{ orgId:
           <section style={{ background: "var(--white)", border: "1px solid #E7E8EC", borderRadius: 12, padding: "16px 18px" }}>
             <div className="kicker">Agreements</div>
             {view.agreements.length === 0 ? (
-              <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--muted-line)" }}>None yet — the package seeds when a deal reaches Committed.</p>
+              <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--muted-line)" }}>None yet — the package seeds when a deal reaches Contracting.</p>
             ) : (
               <div style={{ marginTop: 6 }}>
                 {view.agreements

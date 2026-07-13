@@ -23,7 +23,7 @@ const LABELS: Record<DocKind, { kicker: string; byStatus: Record<string, string>
   msa: {
     kicker: "Wahala Group · Master Services Agreement",
     byStatus: {
-      none: "Not in a deal package yet — this is the boilerplate preview. The MSA row seeds when a deal reaches Committed.",
+      none: "Not in a deal package yet — this is the boilerplate preview. The MSA row seeds when a deal reaches Contracting.",
       needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
       sent: "Sent — waiting on signature.",
       signed: "Signed — on file account-wide; every later deal rides on it (SOW only).",
@@ -32,7 +32,7 @@ const LABELS: Record<DocKind, { kicker: string; byStatus: Record<string, string>
   nda: {
     kicker: "Wahala Group · Mutual Non-Disclosure Agreement",
     byStatus: {
-      none: "Not in a deal package yet — this is the boilerplate preview. The NDA row seeds when a deal reaches Committed.",
+      none: "Not in a deal package yet — this is the boilerplate preview. The NDA row seeds when a deal reaches Contracting.",
       needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
       sent: "Sent — waiting on signature.",
       signed: "Signed — on file account-wide; discovery conversations are covered.",
@@ -41,7 +41,7 @@ const LABELS: Record<DocKind, { kicker: string; byStatus: Record<string, string>
   commercial_agreement: {
     kicker: "Wahala Group · Commercial Agreement",
     byStatus: {
-      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Committed.",
+      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Contracting.",
       needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
       sent: "Sent — waiting on signature.",
       signed: "Signed — standing pricing & payment terms; SOWs only state what differs.",
@@ -50,7 +50,7 @@ const LABELS: Record<DocKind, { kicker: string; byStatus: Record<string, string>
   professional_services: {
     kicker: "Wahala Group · Professional Services Terms",
     byStatus: {
-      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Committed.",
+      none: "Not in a deal package yet — this is the boilerplate preview. The row seeds when a deal reaches Contracting.",
       needed: "Needed — send this for signature, then mark it sent on the deal's agreement package.",
       sent: "Sent — waiting on signature.",
       signed: "Signed — standing delivery rules (acceptance, change orders, warranty); SOWs ride on them.",

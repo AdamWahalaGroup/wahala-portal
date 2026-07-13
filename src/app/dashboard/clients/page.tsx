@@ -1,5 +1,5 @@
 /**
- * Legacy route — "Clients" became "Accounts" (CRM-RESTRUCTURE.md: client is a state
+ * Legacy route — "Clients" became "Accounts" (docs/OPERATING-MODEL.md: client is a state
  * on an account, not a thing). Old links keep working.
  */
 import { redirect } from "next/navigation";

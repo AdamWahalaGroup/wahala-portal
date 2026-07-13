@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { ApiError, handleApiError, requireAuth } from "@/lib/api";
 import { draftProject } from "@/services/ai/draft-project";
+import { meterAiRun } from "@/services/pulse-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     }
 
     const result = await draftProject(ctx, { organizationId, files, pastedText });
+    await meterAiRun({ agentKey: "project_draft", organizationId, ...result.usage });
     return NextResponse.json(result);
   } catch (e) {
     return handleApiError(e);
