@@ -191,6 +191,14 @@ export function applyManualField(
   return { fields: next, readiness: readinessFrom(next) };
 }
 
+/**
+ * Typing evidence is the normal happy path: when an admin does not deliberately
+ * choose Partial or Missing, saving means they consider the answer complete.
+ */
+export function manualFieldStatusForSave(selected: PackageFieldStatus | null): PackageFieldStatus {
+  return selected ?? "ok";
+}
+
 // ---------------------------------------------------------------- next-call prompts
 // One concrete ask per package field — the tactical companion to the strategic
 // "next best action" card. Derived, no AI call; a missing field IS the question.

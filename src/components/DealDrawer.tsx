@@ -141,6 +141,9 @@ export function DealDrawer({
     .filter((m) => m.status === "upcoming" && new Date(m.startsAt).getTime() > Date.now() - 90 * 60_000)
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
   const pastMeetings = process.meetings.filter((m) => m !== nextMeeting).slice(0, 3);
+  const nextMeetingWhen = nextMeeting
+    ? new Date(nextMeeting.startsAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    : null;
   const commitmentTiming = nextActionTiming({
     nextAction: deal.nextAction,
     nextActionDueAt: deal.nextActionDueAt ? new Date(deal.nextActionDueAt) : null,
@@ -353,21 +356,13 @@ export function DealDrawer({
             <div style={{ marginTop: 10 }}>{proposalCtaNode}</div>
           </section>
 
-          <section style={{ border: "1px solid var(--border)", background: "var(--white)", borderRadius: 12, padding: "13px 15px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <div className="kicker">Agreed follow-up</div>
-              {canManage && !editingFollowUp && (
-                <button onClick={openFollowUpEditor} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
-                  {deal.nextAction ? "edit" : nextMeeting ? "+ add separate action" : "+ record follow-up"}
-                </button>
-              )}
-            </div>
-            <p style={{ margin: "5px 0 0", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
-              What someone actually agreed to do by a date. This measures deal motion; it does not sit between Discovery and Proposal.
-            </p>
-
+          <section title="Secondary relationship signal. It never blocks the recommended workflow step above." style={{ border: "1px solid var(--border-softer)", background: "#FBFBFC", borderRadius: 10, padding: "9px 12px" }}>
             {editingFollowUp ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="kicker">What happens next with the customer?</div>
+                  <span className="mono" style={{ marginLeft: "auto", fontSize: 9, color: "var(--muted-line)" }}>secondary · never a gate</span>
+                </div>
                 <input
                   style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 10px", fontSize: 12.5 }}
                   placeholder="One person or party + one observable action"
@@ -406,40 +401,40 @@ export function DealDrawer({
                   )}
                 </div>
               </div>
-            ) : deal.nextAction ? (
-              <div style={{ marginTop: 9 }}>
-                <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
-                <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 7 }}>
+            ) : (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span className="kicker" style={{ flex: "none" }}>Customer motion</span>
+                {deal.nextAction ? (
+                  <>
+                    <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-soft)", flex: 1, minWidth: 180 }}>{deal.nextAction}</span>
                   <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: commitmentTiming.tone === "red" ? "#FBE3E3" : commitmentTiming.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: commitmentTiming.tone === "red" ? "#B91C1C" : commitmentTiming.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
                     {commitmentTiming.label}
                   </span>
                   <span className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>court: {NEXT_ACTION_COURT_LABELS[deal.nextActionCourt]}</span>
-                </div>
-              </div>
-            ) : nextMeeting ? (
-              <div style={{ marginTop: 9 }}>
-                <MeetingCard meeting={nextMeeting} canEdit={canManage} />
-                <p className="mono" style={{ margin: "5px 0 0", fontSize: 9.5, color: "#15803D" }}>✓ This scheduled meeting counts as the Deal&apos;s dated follow-up.</p>
-                {rescheduling === nextMeeting.id && (
-                  <div style={{ display: "flex", gap: 7, marginTop: 8, alignItems: "center" }}>
-                    <input type="datetime-local" style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 12, flex: 1 }} value={rescheduleWhen} onChange={(e) => setRescheduleWhen(e.target.value)} />
-                    <button onClick={() => void reschedule(nextMeeting.id)} disabled={busy || !rescheduleWhen} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      {busy ? "…" : "Update event"}
-                    </button>
-                  </div>
+                  </>
+                ) : nextMeeting ? (
+                  <>
+                    <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-soft)", flex: 1, minWidth: 180 }}>Next touch: {nextMeeting.title} · {nextMeetingWhen}</span>
+                    <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: "#15803D" }}>✓ scheduled</span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 11.5, color: "var(--muted-line)", flex: 1 }}>None recorded · this does not block proposal work.</span>
                 )}
-                {canManage && (
-                  <button
-                    onClick={() => setRescheduling((value) => (value === nextMeeting.id ? null : nextMeeting.id))}
-                    disabled={busy}
-                    style={{ marginTop: 8, background: "var(--white)", color: "var(--ink-soft)", border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    Reschedule
+                {canManage && (deal.nextAction || !nextMeeting) && (
+                  <button onClick={openFollowUpEditor} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                    {deal.nextAction ? "edit" : "+ add follow-up"}
                   </button>
                 )}
+                {canManage && nextMeeting && !deal.nextAction && (
+                  <button onClick={() => setRescheduling((value) => (value === nextMeeting.id ? null : nextMeeting.id))} disabled={busy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 10.5, fontWeight: 600, cursor: "pointer", padding: 0 }}>reschedule</button>
+                )}
               </div>
-            ) : (
-              <p style={{ margin: "9px 0 0", fontSize: 12.5, color: "#B45309", fontWeight: 600 }}>No dated follow-up recorded. Proposal work is still available, but the Deal has no reciprocal motion to track.</p>
+            )}
+            {!editingFollowUp && nextMeeting && !deal.nextAction && rescheduling === nextMeeting.id && (
+              <div style={{ display: "flex", gap: 7, marginTop: 8, alignItems: "center" }}>
+                <input type="datetime-local" style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 12, flex: 1 }} value={rescheduleWhen} onChange={(e) => setRescheduleWhen(e.target.value)} />
+                <button onClick={() => void reschedule(nextMeeting.id)} disabled={busy || !rescheduleWhen} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{busy ? "…" : "Update event"}</button>
+              </div>
             )}
           </section>
         </div>
