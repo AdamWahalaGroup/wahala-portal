@@ -59,6 +59,18 @@ responsible scope and price. It does not measure win probability. Customer
 terminology and deferred scope matter for delivery quality but should not be
 used as proof that a buying motion exists.
 
+For call coaching, present the package as a progressive conversation rather
+than ten unrelated fields:
+
+1. **Business & stakeholders:** business profile, then decision makers.
+2. **Current reality:** current workflow, pain points, and the customer's own terminology.
+3. **Desired outcome & first scope:** success metrics, MVP priorities, and deferred scope.
+4. **Buying reality:** budget posture and timeline.
+
+Do not lead with budget. First understand enough pain and desired value to make
+the funding conversation relevant. Capture customer terminology throughout the
+conversation rather than interrogating it as a standalone vocabulary exercise.
+
 Record discovery evidence once, as a call transcript or meeting notes. AI may
 then propose four kinds of updates in a single pending review:
 

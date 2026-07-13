@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -132,7 +132,7 @@ function DiscoveryReviewCard({ dealId, review, onDone }: { dealId: string; revie
     }
   }
 
-  const proposedPackage = PACKAGE_FIELDS.filter((key) => {
+  const proposedPackage = DISCOVERY_SCRIPT_FIELDS.filter((key) => {
     const field = review.analysis.packageFields[key];
     return field.status !== "missing" || !!field.evidence?.trim();
   });
@@ -476,7 +476,19 @@ export function DealProcessPanel({
             <ReadyPill score={readiness} tone={tone} />
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 14 }}>{PACKAGE_FIELDS.map(fieldRow)}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          {DISCOVERY_SCRIPT_GROUPS.map((group, index) => (
+            <div key={group.key} style={{ borderTop: index === 0 ? undefined : "1px solid var(--border-softer)", paddingTop: index === 0 ? 2 : 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
+                <span className="mono" style={{ fontSize: 9, fontWeight: 800, color: "var(--cobalt-text)", textTransform: "uppercase", letterSpacing: ".05em" }}>{group.label}</span>
+                <span style={{ fontSize: 10.5, color: "var(--muted-line)" }}>{group.purpose}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", columnGap: 14 }}>
+                {group.fields.map(fieldRow)}
+              </div>
+            </div>
+          ))}
+        </div>
         {prompts.length > 0 && (
           <div style={{ marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
             <div className="kicker" style={{ marginBottom: 6 }}>Ask on the next call</div>

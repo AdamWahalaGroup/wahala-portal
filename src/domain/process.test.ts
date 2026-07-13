@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, type PackageFields } from "./process";
+import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;
@@ -27,6 +27,24 @@ describe("applyManualField", () => {
 });
 
 describe("nextCallPrompts", () => {
+  it("groups every package field exactly once in progressive call order", () => {
+    expect(DISCOVERY_SCRIPT_FIELDS).toEqual([
+      "business_profile",
+      "decision_makers",
+      "current_workflow",
+      "pain_points",
+      "customer_terminology",
+      "success_metrics",
+      "mvp_priorities",
+      "deferred_scope",
+      "budget_posture",
+      "timeline",
+    ]);
+    expect(new Set(DISCOVERY_SCRIPT_FIELDS).size).toBe(PACKAGE_FIELDS.length);
+    expect([...DISCOVERY_SCRIPT_FIELDS].sort()).toEqual([...PACKAGE_FIELDS].sort());
+    expect(DISCOVERY_SCRIPT_GROUPS).toHaveLength(4);
+  });
+
   it("has a non-empty prompt for all 10 fields", () => {
     for (const key of PACKAGE_FIELDS) {
       expect(ASK_PROMPTS[key].length).toBeGreaterThan(10);
@@ -35,13 +53,13 @@ describe("nextCallPrompts", () => {
     }
   });
 
-  it("excludes ok fields and keeps PACKAGE_FIELDS order", () => {
+  it("excludes ok fields and keeps progressive script order", () => {
     const fields = allOk();
     fields.pain_points = { status: "partial", evidence: null, source: null };
     fields.decision_makers = { status: "missing", evidence: null, source: null };
     const prompts = nextCallPrompts(fields);
-    expect(prompts.map((p) => p.field)).toEqual(["pain_points", "decision_makers"]);
-    expect(prompts[1].prompt).toBe(ASK_PROMPTS.decision_makers);
+    expect(prompts.map((p) => p.field)).toEqual(["decision_makers", "pain_points"]);
+    expect(prompts[0].prompt).toBe(ASK_PROMPTS.decision_makers);
   });
 
   it("is empty at 10/10 and full for an empty package", () => {

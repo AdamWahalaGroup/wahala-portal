@@ -106,6 +106,46 @@ export const PACKAGE_FIELD_GUIDANCE: Record<PackageFieldKey, PackageFieldGuidanc
   },
 };
 
+export type DiscoveryScriptGroup = {
+  key: string;
+  label: string;
+  purpose: string;
+  fields: readonly PackageFieldKey[];
+};
+
+/**
+ * Progressive call flow for a developing seller. Budget comes after the seller
+ * has earned the right to discuss money by understanding pain and desired value.
+ */
+export const DISCOVERY_SCRIPT_GROUPS = [
+  {
+    key: "business_stakeholders",
+    label: "1 · Business & stakeholders",
+    purpose: "Learn who they are and who needs to be involved.",
+    fields: ["business_profile", "decision_makers"],
+  },
+  {
+    key: "current_reality",
+    label: "2 · Current reality",
+    purpose: "Follow the real workflow before discussing solutions.",
+    fields: ["current_workflow", "pain_points", "customer_terminology"],
+  },
+  {
+    key: "desired_outcome",
+    label: "3 · Desired outcome & first scope",
+    purpose: "Define success, the smallest valuable delivery, and its boundary.",
+    fields: ["success_metrics", "mvp_priorities", "deferred_scope"],
+  },
+  {
+    key: "buying_reality",
+    label: "4 · Buying reality",
+    purpose: "Once value is clear, qualify funding and timing.",
+    fields: ["budget_posture", "timeline"],
+  },
+] as const satisfies readonly DiscoveryScriptGroup[];
+
+export const DISCOVERY_SCRIPT_FIELDS = DISCOVERY_SCRIPT_GROUPS.flatMap((group) => [...group.fields]) as PackageFieldKey[];
+
 /** Readiness 0–10 (one decimal) from package completeness: ok=1, partial=½, missing=0. */
 export function readinessFrom(fields: PackageFields): number {
   let sum = 0;
@@ -126,7 +166,7 @@ export function readinessTone(score: number): ReadinessTone {
 
 /** Fields that fail the proposal-ready check, for the frame-39 nudge body. */
 export function failedChecks(fields: PackageFields): { field: PackageFieldKey; label: string; status: PackageFieldStatus; evidence: string | null }[] {
-  return PACKAGE_FIELDS.filter((k) => (fields[k]?.status ?? "missing") !== "ok").map((k) => ({
+  return DISCOVERY_SCRIPT_FIELDS.filter((k) => (fields[k]?.status ?? "missing") !== "ok").map((k) => ({
     field: k,
     label: PACKAGE_FIELD_LABELS[k],
     status: fields[k]?.status ?? "missing",
