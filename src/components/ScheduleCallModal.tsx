@@ -249,7 +249,7 @@ export function ScheduleCallModal({
               <span style={{ width: 28, height: 16, borderRadius: 999, background: "var(--cobalt)", position: "relative", flex: "none" }}>
                 <span style={{ position: "absolute", top: 2, left: 14, width: 12, height: 12, borderRadius: 999, background: "var(--white)" }} />
               </span>
-              Zoom meeting attached automatically · recording + digest run after the call
+              Zoom meeting attached automatically · recording + evidence analysis run after the call
             </div>
           ) : (
             <>
@@ -257,7 +257,7 @@ export function ScheduleCallModal({
                 <span style={{ width: 28, height: 16, borderRadius: 999, background: "#E2E3E8", position: "relative", flex: "none" }}>
                   <span style={{ position: "absolute", top: 2, left: 2, width: 12, height: 12, borderRadius: 999, background: "var(--white)" }} />
                 </span>
-                Zoom <span className="mono" style={{ fontSize: 10 }}>— connect Zoom in Settings to enable · recording + digest need this</span>
+                Zoom <span className="mono" style={{ fontSize: 10 }}>— connect Zoom in Settings to enable · recording + evidence analysis need this</span>
               </div>
               <input
                 className="mono"

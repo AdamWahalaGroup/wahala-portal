@@ -44,7 +44,14 @@ export type DrawerProcess = {
   journeyIndex: number;
   goal: string;
   nextActions: { n: number; text: string; active: boolean }[];
-  calls: { id: string; title: string; recordedAt: string; durationMin: number | null; fieldsExtracted: number }[];
+  calls: {
+    id: string;
+    title: string;
+    recordedAt: string;
+    durationMin: number | null;
+    fieldsExtracted: number;
+    reviewStatus: "pending" | "applied" | "dismissed";
+  }[];
   meetings: MeetingCardData[];
   zoomReady: boolean;
   calendarConnected: boolean;
@@ -362,7 +369,7 @@ export function DealDrawer({
             </span>
           </div>
           <p style={{ margin: "7px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
-            Readiness drives when this deal is proposal-ready — completeness of the 10-field discovery package, extracted from recorded calls.
+            Readiness shows whether the 10-field discovery package is complete enough to support a responsible proposal. AI proposes evidence from calls; a person decides what becomes Deal truth.
           </p>
         </div>
       )}
@@ -460,17 +467,17 @@ export function DealDrawer({
               )
             )}
 
-            {/* After the call · automatic (frame 42) */}
+            {/* After the call · analyzed automatically, accepted by a human */}
             {!terminal && nextMeeting && (
               <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: "11px 14px" }}>
-                <div className="kicker" style={{ marginBottom: 5 }}>After the call · automatic</div>
+                <div className="kicker" style={{ marginBottom: 5 }}>After the call · review required</div>
                 <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
-                  recording → transcript → ◆ AI digest → deal facts
+                  recording → transcript → ◆ AI analysis → human review → accepted Deal facts
                 </div>
                 <div className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", marginTop: 4 }}>
                   {process.zoomReady
-                    ? "Zoom cloud recording feeds the pipeline — nothing to do after you hang up."
-                    : "until Zoom connects, log the call below after it ends — same pipeline, one paste."}
+                    ? "Zoom feeds the evidence pipeline; review the analysis before it changes the Deal."
+                    : "Until Zoom connects, log the call below after it ends — same review pipeline, one paste."}
                 </div>
               </div>
             )}

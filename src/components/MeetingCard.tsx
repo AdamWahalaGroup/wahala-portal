@@ -3,7 +3,7 @@
 /**
  * MeetingCard (frame 43) — ONE component, five states, used on the deal drawer,
  * staff home, and the client project page:
- *   upcoming → imminent (T−15m) → live → ended · awaiting recording → digest ready
+ *   upcoming → imminent (T−15m) → live → ended · awaiting recording → analysis ready
  * imminent/live are computed from the client clock (same T−15 gate for staff and
  * clients). Missing integrations degrade LOUDLY: where Join would sit, a dashed
  * "no video link" row with connect/paste actions — never an absent button.
@@ -202,14 +202,14 @@ export function MeetingCard({ meeting, canEdit, showAttendees = true }: { meetin
           {meeting.status === "digest_ready" ? (
             <>
               <span className="mono" style={{ fontSize: 9, fontWeight: 800, background: "#DCF5E3", color: "#15803D", borderRadius: 999, padding: "2px 9px" }}>
-                digest ready
+                analysis ready
               </span>
               {meeting.dealId && (
                 <Link href={`/dashboard/sales/deals/${meeting.dealId}`} className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--cobalt-text)", textDecoration: "none" }}>
-                  ◆ AI digest →
+                  ◆ Review AI analysis →
                 </Link>
               )}
-              <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>merged into deal facts</span>
+              <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>Deal facts unchanged until accepted</span>
             </>
           ) : meeting.status === "awaiting_recording" ? (
             <span className="mono" style={{ fontSize: 9, fontWeight: 700, background: "#F1F2F4", color: "var(--muted)", borderRadius: 999, padding: "2px 9px" }}>
@@ -217,7 +217,7 @@ export function MeetingCard({ meeting, canEdit, showAttendees = true }: { meetin
             </span>
           ) : (
             <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
-              ended{meeting.callId ? "" : " · paste the transcript on the deal to run the digest"}
+              ended{meeting.callId ? "" : " · paste the transcript on the Deal to analyze its evidence"}
             </span>
           )}
         </div>

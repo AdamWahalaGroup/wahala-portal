@@ -10,7 +10,7 @@
  *  - Account Owner (relationship) + Lead Engineer (delivery); roster scales 1..N.
  *  - Tasks are client-visible by default; assignees may be a Wahala engineer OR a
  *    client (an "on you" action item), and later an AI worker.
- *  - Assets carry a visibility flag; recordings + AI digests are internal-only.
+ *  - Assets carry a visibility flag; recordings + AI analyses are internal-only.
  */
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
@@ -22,6 +22,8 @@ import {
   IP_DISPOSITIONS,
   NEXT_ACTION_COURTS,
 } from "../domain/deal-operating-model";
+import { PACKAGE_FIELDS } from "../domain/process";
+import { DISCOVERY_REVIEW_STATUSES } from "../domain/discovery-review";
 
 // ---- shared column helpers ----
 const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
@@ -104,20 +106,9 @@ export const AGREEMENT_KINDS = [
 ] as const;
 export const AGREEMENT_STATUSES = ["needed", "sent", "signed", "n_a"] as const;
 export const PROJECT_KINDS = ["standard", "paid_discovery"] as const;
-// Process model (TRAINING-AND-SCORECARD.md): the 10 Discovery Package fields the AI
-// extracts from calls; their completeness drives the deal's readiness score.
-export const PACKAGE_FIELDS = [
-  "business_profile",
-  "current_workflow",
-  "pain_points",
-  "budget_posture",
-  "decision_makers",
-  "success_metrics",
-  "mvp_priorities",
-  "timeline",
-  "customer_terminology",
-  "deferred_scope",
-] as const;
+// Process model (TRAINING-AND-SCORECARD.md): the 10 Discovery Package fields whose
+// accepted evidence drives the deal's readiness score.
+export { PACKAGE_FIELDS };
 export const PACKAGE_FIELD_STATUSES = ["ok", "partial", "missing"] as const;
 // Append-only process log — feeds the post-mortem + admin scorecard entirely.
 export const PROCESS_EVENT_KINDS = [
@@ -354,8 +345,8 @@ export const deals = sqliteTable(
     depositSentAt: integer("deposit_sent_at", { mode: "timestamp" }),
     depositPaidAt: integer("deposit_paid_at", { mode: "timestamp" }),
     // Proposal-readiness (0–10, one decimal) — recomputed from Discovery Package
-    // completeness after every call/artifact; historical values live as per-event
-    // snapshots in process_events, never mutated here.
+    // completeness after reviewed evidence or a manual edit is accepted; historical
+    // values live as per-event snapshots in process_events, never mutated here.
     readinessScore: real("readiness_score"),
     // Auto post-mortem written when the deal is dropped on Lost (frame 40).
     postMortemMd: text("post_mortem_md"),
@@ -400,7 +391,8 @@ export const deals = sqliteTable(
 // ---- Discovery package (frames 38/39) — the structured record behind readiness ----
 // One row per deal; `fields` holds the 10 PACKAGE_FIELDS as
 // { [field]: { status: "ok"|"partial"|"missing", evidence?: string, source?: string } }.
-// The AI extracts/updates it after every ingested call; readiness derives from it.
+// AI may propose updates from a call; staff explicitly accept them. Readiness derives
+// only from the accepted record.
 export const discoveryPackages = sqliteTable(
   "discovery_packages",
   {
@@ -413,7 +405,7 @@ export const discoveryPackages = sqliteTable(
   (t) => [index("discovery_packages_deal_idx").on(t.dealId)],
 );
 
-// ---- Recorded calls on a deal (frame 38) — transcript in, package fields out ----
+// ---- Recorded calls on a deal (frame 38) — transcript in, reviewed evidence out ----
 export const dealCalls = sqliteTable(
   "deal_calls",
   {
@@ -425,6 +417,13 @@ export const dealCalls = sqliteTable(
     transcriptMd: text("transcript_md").notNull(),
     // How many of the 10 package fields this call's extraction filled or improved.
     fieldsExtracted: integer("fields_extracted").notNull().default(0),
+    // One AI pass proposes the long-form memo, readiness evidence,
+    // qualification facts, and commercial classifications. Nothing reaches the
+    // Deal until a staff member reviews this payload and explicitly applies it.
+    discoveryAnalysis: text("discovery_analysis", { mode: "json" }),
+    reviewStatus: text("review_status", { enum: DISCOVERY_REVIEW_STATUSES }).notNull().default("applied"),
+    reviewedByUserId: text("reviewed_by_user_id").references(() => users.id),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
     createdByUserId: text("created_by_user_id").references(() => users.id),
     createdAt: createdAt(),
   },
@@ -860,7 +859,7 @@ export const changeOrders = sqliteTable("change_orders", {
 });
 
 // ---- Assets (files + meeting recordings; visibility-flagged) ----
-// Recordings + Phase-2 AI digests are visibility='internal' — clients never see them.
+// Recordings + AI analyses are visibility='internal' — clients never see them.
 export const assets = sqliteTable(
   "assets",
   {

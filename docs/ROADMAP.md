@@ -3,6 +3,8 @@
 ## Now: first live deal
 
 - Run the deposition-platform opportunity through the portal.
+- Use the unified discovery review: paste evidence once, inspect every proposed
+  change, and explicitly accept only supported Deal facts.
 - Resolve IP ownership before proposal.
 - Classify engagement, delivery, IP, data sensitivity, and support expectations.
 - Record qualification evidence and one dated mutual commitment.
@@ -30,6 +32,8 @@
 ## After real outcomes: narrow AI expansion
 
 - Build a golden evaluation set from accepted/rejected real examples.
+- Use applied versus dismissed discovery suggestions to measure extraction
+  quality by field; do not treat acceptance as proof of factual correctness.
 - Evaluate discovery extraction, qualification evidence, meeting preparation,
   and proposal drafting independently.
 - Add organization monthly spend caps and task-level model routing.

@@ -1,7 +1,7 @@
 /**
  * Zoom adapter (frames 43/47) — an OPTIONAL layer on the Google-event spine:
  * when connected, Schedule-call auto-attaches a Zoom link and cloud-recording
- * transcripts flow back through the webhook into the deal's digest pipeline.
+ * transcripts flow back through the webhook into the Deal's evidence-review pipeline.
  * Credentials come from app_settings (`zoom:credentials`, the frame-47 Connect
  * Zoom form) with env-var fallback — connecting is a settings save, not a deploy.
  * The pure helpers (VTT parsing, webhook signature) are exported for unit tests;
@@ -204,7 +204,8 @@ export type TranscriptCompletedPayload = {
  * Handle recording.transcript_completed. Matching order: the meetings row keyed
  * by zoomMeetingId (covers portal-scheduled AND synced calendar events whose
  * join link carried the meeting id). A linked row ingests straight onto its deal
- * (→ digest_ready); a known-but-unlinked row holds the transcript for the inbox;
+ * (→ digest_ready, the legacy internal name for analysis ready); a known-but-unlinked
+ * row holds the transcript for the inbox;
  * an unknown meeting becomes a fresh inbox row.
  */
 export async function handleTranscriptCompleted(

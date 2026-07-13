@@ -17,6 +17,14 @@ commercial records, account context, and the explicit next commitment. AI reads
 that state and writes drafts or suggestions. A human remains responsible for
 client communication and commercial actions.
 
+Discovery uses one evidence-ingestion workflow. A transcript or set of meeting
+notes produces a pending analysis containing a proposed long-form memo,
+Discovery Package evidence, qualification evidence, and commercial
+classifications. The Deal does not change until a staff member reviews the
+proposal and applies selected items. Commercial classifications are always
+unselected by default; AI must never silently decide IP ownership, engagement
+shape, delivery model, support obligations, or data risk.
+
 Task-specific AI tools may support contact research, discovery extraction,
 proposal/SOW drafting, and delivery task breakdown. They share the same safety
 boundary; adding more agent names does not grant more authority.
@@ -69,6 +77,9 @@ cost before usage data supports it.
 
 ## Implemented R1
 
+- one-pass discovery evidence analysis with item-level human review
+- pending, applied, and dismissed analysis status on recorded calls
+- explicit acceptance before discovery, qualification, or commercial Deal data changes
 - AI-run ledger and per-Deal spend total
 - Wahala fit rationale and portfolio-attractiveness score
 - deterministic engagement-health and action-urgency refresh
@@ -100,6 +111,10 @@ agent fleet.
   status, resolver, and timestamp.
 - `deals`: fit score/rationale/freshness, denormalized portfolio attractiveness,
   engagement health, action urgency, and cumulative AI spend.
+- `deal_calls`: source transcript or notes, proposed discovery analysis, review
+  status, reviewer, review time, and count of accepted evidence items.
+- `discovery_packages`: only the reviewed evidence accepted as current Deal
+  truth; its completeness determines solution readiness.
 
 The canonical authority boundary remains in
 [`OPERATING-MODEL.md`](OPERATING-MODEL.md); the current queue and qualification

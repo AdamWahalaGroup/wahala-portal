@@ -197,7 +197,7 @@ export function IntegrationsPanel({ google, zoomConnected, isAdmin }: { google: 
             )}
           </div>
           <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "var(--muted)" }}>
-            Join buttons on every card, a meeting link auto-attached when you schedule, recording → transcript → ◆ AI digest.
+            Join buttons on every card, a meeting link auto-attached when you schedule, recording → transcript → ◆ AI evidence analysis → human review.
           </p>
           {!zoomConnected && (
             <div className="mono" style={{ fontSize: 10, color: "var(--muted-line)", marginTop: 3 }}>

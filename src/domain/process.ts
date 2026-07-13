@@ -13,8 +13,20 @@
  * are logged, never prevented.
  */
 // Relative imports so any future worker bundle can resolve this chain.
-import { PACKAGE_FIELDS } from "../db/schema";
 import type { DealStage } from "./sales";
+
+export const PACKAGE_FIELDS = [
+  "business_profile",
+  "current_workflow",
+  "pain_points",
+  "budget_posture",
+  "decision_makers",
+  "success_metrics",
+  "mvp_priorities",
+  "timeline",
+  "customer_terminology",
+  "deferred_scope",
+] as const;
 
 export type PackageFieldKey = (typeof PACKAGE_FIELDS)[number];
 export type PackageFieldStatus = "ok" | "partial" | "missing";
@@ -169,7 +181,7 @@ export function nextBestActions(input: {
     const ready = (readiness ?? 0) >= PROPOSAL_READY_AT;
     if (!ready) {
       return list([
-        ["Record the next call (or paste its transcript) — the package fills itself.", true],
+        ["Record the next call (or paste its transcript), then review the evidence AI proposes.", true],
         ["Close the open package fields: name the decision maker, get a budget posture.", false],
         [`At ${PROPOSAL_READY_AT}/10 readiness, draft Option A / Option B.`, false],
       ]);

@@ -6,8 +6,9 @@
  *   backward → measurement (frame 40 post-mortem, frame 41 scorecard)
  *
  * Everything measurable comes from the append-only process_events table — no
- * gut-feel fields. Readiness recomputes from Discovery Package completeness after
- * every ingested call; history keeps per-event snapshots, never mutated.
+ * gut-feel fields. Readiness recomputes from Discovery Package completeness only
+ * after reviewed evidence or a manual edit is accepted; history keeps per-event
+ * snapshots, never mutated.
  */
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
@@ -24,6 +25,7 @@ import {
   nextBestActions,
   journeyIndex,
   JOURNEY,
+  PACKAGE_FIELDS,
   PROPOSAL_READY_AT,
   FOLLOWUP_EXPECTED_DAYS,
   PACKAGE_FIELD_LABELS,
@@ -33,9 +35,28 @@ import {
   type PackageFieldStatus,
   type NextAction,
 } from "@/domain/process";
+import {
+  COMMERCIAL_REVIEW_FIELDS,
+  DISCOVERY_REVIEW_ENUMS,
+  QUALIFICATION_REVIEW_FIELDS,
+  mergeReviewedPackage,
+  recommendedDiscoverySelection,
+  sanitizeDiscoverySelection,
+  type DiscoveryAnalysis,
+  type DiscoveryReviewRecommendation,
+  type DiscoveryReviewSelection,
+} from "@/domain/discovery-review";
+import {
+  isBudgetStatus,
+  isDataSensitivity,
+  isDeliveryModel,
+  isEngagementType,
+  isIpDisposition,
+} from "@/domain/deal-operating-model";
 import { getDraftProvider, type DraftUsage } from "@/services/ai/provider";
 import { resolveAgentConfig } from "@/services/ai/agent-config";
 import { recordAiRun } from "@/services/ai/usage";
+import { buildAudit } from "@/services/audit";
 
 type ProcessEventKind = (typeof schema.PROCESS_EVENT_KINDS)[number];
 
@@ -82,7 +103,14 @@ export type DealProcess = {
   journeyIndex: number;
   goal: string;
   nextActions: NextAction[];
-  calls: { id: string; title: string; recordedAt: Date; durationMin: number | null; fieldsExtracted: number }[];
+  calls: {
+    id: string;
+    title: string;
+    recordedAt: Date;
+    durationMin: number | null;
+    fieldsExtracted: number;
+    reviewStatus: "pending" | "applied" | "dismissed";
+  }[];
 };
 
 /** Everything frame 38 renders on the deal view. */
@@ -123,23 +151,43 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
       complexityScore: open[0]?.complexityScore ?? null,
       depositPaid: !!deal.depositPaidAt,
     }),
-    calls: calls.map((c) => ({ id: c.id, title: c.title, recordedAt: c.recordedAt, durationMin: c.durationMin, fieldsExtracted: c.fieldsExtracted })),
+    calls: calls.map((c) => ({
+      id: c.id,
+      title: c.title,
+      recordedAt: c.recordedAt,
+      durationMin: c.durationMin,
+      fieldsExtracted: c.fieldsExtracted,
+      reviewStatus: c.reviewStatus,
+    })),
   };
 }
 
 // ---------------------------------------------------------------- call ingestion (AI extraction)
 
-const extractionSchema = {
+const evidenceSuggestionSchema = (values?: readonly string[]) => ({
   type: "object",
   additionalProperties: false,
-  required: ["fields", "fieldsImproved"],
+  required: ["suggested", "value", "evidence", "source"],
   properties: {
-    fields: {
+    suggested: { type: "boolean" },
+    value: values ? { type: "string", enum: [...values] } : { type: "string" },
+    evidence: { type: "string" },
+    source: { type: "string" },
+  },
+});
+
+const discoveryAnalysisSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["discoveryMd", "packageFields", "fieldsImproved", "qualification", "commercial"],
+  properties: {
+    discoveryMd: { type: "string" },
+    packageFields: {
       type: "object",
       additionalProperties: false,
-      required: [...schema.PACKAGE_FIELDS],
+      required: [...PACKAGE_FIELDS],
       properties: Object.fromEntries(
-        schema.PACKAGE_FIELDS.map((k) => [
+        PACKAGE_FIELDS.map((k) => [
           k,
           {
             type: "object",
@@ -155,25 +203,50 @@ const extractionSchema = {
       ),
     },
     fieldsImproved: { type: "integer" },
+    qualification: {
+      type: "object",
+      additionalProperties: false,
+      required: [...QUALIFICATION_REVIEW_FIELDS],
+      properties: {
+        champion: evidenceSuggestionSchema(),
+        economicBuyer: evidenceSuggestionSchema(),
+        compellingEvent: evidenceSuggestionSchema(),
+        decisionProcess: evidenceSuggestionSchema(),
+        budgetStatus: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.budgetStatus),
+        budgetEvidence: evidenceSuggestionSchema(),
+      },
+    },
+    commercial: {
+      type: "object",
+      additionalProperties: false,
+      required: [...COMMERCIAL_REVIEW_FIELDS],
+      properties: {
+        engagementType: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.engagementType),
+        deliveryModel: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.deliveryModel),
+        ipDisposition: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.ipDisposition),
+        dataSensitivity: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.dataSensitivity),
+        supportExpectation: evidenceSuggestionSchema(),
+      },
+    },
   },
 } as const;
 
-type ExtractionOutput = {
-  fields: Record<string, { status: "ok" | "partial" | "missing"; evidence: string; source: string }>;
-  fieldsImproved: number;
-};
-
 /**
  * The shared ingest core — the authed paste path AND the Zoom webhook (no user
- * context, actorUserId null) both land here: store the transcript, run the
- * package extractor, merge the 10 fields, recompute readiness (snapshot logged).
+ * context, actorUserId null) both land here. The source and analysis are durable,
+ * but the Deal remains unchanged until a human reviews and applies selections.
  */
 export async function ingestCallCore(
   deal: typeof schema.deals.$inferSelect,
   input: { title: string; transcriptMd: string; recordedAt?: string | Date; durationMin?: number | null },
   actorUserId: string | null,
   trigger: "user" | "webhook" = "user",
-): Promise<{ callId: string; readiness: number; fieldsExtracted: number; usage: DraftUsage }> {
+): Promise<{
+  callId: string;
+  analysis: DiscoveryAnalysis;
+  recommended: DiscoveryReviewRecommendation;
+  usage: DraftUsage;
+}> {
   const title = input.title?.trim();
   const transcript = input.transcriptMd?.trim();
   if (!title) throw new StageError("VALIDATION", "Give the call a title.");
@@ -184,33 +257,46 @@ export async function ingestCallCore(
   const previous = await loadPackage(dealId);
   const provider = await getDraftProvider();
   const cfg = await resolveAgentConfig("package_extractor");
-  const { output, usage } = await provider.completeStructured<ExtractionOutput>({
+  const currentDealState = {
+    name: deal.name,
+    stage: deal.stage,
+    discoveryMd: deal.discoveryMd,
+    qualification: {
+      champion: deal.champion,
+      economicBuyer: deal.economicBuyer,
+      compellingEvent: deal.compellingEvent,
+      decisionProcess: deal.decisionProcess,
+      budgetStatus: deal.budgetStatus,
+      budgetEvidence: deal.budgetEvidence,
+    },
+    commercial: {
+      engagementType: deal.engagementType,
+      deliveryModel: deal.deliveryModel,
+      ipDisposition: deal.ipDisposition,
+      dataSensitivity: deal.dataSensitivity,
+      supportExpectation: deal.supportExpectation,
+    },
+  };
+  const { output, usage } = await provider.completeStructured<DiscoveryAnalysis>({
     system: cfg.systemPrompt,
     parts: [
       { kind: "text", text: `CURRENT PACKAGE (JSON):\n${JSON.stringify(previous)}` },
-      { kind: "text", text: `CALL TITLE: ${title}\n\nTRANSCRIPT:\n${transcript.slice(0, 120_000)}` },
+      { kind: "text", text: `CURRENT DEAL STATE (JSON):\n${JSON.stringify(currentDealState)}` },
+      { kind: "text", text: `UNTRUSTED SOURCE MATERIAL\nTITLE: ${title}\n\n${transcript.slice(0, 120_000)}` },
     ],
-    schemaName: "discovery_package",
-    schema: extractionSchema,
+    schemaName: "discovery_evidence_review",
+    schema: discoveryAnalysisSchema,
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
   });
-
-  // Merge rule: a field never gets WORSE because a later call didn't mention it.
-  const rank = { missing: 0, partial: 1, ok: 2 } as const;
-  const merged: PackageFields = { ...previous };
-  for (const key of schema.PACKAGE_FIELDS) {
-    const next = output.fields[key];
-    if (!next) continue;
-    const prev = previous[key];
-    if (!prev || rank[next.status] >= rank[prev.status]) {
-      merged[key] = { status: next.status, evidence: next.evidence || prev?.evidence || null, source: next.source || prev?.source || null };
-    }
-  }
-  const readiness = readinessFrom(merged);
+  const analysis: DiscoveryAnalysis = {
+    ...output,
+    discoveryMd: output.discoveryMd.trim(),
+    fieldsImproved: Math.max(0, Math.min(PACKAGE_FIELDS.length, Math.round(output.fieldsImproved))),
+  };
+  const recommended = recommendedDiscoverySelection(deal, previous, analysis);
   const callId = crypto.randomUUID();
 
-  const existing = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
   await db.batch([
     db.insert(schema.dealCalls).values({
       id: callId,
@@ -219,26 +305,25 @@ export async function ingestCallCore(
       recordedAt: input.recordedAt ? new Date(input.recordedAt) : new Date(),
       durationMin: input.durationMin ?? null,
       transcriptMd: transcript,
-      fieldsExtracted: Math.max(0, Math.min(10, Math.round(output.fieldsImproved))),
+      fieldsExtracted: 0,
+      discoveryAnalysis: analysis,
+      reviewStatus: "pending",
       createdByUserId: actorUserId,
     }),
-    existing
-      ? db.update(schema.discoveryPackages).set({ fields: merged }).where(eq(schema.discoveryPackages.dealId, dealId))
-      : db.insert(schema.discoveryPackages).values({ dealId, fields: merged }),
-    db.update(schema.deals).set({ readinessScore: readiness }).where(eq(schema.deals.id, dealId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId,
+        action: "deal.discovery_analyzed",
+        entityType: "deal_call",
+        entityId: callId,
+        metadata: { dealId, model: usage.model, costCents: usage.costCents, reviewStatus: "pending" },
+      }),
+    ),
   ]);
-  await recordProcessEvent({
-    organizationId: deal.organizationId,
-    dealId,
-    ownerUserId: deal.ownerUserId,
-    actorUserId,
-    kind: "call_ingested",
-    readinessScore: readiness,
-    metadata: { callId, title, fieldsImproved: output.fieldsImproved },
-  });
   await recordAiRun(db, { agentKey: "package_extractor", trigger, dealId, organizationId: deal.organizationId, ...usage });
 
-  return { callId, readiness, fieldsExtracted: output.fieldsImproved, usage };
+  return { callId, analysis, recommended, usage };
 }
 
 /**
@@ -248,7 +333,7 @@ export async function ingestCall(
   ctx: AuthContext,
   dealId: string,
   input: { title: string; transcriptMd: string; recordedAt?: string; durationMin?: number },
-): Promise<{ callId: string; readiness: number; fieldsExtracted: number; usage: DraftUsage }> {
+): Promise<{ callId: string; analysis: DiscoveryAnalysis; recommended: DiscoveryReviewRecommendation; usage: DraftUsage }> {
   assertSalesManager(ctx, "ingest_call");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
@@ -256,6 +341,188 @@ export async function ingestCall(
   const scope = ctx.accessScope;
   if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   return ingestCallCore(deal, input, ctx.user.id);
+}
+
+export type DiscoveryReviewView = {
+  callId: string;
+  title: string;
+  analysis: DiscoveryAnalysis;
+  recommended: DiscoveryReviewRecommendation;
+};
+
+async function reviewContext(ctx: AuthContext, dealId: string, callId: string) {
+  const db = getDb();
+  const [deal, call] = await Promise.all([
+    db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) }),
+    db.query.dealCalls.findFirst({ where: eq(schema.dealCalls.id, callId) }),
+  ]);
+  if (!deal || !call || call.dealId !== dealId) throw new StageError("NOT_FOUND", "Discovery review not found.");
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) {
+    throw new StageError("NOT_FOUND", "Discovery review not found.");
+  }
+  return { db, deal, call };
+}
+
+export async function getCallReview(ctx: AuthContext, dealId: string, callId: string): Promise<DiscoveryReviewView | null> {
+  assertStaff(ctx, "read_discovery_review");
+  const { deal, call } = await reviewContext(ctx, dealId, callId);
+  const analysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
+  if (!analysis) return null;
+  const currentPackage = await loadPackage(dealId);
+  return {
+    callId,
+    title: call.title,
+    analysis,
+    recommended: recommendedDiscoverySelection(deal, currentPackage, analysis),
+  };
+}
+
+function acceptedSuggestion<T extends string>(suggestion: { suggested: boolean; value: T }, label: string): T {
+  if (!suggestion.suggested || !suggestion.value.trim()) {
+    throw new StageError("VALIDATION", `${label} has no supported AI suggestion to apply.`);
+  }
+  return suggestion.value;
+}
+
+export async function applyCallReview(
+  ctx: AuthContext,
+  dealId: string,
+  callId: string,
+  requested: DiscoveryReviewSelection,
+): Promise<{ readiness: number | null; fieldsImproved: number }> {
+  assertSalesManager(ctx, "apply_discovery_review");
+  const { db, deal, call } = await reviewContext(ctx, dealId, callId);
+  if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
+  const analysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
+  if (!analysis) throw new StageError("INVALID_STATE", "This call has no reviewable analysis.");
+  const selection = sanitizeDiscoverySelection(requested);
+  if (
+    !selection.applyDiscoveryMd &&
+    selection.packageFields.length === 0 &&
+    selection.qualificationFields.length === 0 &&
+    selection.commercialFields.length === 0
+  ) {
+    throw new StageError("VALIDATION", "Select at least one evidence update, or dismiss the review.");
+  }
+
+  const currentPackage = await loadPackage(dealId);
+  const packageResult = mergeReviewedPackage(currentPackage, analysis.packageFields, selection.packageFields);
+  const dealPatch: Partial<typeof schema.deals.$inferInsert> = {};
+  if (selection.applyDiscoveryMd) {
+    const memo = analysis.discoveryMd.trim();
+    if (!memo) throw new StageError("VALIDATION", "The analysis has no discovery memo to apply.");
+    dealPatch.discoveryMd = memo;
+  }
+  if (selection.packageFields.length > 0) dealPatch.readinessScore = packageResult.readiness;
+
+  for (const key of selection.qualificationFields) {
+    const suggestion = analysis.qualification[key];
+    const value = acceptedSuggestion(suggestion, key);
+    switch (key) {
+      case "champion": dealPatch.champion = value; break;
+      case "economicBuyer": dealPatch.economicBuyer = value; break;
+      case "compellingEvent": dealPatch.compellingEvent = value; break;
+      case "decisionProcess": dealPatch.decisionProcess = value; break;
+      case "budgetEvidence": dealPatch.budgetEvidence = value; break;
+      case "budgetStatus":
+        if (!isBudgetStatus(value)) throw new StageError("VALIDATION", "Invalid suggested budget status.");
+        dealPatch.budgetStatus = value;
+        break;
+    }
+  }
+  for (const key of selection.commercialFields) {
+    const suggestion = analysis.commercial[key];
+    const value = acceptedSuggestion(suggestion, key);
+    switch (key) {
+      case "engagementType":
+        if (!isEngagementType(value)) throw new StageError("VALIDATION", "Invalid suggested engagement type.");
+        dealPatch.engagementType = value;
+        break;
+      case "deliveryModel":
+        if (!isDeliveryModel(value)) throw new StageError("VALIDATION", "Invalid suggested delivery model.");
+        dealPatch.deliveryModel = value;
+        break;
+      case "ipDisposition":
+        if (!isIpDisposition(value)) throw new StageError("VALIDATION", "Invalid suggested IP disposition.");
+        dealPatch.ipDisposition = value;
+        break;
+      case "dataSensitivity":
+        if (!isDataSensitivity(value)) throw new StageError("VALIDATION", "Invalid suggested data sensitivity.");
+        dealPatch.dataSensitivity = value;
+        break;
+      case "supportExpectation": dealPatch.supportExpectation = value; break;
+    }
+  }
+
+  const acceptedEvidence = {
+    qualification: Object.fromEntries(selection.qualificationFields.map((key) => [key, analysis.qualification[key]])),
+    commercial: Object.fromEntries(selection.commercialFields.map((key) => [key, analysis.commercial[key]])),
+  };
+  const statements: unknown[] = [
+    db.update(schema.deals).set(dealPatch).where(eq(schema.deals.id, dealId)),
+    db.update(schema.dealCalls)
+      .set({
+        reviewStatus: "applied",
+        reviewedByUserId: ctx.user.id,
+        reviewedAt: new Date(),
+        fieldsExtracted: packageResult.fieldsImproved,
+      })
+      .where(and(eq(schema.dealCalls.id, callId), eq(schema.dealCalls.reviewStatus, "pending"))),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId: ctx.user.id,
+        action: "deal.discovery_review_applied",
+        entityType: "deal_call",
+        entityId: callId,
+        metadata: { selection, acceptedEvidence, readiness: selection.packageFields.length ? packageResult.readiness : deal.readinessScore },
+      }),
+    ),
+  ];
+  if (selection.packageFields.length > 0) {
+    const existing = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
+    statements.splice(
+      1,
+      0,
+      existing
+        ? db.update(schema.discoveryPackages).set({ fields: packageResult.fields }).where(eq(schema.discoveryPackages.dealId, dealId))
+        : db.insert(schema.discoveryPackages).values({ dealId, fields: packageResult.fields }),
+    );
+  }
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+  const readiness = selection.packageFields.length ? packageResult.readiness : deal.readinessScore;
+  await recordProcessEvent({
+    organizationId: deal.organizationId,
+    dealId,
+    ownerUserId: deal.ownerUserId,
+    actorUserId: ctx.user.id,
+    kind: "call_ingested",
+    readinessScore: readiness,
+    metadata: { callId, title: call.title, fieldsImproved: packageResult.fieldsImproved, selection },
+  });
+  return { readiness, fieldsImproved: packageResult.fieldsImproved };
+}
+
+export async function dismissCallReview(ctx: AuthContext, dealId: string, callId: string): Promise<void> {
+  assertSalesManager(ctx, "dismiss_discovery_review");
+  const { db, deal, call } = await reviewContext(ctx, dealId, callId);
+  if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
+  await db.batch([
+    db.update(schema.dealCalls)
+      .set({ reviewStatus: "dismissed", reviewedByUserId: ctx.user.id, reviewedAt: new Date() })
+      .where(and(eq(schema.dealCalls.id, callId), eq(schema.dealCalls.reviewStatus, "pending"))),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId: ctx.user.id,
+        action: "deal.discovery_review_dismissed",
+        entityType: "deal_call",
+        entityId: callId,
+        metadata: { dealId },
+      }),
+    ),
+  ]);
 }
 
 /**
@@ -308,9 +575,8 @@ export async function setPackageField(
 
 export async function getCallTranscript(ctx: AuthContext, dealId: string, callId: string): Promise<{ title: string; recordedAt: Date; transcriptMd: string }> {
   assertStaff(ctx, "read_transcript");
-  const row = await getDb().query.dealCalls.findFirst({ where: eq(schema.dealCalls.id, callId) });
-  if (!row || row.dealId !== dealId) throw new StageError("NOT_FOUND", "Call not found.");
-  return { title: row.title, recordedAt: row.recordedAt, transcriptMd: row.transcriptMd };
+  const { call } = await reviewContext(ctx, dealId, callId);
+  return { title: call.title, recordedAt: call.recordedAt, transcriptMd: call.transcriptMd };
 }
 
 // ---------------------------------------------------------------- the frame-39 nudge
