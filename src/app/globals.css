@@ -71,6 +71,52 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* Field explanations: visible on pointer hover and keyboard/touch focus. The
+   selected data-sensitivity definition also remains inline, so this is never
+   the only place essential guidance appears. */
+.field-help {
+  position: relative;
+  display: inline-flex;
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.field-help__trigger {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid #c9d0fb;
+  border-radius: 999px;
+  background: var(--cobalt-wash);
+  color: var(--cobalt-text);
+  font: 800 10px/1 var(--font-sans), system-ui, sans-serif;
+  cursor: help;
+}
+.field-help__content {
+  position: fixed;
+  z-index: 1000;
+  display: block;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 9px 11px;
+  border: 1px solid #d7d9df;
+  border-radius: 9px;
+  background: var(--white);
+  box-shadow: var(--shadow-card);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+}
+.field-help__definitions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
 /* Visible focus — cobalt ring (WCAG AA). */
 :where(button, a, input, textarea, select):focus-visible {
   outline: none;

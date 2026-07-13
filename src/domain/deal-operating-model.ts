@@ -79,6 +79,20 @@ export const DATA_SENSITIVITY_LABELS: Record<DataSensitivity, string> = {
   high_risk: "High-risk / regulated data",
 };
 
+/**
+ * Classify the most sensitive data the proposed engagement may receive, store,
+ * transmit, or send to a third-party provider. These descriptions are operating
+ * guidance, not legal conclusions.
+ */
+export const DATA_SENSITIVITY_DESCRIPTIONS: Record<DataSensitivity, string> = {
+  standard:
+    "Public or low-sensitivity operational data. No privileged, regulated, or materially confidential client information is expected.",
+  confidential:
+    "Non-public customer or business information that needs controlled access, retention, deletion, and contractual handling rules.",
+  high_risk:
+    "Privileged, court-protected, identifying, biometric, health, financial, or other regulated data. Security, legal, retention, and provider approval are required before use.",
+};
+
 export const BUDGET_STATUS_LABELS: Record<BudgetStatus, string> = {
   unknown: "Unknown",
   authority_known: "Spending authority known",

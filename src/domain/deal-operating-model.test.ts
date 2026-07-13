@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { actionUrgencyScore, nextActionTiming } from "./deal-operating-model";
+import {
+  actionUrgencyScore,
+  DATA_SENSITIVITIES,
+  DATA_SENSITIVITY_DESCRIPTIONS,
+  nextActionTiming,
+} from "./deal-operating-model";
 
 const now = new Date("2026-07-13T12:00:00.000Z");
 
@@ -28,5 +33,13 @@ describe("nextActionTiming", () => {
   it("explains missing and overdue commitments", () => {
     expect(nextActionTiming({ nextAction: null, nextActionDueAt: null, now }).label).toBe("next commitment missing");
     expect(nextActionTiming({ nextAction: "Follow up", nextActionDueAt: new Date("2026-07-11T12:00:00.000Z"), now }).label).toBe("2d overdue");
+  });
+});
+
+describe("data sensitivity guidance", () => {
+  it("explains every selectable classification", () => {
+    for (const sensitivity of DATA_SENSITIVITIES) {
+      expect(DATA_SENSITIVITY_DESCRIPTIONS[sensitivity].length).toBeGreaterThan(40);
+    }
   });
 });
