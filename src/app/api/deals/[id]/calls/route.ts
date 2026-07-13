@@ -1,8 +1,8 @@
 /**
  * POST /api/deals/[id]/calls — ingest a recorded call (frame 38):
  *   { title, transcriptMd, recordedAt?, durationMin? }
- * Stores the transcript, runs the package extractor (AI), merges the 10 Discovery
- * Package fields, recomputes readiness (snapshot logged to process_events).
+ * Stores the transcript and one unified AI analysis. The response is reviewable;
+ * no Deal, qualification, commercial, or readiness field changes until PATCH apply.
  * Admin / account owner (it costs money). ~15–30s.
  */
 import { NextResponse } from "next/server";

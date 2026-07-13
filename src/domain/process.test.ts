@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, type PackageFields } from "./process";
-import { PACKAGE_FIELDS } from "../db/schema";
+import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, PACKAGE_FIELDS, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;

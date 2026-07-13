@@ -33,13 +33,6 @@ export const AGENT_DEFS: AgentDef[] = [
     supportsReasoning: true,
   },
   {
-    key: "discovery",
-    label: "Discovery analyst",
-    description: "Distills call transcripts into the Discovery Package on a deal (merges across calls).",
-    defaultModel: aiDraftModel,
-    supportsReasoning: true,
-  },
-  {
     key: "proposal",
     label: "Proposal writer",
     description: "Drafts Option A/B proposals from discovery, with the 1–5 complexity score. Never prices.",
@@ -69,8 +62,8 @@ export const AGENT_DEFS: AgentDef[] = [
   },
   {
     key: "package_extractor",
-    label: "Package extractor (readiness)",
-    description: "Reads each recorded call and updates the 10 Discovery Package fields that drive the deal's readiness score.",
+    label: "Discovery evidence analyst",
+    description: "Analyzes each call once, then proposes memo, readiness, qualification, and commercial updates for human review.",
     defaultModel: aiDraftModel,
     supportsReasoning: true,
   },

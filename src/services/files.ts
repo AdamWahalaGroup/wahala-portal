@@ -3,7 +3,7 @@
  *
  * Staff upload (and choose visibility); everyone in scope can download what they're
  * allowed to see. Clients are read-only and NEVER see internal-flagged files
- * (recordings, AI digests) — the same visibility rule as tasks, enforced here.
+ * (recordings, AI analyses) — the same visibility rule as tasks, enforced here.
  */
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";

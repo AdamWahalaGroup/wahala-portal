@@ -23,6 +23,7 @@ import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
 import {
   actionUrgencyScore,
+  DEFAULT_DATA_SENSITIVITY,
   isBudgetStatus,
   isDataSensitivity,
   isDeliveryModel,
@@ -239,6 +240,7 @@ export async function createOpportunity(
       ownerUserId,
       primaryContactId: contactId,
       origin: "captured",
+      dataSensitivity: DEFAULT_DATA_SENSITIVITY,
       valueCents: Math.max(0, Math.round(input.estValueCents ?? 0)),
       notes: need,
       discoveryNote: need,

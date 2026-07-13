@@ -175,7 +175,7 @@ export function MeetingInbox({ items, deals }: { items: InboxItem[]; deals: Deal
                 disabled={busy === m.id || !dealId}
                 style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
               >
-                {busy === m.id ? (m.hasTranscript ? "Linking + digesting…" : "Linking…") : "Link"}
+                {busy === m.id ? (m.hasTranscript ? "Linking + analyzing…" : "Linking…") : "Link"}
               </button>
             </div>
           )}

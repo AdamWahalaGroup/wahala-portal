@@ -37,8 +37,9 @@ export const IP_DISPOSITIONS = [
 ] as const;
 export type IpDisposition = (typeof IP_DISPOSITIONS)[number];
 
-export const DATA_SENSITIVITIES = ["standard", "confidential", "high_risk"] as const;
+export const DATA_SENSITIVITIES = ["unknown", "standard", "confidential", "high_risk"] as const;
 export type DataSensitivity = (typeof DATA_SENSITIVITIES)[number];
+export const DEFAULT_DATA_SENSITIVITY: DataSensitivity = "unknown";
 
 export const BUDGET_STATUSES = ["unknown", "authority_known", "funding_path", "confirmed"] as const;
 export type BudgetStatus = (typeof BUDGET_STATUSES)[number];
@@ -74,6 +75,7 @@ export const IP_DISPOSITION_LABELS: Record<IpDisposition, string> = {
 };
 
 export const DATA_SENSITIVITY_LABELS: Record<DataSensitivity, string> = {
+  unknown: "Unknown — discovery needed",
   standard: "Standard",
   confidential: "Confidential customer data",
   high_risk: "High-risk / regulated data",
@@ -85,6 +87,8 @@ export const DATA_SENSITIVITY_LABELS: Record<DataSensitivity, string> = {
  * guidance, not legal conclusions.
  */
 export const DATA_SENSITIVITY_DESCRIPTIONS: Record<DataSensitivity, string> = {
+  unknown:
+    "The data has not been classified yet. Treat it conservatively and resolve the expected data types, handling, and provider rules during discovery.",
   standard:
     "Public or low-sensitivity operational data. No privileged, regulated, or materially confidential client information is expected.",
   confidential:

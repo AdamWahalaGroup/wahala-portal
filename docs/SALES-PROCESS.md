@@ -53,6 +53,23 @@ responsible scope and price. It does not measure win probability. Customer
 terminology and deferred scope matter for delivery quality but should not be
 used as proof that a buying motion exists.
 
+Record discovery evidence once, as a call transcript or meeting notes. AI may
+then propose four kinds of updates in a single pending review:
+
+- a long-form discovery memo;
+- evidence for the ten Discovery Package fields;
+- qualification evidence such as champion, economic buyer, compelling event,
+  decision process, and budget; and
+- commercial classifications such as engagement, delivery, IP, data
+  sensitivity, and support.
+
+A staff member applies or dismisses the analysis. Applying is item-level:
+accepted facts update the Deal and recompute readiness; rejected or unchecked
+items do nothing. Existing human-entered evidence is not selected for overwrite
+by default. Commercial classifications are never selected by default. In
+particular, AI must not infer favorable IP ownership, a funded budget, buyer
+authority, or low data sensitivity from silence.
+
 ## Proposal and contracting
 
 - Use one recommended proposal path when it is clearly best.
@@ -72,6 +89,7 @@ With little historical data, prioritize process visibility over rankings:
 - overdue Wahala/client commitments;
 - meeting reschedules and no-shows;
 - qualification and solution-readiness coverage;
+- pending discovery analyses and accepted evidence rate;
 - founder hours spent to reach each gate;
 - proposals sent and decisions received;
 - structured pass, park, and loss reasons; and
@@ -80,4 +98,3 @@ With little historical data, prioritize process visibility over rankings:
 After enough closed cohorts, add stage conversion, sales cycle, forecast
 accuracy, gross margin, source effectiveness, repeat revenue, and seller
 coaching views. Always show time range and sample size.
-
