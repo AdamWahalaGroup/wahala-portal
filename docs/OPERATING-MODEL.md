@@ -43,7 +43,7 @@ One Deal represents one potential commercial engagement. It owns or links to:
 - account, contacts, owner, and provenance;
 - qualification evidence;
 - discovery and solution-readiness evidence;
-- one explicit next mutual commitment;
+- one explicit agreed follow-up or scheduled next meeting;
 - meetings, activity, and grounded AI suggestions;
 - proposals and commercial options;
 - agreement, IP, data-risk, payment, and support decisions;
@@ -89,4 +89,3 @@ not be assigned accidentally.
 One-shot and phased delivery use the same Project model. One-shot work has one
 paid delivery stage; phased work has several. Payment schedule is a separate
 commercial choice.
-

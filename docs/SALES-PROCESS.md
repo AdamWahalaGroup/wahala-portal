@@ -17,15 +17,20 @@ calibrate the process.
 
 Stages report where a deal is; they do not force a conversation sequence.
 
-## The next-commitment rule
+## Recommended next step versus agreed follow-up
 
-The UI calls this the **Next agreed action**. Stage guidance is the standard
-playbook; it is not evidence that a buyer or Wahala has actually committed to
-anything. Record only the next observable action a named party accepted, with a
-due date. When it is complete, replace it with the next agreed action rather
-than building a second task list inside the Deal.
+The **Recommended next step** is system guidance from stage and readiness. In
+Discovery that will normally be to close specific evidence gaps or start a
+proposal. It is not a new stage, a gate, or evidence that anyone agreed to act.
 
-Every active Deal records:
+The **Agreed follow-up** is the next observable action a named party accepted,
+with a due date. A scheduled meeting satisfies this rule without a duplicate
+action. When an action is complete, replace it with the next agreement rather
+than building a second task list inside the Deal. The agreed follow-up is Deal
+motion, not another field in the Discovery Package and not a step between
+Discovery and Proposal.
+
+Every active Deal has either a scheduled meeting or records:
 
 - one specific action;
 - a due date;
@@ -48,7 +53,7 @@ Before investing proposal-level effort, capture evidence for:
 - decision process and criteria;
 - alternatives, competition, and no-decision risk;
 - Wahala delivery/IP/data/support risk; and
-- next mutual commitment.
+- agreed follow-up or scheduled next meeting.
 
 Unknown is an acceptable answer. Unsupported certainty is not.
 
@@ -72,21 +77,23 @@ the funding conversation relevant. Capture customer terminology throughout the
 conversation rather than interrogating it as a standalone vocabulary exercise.
 
 Record discovery evidence once, as a call transcript or meeting notes. AI may
-then propose four kinds of updates in a single pending review:
+then propose five kinds of updates in a single pending review:
 
 - a long-form discovery memo;
 - evidence for the ten Discovery Package fields;
 - qualification evidence such as champion, economic buyer, compelling event,
   decision process, and budget; and
 - commercial classifications such as engagement, delivery, IP, data
-  sensitivity, and support.
+  sensitivity, and support; and
+- an agreed follow-up only when the source explicitly states the responsible
+  party, accepted action, and exact calendar date.
 
 A staff member applies or dismisses the analysis. Applying is item-level:
 accepted facts update the Deal and recompute readiness; rejected or unchecked
 items do nothing. Existing human-entered evidence is not selected for overwrite
-by default. Commercial classifications are never selected by default. In
+by default. Commercial classifications and agreed follow-ups are never selected by default. In
 particular, AI must not infer favorable IP ownership, a funded budget, buyer
-authority, or low data sensitivity from silence.
+authority, low data sensitivity, acceptance of an action, or a calendar date.
 
 ## Proposal and contracting
 
@@ -103,7 +110,7 @@ authority, or low data sensitivity from silence.
 With little historical data, prioritize process visibility over rankings:
 
 - first-response time;
-- active deals with a dated next commitment;
+- active deals with a dated agreed follow-up or scheduled meeting;
 - overdue Wahala/client commitments;
 - meeting reschedules and no-shows;
 - qualification and solution-readiness coverage;

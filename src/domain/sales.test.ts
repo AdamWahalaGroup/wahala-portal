@@ -8,7 +8,6 @@ import {
   isStuck,
   isDealStage,
   needsEngineeringReview,
-  nextCommitmentGuidance,
 } from "@/domain/sales";
 import { DEAL_STAGES } from "@/db/schema";
 
@@ -33,15 +32,6 @@ describe("sales stage metadata", () => {
     expect(isDealStage("")).toBe(false);
   });
 
-  it("provides concrete next-commitment coaching for every stage", () => {
-    for (const stage of DEAL_STAGES) {
-      const guidance = nextCommitmentGuidance(stage);
-      expect(guidance.goal.length).toBeGreaterThan(20);
-      expect(guidance.example.length).toBeGreaterThan(20);
-    }
-    expect(nextCommitmentGuidance("proposal_out").goal).toContain("buyer response");
-    expect(nextCommitmentGuidance("committed").goal).toContain("payment gate");
-  });
 });
 
 describe("complexity review flag", () => {

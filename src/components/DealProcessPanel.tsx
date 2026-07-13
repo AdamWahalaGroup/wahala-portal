@@ -27,6 +27,7 @@ import {
   DELIVERY_MODEL_LABELS,
   ENGAGEMENT_TYPE_LABELS,
   IP_DISPOSITION_LABELS,
+  NEXT_ACTION_COURT_LABELS,
 } from "@/domain/deal-operating-model";
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 import { FieldHelp } from "@/components/FieldHelp";
@@ -138,13 +139,14 @@ function DiscoveryReviewCard({ dealId, review, onDone }: { dealId: string; revie
   });
   const proposedQualification = QUALIFICATION_REVIEW_FIELDS.filter((key) => review.analysis.qualification[key].suggested);
   const proposedCommercial = COMMERCIAL_REVIEW_FIELDS.filter((key) => review.analysis.commercial[key].suggested);
+  const proposedFollowUp = review.analysis.followUp.suggested;
 
   return (
     <div style={{ border: "1px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: 13, display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
       <div>
         <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Review AI evidence · {review.title}</div>
         <p style={{ margin: "5px 0 0", fontSize: 12, color: "var(--ink-soft)" }}>
-          Nothing below changes the Deal until you select it and apply. Commercial suggestions start unchecked.
+          Nothing below changes the Deal until you select it and apply. Commercial suggestions and agreed follow-ups start unchecked.
         </p>
       </div>
 
@@ -218,10 +220,27 @@ function DiscoveryReviewCard({ dealId, review, onDone }: { dealId: string; revie
         </div>
       )}
 
+      {proposedFollowUp && (
+        <div style={{ borderTop: "1px solid #DDE1FB", paddingTop: 10 }}>
+          <div className="kicker" style={{ marginBottom: 5, color: "#B45309" }}>Agreed follow-up · explicit confirmation required</div>
+          <label style={{ display: "flex", gap: 8, padding: "6px 0", cursor: "pointer" }}>
+            <input type="checkbox" checked={selection.applyFollowUp} onChange={(e) => setSelection((current) => ({ ...current, applyFollowUp: e.target.checked }))} />
+            <span style={{ fontSize: 12, lineHeight: 1.4 }}>
+              <b>{review.analysis.followUp.action} · {review.analysis.followUp.dueAt}</b>
+              <span className="mono" style={{ display: "block", color: "var(--muted)", fontSize: 9.5 }}>
+                court: {review.analysis.followUp.court ? NEXT_ACTION_COURT_LABELS[review.analysis.followUp.court] : "not identified"}
+              </span>
+              <span style={{ display: "block", color: "var(--ink-soft)" }}>{review.analysis.followUp.evidence}</span>
+              <span className="mono" style={{ display: "block", color: "var(--muted-line)", fontSize: 9.5 }}>{review.analysis.followUp.source}</span>
+            </span>
+          </label>
+        </div>
+      )}
+
       {error && <p style={{ margin: 0, color: "#b00020", fontSize: 12 }}>{error}</p>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={() => resolve("apply")} disabled={busy} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-          {busy ? "Saving…" : "Apply selected evidence"}
+          {busy ? "Saving…" : "Apply selected updates"}
         </button>
         <button onClick={() => resolve("dismiss")} disabled={busy} style={{ border: "1px solid #d7d9df", background: "var(--white)", color: "var(--muted)", borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
           Dismiss analysis

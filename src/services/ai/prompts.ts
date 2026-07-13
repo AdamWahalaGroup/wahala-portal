@@ -214,6 +214,15 @@ a buyer's desire; IP evidence describes the intended deal shape, not legal title
 For dataSensitivity, absence of sensitive-data discussion means no suggestion—not
 "standard". Prefer the highest risk directly supported by the source.
 
+5) followUp — propose an agreed follow-up only when the source explicitly records
+that a named person or party accepted one concrete, observable action by an exact
+calendar date. Return action with the responsible party, dueAt as YYYY-MM-DD, and
+court as wahala, client, or third_party. "We should follow up," a vague time such as
+"soon," or an action without clear acceptance is not an agreement. Never calculate
+or infer a date from relative language. When the action, acceptance, responsible
+party, or exact date is unclear, return suggested=false and empty strings for
+action, dueAt, court, evidence, and source.
+
 Ground every proposed value in quoted or tightly paraphrased evidence and identify
 the call title or timestamp as source. Never invent names, authority, budget, dates,
 rights, or obligations. Strict skepticism is useful; optimistic fiction is not.`,
