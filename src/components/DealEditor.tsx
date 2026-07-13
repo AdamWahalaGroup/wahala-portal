@@ -5,11 +5,12 @@
  * small name / value / notes form. Fetch → router.refresh(), same as StageActions.
  */
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   BUDGET_STATUSES,
   BUDGET_STATUS_LABELS,
   DATA_SENSITIVITIES,
+  DATA_SENSITIVITY_DESCRIPTIONS,
   DATA_SENSITIVITY_LABELS,
   DELIVERY_MODELS,
   DELIVERY_MODEL_LABELS,
@@ -59,8 +60,28 @@ function dateOnly(value: string | null): string {
   return value ? value.slice(0, 10) : "";
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <div className="kicker" style={{ marginBottom: 5 }}>{children}</div>;
+function FieldHelp({ children, label }: { children: React.ReactNode; label: string }) {
+  const descriptionId = useId();
+  return (
+    <span className="field-help">
+      <button type="button" className="field-help__trigger" aria-label={`Explain ${label}`} aria-describedby={descriptionId}>
+        ?
+      </button>
+      <span id={descriptionId} className="field-help__content" role="tooltip">
+        {children}
+      </span>
+    </span>
+  );
+}
+
+function FieldLabel({ children, help }: { children: React.ReactNode; help?: React.ReactNode }) {
+  const label = typeof children === "string" ? children : "this field";
+  return (
+    <div className="kicker" style={{ marginBottom: 5, display: "flex", alignItems: "center", gap: 5 }}>
+      <span>{children}</span>
+      {help && <FieldHelp label={label}>{help}</FieldHelp>}
+    </div>
+  );
 }
 
 async function patchDeal(dealId: string, body: unknown): Promise<string | null> {
@@ -224,41 +245,53 @@ export function DealFieldsForm({
             <input style={inputStyle} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
-            <FieldLabel>Estimated value ($)</FieldLabel>
+            <FieldLabel help="A rough portfolio-planning estimate, not a quote, forecast, or promise. Record the evidence behind it in the qualification section.">Estimated value ($)</FieldLabel>
             <input style={inputStyle} inputMode="numeric" placeholder="Gut range anchor, not a quote" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))} />
           </div>
           <div>
-            <FieldLabel>Expected close</FieldLabel>
+            <FieldLabel help="The buyer-supported target date for a decision or signed agreement. Leave it blank when it is only a founder hope.">Expected close</FieldLabel>
             <input type="date" style={inputStyle} value={form.expectedCloseAt} onChange={(e) => setForm((f) => ({ ...f, expectedCloseAt: e.target.value }))} />
           </div>
           <div>
-            <FieldLabel>Engagement type</FieldLabel>
+            <FieldLabel help="What Wahala is selling: a product/license, modernization, custom build, paid discovery, advisory work, or support.">Engagement type</FieldLabel>
             <select style={inputStyle} value={form.engagementType} onChange={(e) => setForm((f) => ({ ...f, engagementType: e.target.value as EngagementType | "" }))}>
               <option value="">Unclassified</option>
               {ENGAGEMENT_TYPES.map((value) => <option key={value} value={value}>{ENGAGEMENT_TYPE_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
-            <FieldLabel>Delivery model</FieldLabel>
+            <FieldLabel help="How the engagement will be structured and delivered. This is separate from what is being sold and from the payment schedule.">Delivery model</FieldLabel>
             <select style={inputStyle} value={form.deliveryModel} onChange={(e) => setForm((f) => ({ ...f, deliveryModel: e.target.value as DeliveryModel | "" }))}>
               <option value="">Unclassified</option>
               {DELIVERY_MODELS.map((value) => <option key={value} value={value}>{DELIVERY_MODEL_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
-            <FieldLabel>IP disposition</FieldLabel>
+            <FieldLabel help="The intended ownership or license outcome for code and deliverables. It records the commercial position; it does not prove Wahala has authority to sell or transfer the IP.">IP disposition</FieldLabel>
             <select style={inputStyle} value={form.ipDisposition} onChange={(e) => setForm((f) => ({ ...f, ipDisposition: e.target.value as IpDisposition }))}>
               {IP_DISPOSITIONS.map((value) => <option key={value} value={value}>{IP_DISPOSITION_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
-            <FieldLabel>Data sensitivity</FieldLabel>
+            <FieldLabel
+              help={
+                <span className="field-help__definitions">
+                  <span>Classify the most sensitive data the work may receive, store, transmit, or send to a provider. When unsure, choose the higher risk until discovery proves otherwise.</span>
+                  {DATA_SENSITIVITIES.map((value) => (
+                    <span key={value}><b>{DATA_SENSITIVITY_LABELS[value]}:</b> {DATA_SENSITIVITY_DESCRIPTIONS[value]}</span>
+                  ))}
+                </span>
+              }
+            >Data sensitivity</FieldLabel>
             <select style={inputStyle} value={form.dataSensitivity} onChange={(e) => setForm((f) => ({ ...f, dataSensitivity: e.target.value as DataSensitivity }))}>
               {DATA_SENSITIVITIES.map((value) => <option key={value} value={value}>{DATA_SENSITIVITY_LABELS[value]}</option>)}
             </select>
+            <p style={{ margin: "6px 2px 0", fontSize: 11.5, lineHeight: 1.45, color: "var(--muted)" }}>
+              {DATA_SENSITIVITY_DESCRIPTIONS[form.dataSensitivity]}
+            </p>
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
-            <FieldLabel>Support expectation</FieldLabel>
+            <FieldLabel help="What Wahala must do after handoff or acceptance: warranty fixes, enablement, monitoring, response times, a paid retainer, or explicitly nothing.">Support expectation</FieldLabel>
             <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
           </div>
         </div>
@@ -276,7 +309,7 @@ export function DealFieldsForm({
             <input type="date" style={inputStyle} value={form.nextActionDueAt} onChange={(e) => setForm((f) => ({ ...f, nextActionDueAt: e.target.value }))} />
           </div>
           <div>
-            <FieldLabel>Whose court?</FieldLabel>
+            <FieldLabel help="Who must act next. The Wahala Deal owner still owns follow-up and escalation even when the client or a third party has the ball.">Whose court?</FieldLabel>
             <select style={inputStyle} value={form.nextActionCourt} onChange={(e) => setForm((f) => ({ ...f, nextActionCourt: e.target.value as NextActionCourt }))}>
               {NEXT_ACTION_COURTS.map((value) => <option key={value} value={value}>{NEXT_ACTION_COURT_LABELS[value]}</option>)}
             </select>
@@ -289,11 +322,11 @@ export function DealFieldsForm({
         <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Qualification evidence</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <div>
-            <FieldLabel>Champion</FieldLabel>
+            <FieldLabel help="A person inside the buyer who actively wants the outcome and will help the purchase move. A friendly contact is not automatically a champion.">Champion</FieldLabel>
             <input style={inputStyle} placeholder="Who wants this internally?" value={form.champion} onChange={(e) => setForm((f) => ({ ...f, champion: e.target.value }))} />
           </div>
           <div>
-            <FieldLabel>Economic buyer</FieldLabel>
+            <FieldLabel help="The person with authority to approve the money or make the final commercial decision. Record unknown until that authority is evidenced.">Economic buyer</FieldLabel>
             <input style={inputStyle} placeholder="Who can authorize the spend?" value={form.economicBuyer} onChange={(e) => setForm((f) => ({ ...f, economicBuyer: e.target.value }))} />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
@@ -305,7 +338,7 @@ export function DealFieldsForm({
             <textarea style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit" }} placeholder="Approvals, legal, procurement, evaluation, and timing" value={form.decisionProcess} onChange={(e) => setForm((f) => ({ ...f, decisionProcess: e.target.value }))} />
           </div>
           <div>
-            <FieldLabel>Budget status</FieldLabel>
+            <FieldLabel help="How much buying evidence exists: unknown, authority identified, a funding path identified, or budget directly confirmed. A stated price tolerance alone is not confirmed budget.">Budget status</FieldLabel>
             <select style={inputStyle} value={form.budgetStatus} onChange={(e) => setForm((f) => ({ ...f, budgetStatus: e.target.value as BudgetStatus }))}>
               {BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}
             </select>
