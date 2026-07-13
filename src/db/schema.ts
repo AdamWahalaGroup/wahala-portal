@@ -329,6 +329,9 @@ export const deals = sqliteTable(
     engagementType: text("engagement_type", { enum: ENGAGEMENT_TYPES }),
     deliveryModel: text("delivery_model", { enum: DELIVERY_MODELS }),
     ipDisposition: text("ip_disposition", { enum: IP_DISPOSITIONS }).notNull().default("undecided"),
+    // The D1 column retains its legacy 'standard' fallback because changing a
+    // SQLite default rebuilds this heavily referenced table. Supported creation
+    // services always write DEFAULT_DATA_SENSITIVITY explicitly instead.
     dataSensitivity: text("data_sensitivity", { enum: DATA_SENSITIVITIES }).notNull().default("standard"),
     supportExpectation: text("support_expectation"),
     expectedCloseAt: integer("expected_close_at", { mode: "timestamp" }),

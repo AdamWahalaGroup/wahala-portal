@@ -3,6 +3,7 @@ import {
   actionUrgencyScore,
   DATA_SENSITIVITIES,
   DATA_SENSITIVITY_DESCRIPTIONS,
+  DEFAULT_DATA_SENSITIVITY,
   nextActionTiming,
 } from "./deal-operating-model";
 
@@ -37,6 +38,11 @@ describe("nextActionTiming", () => {
 });
 
 describe("data sensitivity guidance", () => {
+  it("defaults the selection order to an honest unknown", () => {
+    expect(DEFAULT_DATA_SENSITIVITY).toBe("unknown");
+    expect(DATA_SENSITIVITIES[0]).toBe("unknown");
+  });
+
   it("explains every selectable classification", () => {
     for (const sensitivity of DATA_SENSITIVITIES) {
       expect(DATA_SENSITIVITY_DESCRIPTIONS[sensitivity].length).toBeGreaterThan(40);

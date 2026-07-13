@@ -10,6 +10,7 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { STAGE_META, isDealStage, type DealStage } from "@/domain/sales";
+import { DEFAULT_DATA_SENSITIVITY } from "@/domain/deal-operating-model";
 import { getAccountHub, type AccountHub } from "@/services/account-hub";
 import { listForAccount, msaOnFileFor, type AgreementRow } from "@/services/agreements";
 import { assertSalesManager, assertStaff } from "@/services/sales";
@@ -385,6 +386,7 @@ export async function createDealOnAccount(
       ownerUserId: ctx.user.id,
       primaryContactId: input.contactId ?? null,
       origin,
+      dataSensitivity: DEFAULT_DATA_SENSITIVITY,
       valueCents: Math.max(0, Math.round(input.valueCents ?? 0)),
     }),
     db.insert(schema.auditLog).values(
