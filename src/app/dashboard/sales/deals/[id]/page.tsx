@@ -90,7 +90,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   // The suggestion box — the pulse's concrete next actions (empty → renders nothing).
   const suggestionsNode = (
     <SuggestionsCard
-      suggestions={suggestions.map((s) => ({ id: s.id, title: s.title, bodyMd: s.bodyMd, createdAt: s.createdAt.toISOString() }))}
+      suggestions={suggestions.map((s) => ({ id: s.id, title: s.title, bodyMd: s.bodyMd, status: s.status === "done" ? ("done" as const) : ("open" as const), createdAt: s.createdAt.toISOString() }))}
       canManage={canManage && !lost}
     />
   );

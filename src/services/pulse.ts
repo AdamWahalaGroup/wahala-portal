@@ -229,16 +229,18 @@ export async function runPulseAi(db: Db, env: PulseEnv, now: Date): Promise<Puls
       .run();
     result.refreshed++;
 
-    // Suggestion box upsert — dedupe against OPEN suggestions by title.
-    const openSuggestions = await db
+    // Suggestion box upsert — dedupe against OPEN and DONE suggestions by title
+    // (done ones stay visible struck-through; recreating them would sit a fresh
+    // copy next to its completed twin).
+    const existingSuggestions = await db
       .select()
       .from(schema.suggestions)
-      .where(and(eq(schema.suggestions.dealId, deal.id), eq(schema.suggestions.status, "open")))
+      .where(and(eq(schema.suggestions.dealId, deal.id), inArray(schema.suggestions.status, ["open", "done"])))
       .all();
-    const openTitles = new Set(openSuggestions.map((s) => s.title.toLowerCase()));
+    const existingTitles = new Set(existingSuggestions.map((s) => s.title.toLowerCase()));
     const fresh = (out.suggestions ?? [])
       .filter((s) => s.title?.trim())
-      .filter((s) => !openTitles.has(s.title.trim().toLowerCase()))
+      .filter((s) => !existingTitles.has(s.title.trim().toLowerCase()))
       .slice(0, 3);
     if (fresh.length > 0) {
       await db
@@ -278,7 +280,7 @@ async function groundedDigest(db: Db, deal: typeof schema.deals.$inferSelect, no
     db.select().from(schema.meetings).where(eq(schema.meetings.dealId, deal.id)).all(),
     db.select().from(schema.proposals).where(eq(schema.proposals.dealId, deal.id)).all(),
     deal.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null,
-    db.select({ title: schema.suggestions.title }).from(schema.suggestions).where(and(eq(schema.suggestions.dealId, deal.id), eq(schema.suggestions.status, "open"))).all(),
+    db.select({ title: schema.suggestions.title }).from(schema.suggestions).where(and(eq(schema.suggestions.dealId, deal.id), inArray(schema.suggestions.status, ["open", "done"]))).all(),
   ]);
 
   const lines: string[] = [
