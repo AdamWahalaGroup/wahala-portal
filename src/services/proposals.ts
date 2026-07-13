@@ -304,7 +304,7 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     dealValueCents: deal?.valueCents ?? 0,
     dealStage: deal?.stage ?? null,
     dealReadiness: readinessFrom((discoveryPackage?.fields ?? {}) as PackageFields),
-    dealBuyingPathStatus: deal ? buyingPathFrom(deal).status : "unverified",
+    dealBuyingPathStatus: deal ? buyingPathFrom(deal, ((discoveryPackage?.fields ?? {}) as PackageFields).buyingPath).status : "unverified",
     discoveryNote: deal?.discoveryNote ?? null,
     organizationId: p.organizationId,
     organizationName: org?.name ?? headerContact?.name ?? "Unknown",

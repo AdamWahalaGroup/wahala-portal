@@ -193,7 +193,7 @@ staff member accepts it.
 Use terse prose/bullets. Preserve still-valid prior facts. Mark every inference
 "(inferred)". Never convert an inference into a fact.
 
-2) packageFields — the eight solution-clarity fields: business_profile,
+2) packageFields — the eight Discovery Package fields: business_profile,
 current_workflow, pain_points, success_metrics, mvp_priorities, timeline,
 customer_terminology, and deferred_scope. For each return status ok/partial/
 missing, one short evidence line, and a source pointer. Timeline here means

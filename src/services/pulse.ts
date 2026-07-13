@@ -309,12 +309,12 @@ async function groundedDigest(db: Db, deal: typeof schema.deals.$inferSelect, no
   ]);
 
   const solutionClarity = readinessFrom(((pkg?.fields ?? {}) as PackageFields));
-  const buyingPath = buyingPathFrom(deal);
+  const buyingPath = buyingPathFrom(deal, ((pkg?.fields ?? {}) as PackageFields).buyingPath);
   const lines: string[] = [
     `DEAL: ${deal.name}`,
     `Stage: ${deal.stage} (${daysInStage(deal.stageEnteredAt, now)} days in stage) · value $${Math.round(deal.valueCents / 100).toLocaleString("en-US")} (gut number)`,
     `Account: ${org ? `${org.name} (${org.status})` : "none yet — opportunity on a contact"}`,
-    `Solution clarity: ${solutionClarity} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
+    `Discovery Package: ${solutionClarity} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
     `Engagement type: ${deal.engagementType ?? "unclassified"} · delivery: ${deal.deliveryModel ?? "unclassified"}`,
     `IP: ${deal.ipDisposition} · data sensitivity: ${deal.dataSensitivity}`,
     `Agreed follow-up: ${deal.nextAction ?? "MISSING"}${deal.nextActionDueAt ? ` · due ${deal.nextActionDueAt.toISOString().slice(0, 10)}` : " · due date MISSING"} · court: ${deal.nextActionCourt}`,

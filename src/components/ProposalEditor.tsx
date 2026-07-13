@@ -244,7 +244,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           // Frame 39's training-off inline variant, now on Send: quiet, logged.
           void recordSendOverride();
           const reason = belowSolutionClarity
-            ? `solution clarity ${(proposal.dealReadiness ?? 0).toFixed(1)}/10`
+            ? `Discovery Package ${(proposal.dealReadiness ?? 0).toFixed(1)}/10`
             : `buying path ${proposal.dealBuyingPathStatus}`;
           setFlash(`Sent — deal moved to "Proposal out" · ⚠ ${reason}, override logged`);
         } else {

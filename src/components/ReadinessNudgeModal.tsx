@@ -78,7 +78,7 @@ export function ReadinessNudgeModal({
             <div className="mono" style={{ fontSize: 10, color: "#B45309", marginTop: 2 }}>{dealName} → Proposal out</div>
           </div>
           <span className="mono" style={{ fontSize: 10, fontWeight: 800, background: "#FBE3E3", color: "#B91C1C", borderRadius: 999, padding: "4px 11px", flex: "none" }}>
-            SOLUTION {data ? data.score.toFixed(1) : "…"}/10
+            DISCOVERY {data ? data.score.toFixed(1) : "…"}/10
           </span>
           {data && <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, background: data.buyingPath.status === "confirmed" ? "#DCF5E3" : "#FCEFDC", color: data.buyingPath.status === "confirmed" ? "#15803D" : "#B45309", borderRadius: 999, padding: "4px 10px", flex: "none" }}>BUYING {data.buyingPath.status.toUpperCase()}</span>}
         </div>
@@ -86,8 +86,8 @@ export function ReadinessNudgeModal({
         <div style={{ padding: "16px 18px" }}>
           <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>
             {send
-              ? "Drafting and sending are different decisions. Solution clarity protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."
-              : "Solution clarity protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."}
+              ? "Drafting and sending are different decisions. The Discovery Package protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."
+              : "The Discovery Package protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."}
           </p>
 
           {/* Failed checks, evidence quoted verbatim */}

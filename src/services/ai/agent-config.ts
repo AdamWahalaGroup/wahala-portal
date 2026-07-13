@@ -63,7 +63,7 @@ export const AGENT_DEFS: AgentDef[] = [
   {
     key: "package_extractor",
     label: "Discovery evidence analyst",
-    description: "Analyzes each call once, then proposes memo, readiness, qualification, commercial, and explicit follow-up updates for human review.",
+    description: "Analyzes each call once, then proposes memo, Discovery Package, buying-path, commercial, and explicit follow-up updates for human review.",
     defaultModel: aiDraftModel,
     supportsReasoning: true,
   },
