@@ -17,14 +17,12 @@ import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components
 import type { SalesOverview, DealItem, FunnelColumn } from "@/services/sales";
 import type { DealStage } from "@/domain/sales";
 
-type StaffOption = { id: string; name: string };
-
 const STAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "new", label: "New (opportunity)" },
   { value: "discovery", label: "Discovery" },
   { value: "proposal_out", label: "Proposal out" },
   { value: "negotiating", label: "Negotiating" },
-  { value: "committed", label: "Committed" },
+  { value: "committed", label: "Contracting" },
   { value: "won", label: "Won 🎉" },
   { value: "lost", label: "Lost" },
 ];
@@ -36,15 +34,6 @@ const COLUMN_HINTS: Record<string, string> = {
   proposal_out: "the at-risk clock",
   negotiating: "client engaged",
   committed: "docs + deposit",
-};
-
-const inputStyle: React.CSSProperties = {
-  border: "1px solid #d7d9df",
-  borderRadius: 8,
-  padding: "8px 10px",
-  fontSize: 13.5,
-  background: "var(--white)",
-  minWidth: 0,
 };
 
 async function patch(url: string, body: unknown): Promise<string | null> {

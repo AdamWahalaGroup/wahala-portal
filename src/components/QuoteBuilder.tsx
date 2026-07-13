@@ -377,7 +377,7 @@ export function QuoteBuilder({
               <span>
                 <span style={{ fontWeight: 700, fontSize: 13.5 }}>Pay on delivery</span>
                 <span style={{ display: "block", fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.45 }}>
-                  Work starts as soon as the quote is approved; mark paid whenever the money lands. Client can't accept until it's paid.
+                  Work starts as soon as the quote is approved; mark paid whenever the money lands. Client can&apos;t accept until it&apos;s paid.
                 </span>
               </span>
             </label>

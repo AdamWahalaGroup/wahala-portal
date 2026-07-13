@@ -53,7 +53,7 @@ export default async function QuoteBuilderPage({ params }: { params: Promise<{ i
         <StatusBadge status={stage.status} />
       </div>
       <p style={{ margin: "0 0 24px", color: "var(--muted)", fontSize: 14 }}>
-        Itemize the scope and price. This becomes the client's acceptance checklist when you send it.
+        Itemize the scope and price. This becomes the client&apos;s acceptance checklist when you send it.
       </p>
 
       <QuoteBuilder

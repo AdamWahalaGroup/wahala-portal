@@ -9,7 +9,7 @@
  * gut-feel fields. Readiness recomputes from Discovery Package completeness after
  * every ingested call; history keeps per-event snapshots, never mutated.
  */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";

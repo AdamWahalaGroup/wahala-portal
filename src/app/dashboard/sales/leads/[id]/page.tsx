@@ -1,5 +1,5 @@
 /**
- * Legacy route — leads folded into contacts (CRM-RESTRUCTURE.md). Unqualified leads
+ * Legacy route — leads folded into contacts (docs/OPERATING-MODEL.md). Unqualified leads
  * kept their ids through the migration, so a straight redirect works.
  */
 import { redirect } from "next/navigation";

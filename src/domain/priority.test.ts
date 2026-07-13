@@ -35,21 +35,21 @@ describe("dealBudgetCents", () => {
 });
 
 describe("priorityScore", () => {
-  it("normalizes: $10k, fit 5, anchor 50, momentum 1 → 25", () => {
-    expect(priorityScore({ fit: 5, valueCents: 10000_00, anchorPct: 50, momentum: 1 })).toBe(25);
+  it("normalizes: $10k, fit 5, anchor 50 → 25", () => {
+    expect(priorityScore({ fit: 5, valueCents: 10000_00, anchorPct: 50 })).toBe(25);
   });
   it("fit beats raw size: high-fit $15k outranks poor-fit $200k", () => {
-    const smallGood = priorityScore({ fit: 9, valueCents: 15000_00, anchorPct: 50, momentum: 1 });
-    const bigBad = priorityScore({ fit: 2, valueCents: 200000_00, anchorPct: 50, momentum: 1 });
+    const smallGood = priorityScore({ fit: 9, valueCents: 15000_00, anchorPct: 50 });
+    const bigBad = priorityScore({ fit: 2, valueCents: 200000_00, anchorPct: 50 });
     expect(smallGood).toBeGreaterThan(bigBad);
   });
-  it("momentum drags a stalled deal below a fresh smaller one", () => {
-    const stalled = priorityScore({ fit: 7, valueCents: 50000_00, anchorPct: 55, momentum: 0.2 });
-    const fresh = priorityScore({ fit: 7, valueCents: 20000_00, anchorPct: 55, momentum: 1 });
-    expect(fresh).toBeGreaterThan(stalled);
+  it("does not hide an attractive deal because engagement health declined", () => {
+    const larger = priorityScore({ fit: 7, valueCents: 50000_00, anchorPct: 55 });
+    const smaller = priorityScore({ fit: 7, valueCents: 20000_00, anchorPct: 55 });
+    expect(larger).toBeGreaterThan(smaller);
   });
   it("null fit is neutral (5); zero value scores 0", () => {
-    expect(priorityScore({ fit: null, valueCents: 10000_00, anchorPct: 50, momentum: 1 })).toBe(25);
-    expect(priorityScore({ fit: 10, valueCents: 0, anchorPct: 90, momentum: 1 })).toBe(0);
+    expect(priorityScore({ fit: null, valueCents: 10000_00, anchorPct: 50 })).toBe(25);
+    expect(priorityScore({ fit: 10, valueCents: 0, anchorPct: 90 })).toBe(0);
   });
 });

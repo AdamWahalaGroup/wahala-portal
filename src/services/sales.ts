@@ -17,10 +17,25 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { isDealStage, daysInStage, FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
-import { isStuckWith, isLeadOverdue, type SlaSettings } from "@/domain/sla";
+import { isStuckWith, type SlaSettings } from "@/domain/sla";
 import { getSlaSettings } from "@/services/sla-settings";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
+import {
+  actionUrgencyScore,
+  isBudgetStatus,
+  isDataSensitivity,
+  isDeliveryModel,
+  isEngagementType,
+  isIpDisposition,
+  isNextActionCourt,
+  type BudgetStatus,
+  type DataSensitivity,
+  type DeliveryModel,
+  type EngagementType,
+  type IpDisposition,
+  type NextActionCourt,
+} from "@/domain/deal-operating-model";
 
 export function assertStaff(ctx: AuthContext, action: string): void {
   if (!ctx.isStaff) {
@@ -323,6 +338,11 @@ export type DealItem = {
   notes: string | null;
   /** One-line next step for this stage (board card peek). */
   nextStep: string;
+  /** The explicit mutual commitment wins over generic stage advice. */
+  nextAction: string | null;
+  nextActionDueAt: Date | null;
+  nextActionCourt: NextActionCourt;
+  actionUrgencyScore: number;
   /** Scout opinion carried on the (shared) contact record. */
   scoutMd: string | null;
   scoutScore: number | null;
@@ -348,6 +368,7 @@ export type DealItem = {
   projectId: string | null;
   /** Agent layer: business-fit 0–10 + the derived priority (Home queue / list sort). */
   fitScore: number | null;
+  engagementHealthScore: number | null;
   priorityScore: number | null;
 };
 
@@ -439,7 +460,11 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       stuck: isStuckWith(d.stage, d.stageEnteredAt, now, sla),
       stageEnteredAt: d.stageEnteredAt,
       notes: d.notes,
-      nextStep: nextStepFor(d.stage),
+      nextStep: d.nextAction ?? nextStepFor(d.stage),
+      nextAction: d.nextAction,
+      nextActionDueAt: d.nextActionDueAt,
+      nextActionCourt: d.nextActionCourt,
+      actionUrgencyScore: actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now }),
       scoutMd: contact?.aiAnalysisMd ?? null,
       scoutScore: contact?.aiScore ?? null,
       scoutVerdict: contact?.aiVerdict ?? null,
@@ -455,6 +480,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       readinessScore: d.readinessScore,
       projectId: d.projectId,
       fitScore: d.fitScore,
+      engagementHealthScore: d.engagementHealthScore,
       priorityScore: d.priorityScore,
     };
   });
@@ -479,8 +505,36 @@ export async function setDealStage(
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   if (deal.stage === stage) return;
 
-  // Stage moves clear the substatus chip — it describes the stage the deal was in.
-  const moveDeal = db.update(schema.deals).set({ stage, stageEnteredAt: new Date(), subStatus: null }).where(eq(schema.deals.id, dealId));
+  // Stage moves clear stage-specific labels and the completed commitment. Every
+  // new open stage must state its own dated next commitment; closed deals have
+  // no action urgency.
+  const closed = stage === "won" || stage === "lost";
+  const moveDeal = db
+    .update(schema.deals)
+    .set({
+      stage,
+      stageEnteredAt: new Date(),
+      subStatus: null,
+      nextAction: null,
+      nextActionDueAt: null,
+      nextActionCourt: "wahala",
+      actionUrgencyScore: closed ? 0 : 100,
+    })
+    .where(eq(schema.deals.id, dealId));
+  const transitionMetadata = {
+    from: deal.stage,
+    to: stage,
+    ...(reason?.trim() ? { reason: reason.trim() } : {}),
+    ...(deal.nextAction
+      ? {
+          completedCommitment: {
+            action: deal.nextAction,
+            dueAt: deal.nextActionDueAt?.toISOString() ?? null,
+            court: deal.nextActionCourt,
+          },
+        }
+      : {}),
+  };
   const audit = db.insert(schema.auditLog).values(
     buildAudit({
       organizationId: deal.organizationId,
@@ -488,7 +542,7 @@ export async function setDealStage(
       action: "deal.stage_changed",
       entityType: "deal",
       entityId: dealId,
-      metadata: reason?.trim() ? { from: deal.stage, to: stage, reason: reason.trim() } : { from: deal.stage, to: stage },
+      metadata: transitionMetadata,
     }),
   );
   if (stage === "won" && deal.organizationId) {
@@ -551,10 +605,40 @@ export async function setDealStage(
   }
 }
 
+export type DealUpdateInput = {
+  name?: string;
+  valueCents?: number;
+  notes?: string;
+  discoveryMd?: string;
+  subStatus?: string | null;
+  engagementType?: EngagementType | null;
+  deliveryModel?: DeliveryModel | null;
+  ipDisposition?: IpDisposition;
+  dataSensitivity?: DataSensitivity;
+  supportExpectation?: string | null;
+  expectedCloseAt?: string | null;
+  nextAction?: string | null;
+  nextActionDueAt?: string | null;
+  nextActionCourt?: NextActionCourt;
+  champion?: string | null;
+  economicBuyer?: string | null;
+  compellingEvent?: string | null;
+  decisionProcess?: string | null;
+  budgetStatus?: BudgetStatus;
+  budgetEvidence?: string | null;
+};
+
+function inputDate(value: string | null, label: string): Date | null {
+  if (!value?.trim()) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new StageError("VALIDATION", `${label} is not a valid date.`);
+  return parsed;
+}
+
 export async function updateDeal(
   ctx: AuthContext,
   dealId: string,
-  input: { name?: string; valueCents?: number; notes?: string; discoveryMd?: string; subStatus?: string | null },
+  input: DealUpdateInput,
 ): Promise<void> {
   assertSalesManager(ctx, "update_deal");
   const db = getDb();
@@ -570,8 +654,77 @@ export async function updateDeal(
   if (input.notes !== undefined) patch.notes = input.notes.trim() || null;
   if (input.discoveryMd !== undefined) patch.discoveryMd = input.discoveryMd.trim() || null;
   if (input.subStatus !== undefined) patch.subStatus = input.subStatus?.trim() || null;
+  if (input.engagementType !== undefined) {
+    if (input.engagementType !== null && !isEngagementType(input.engagementType)) throw new StageError("VALIDATION", "Unknown engagement type.");
+    patch.engagementType = input.engagementType;
+  }
+  if (input.deliveryModel !== undefined) {
+    if (input.deliveryModel !== null && !isDeliveryModel(input.deliveryModel)) throw new StageError("VALIDATION", "Unknown delivery model.");
+    patch.deliveryModel = input.deliveryModel;
+  }
+  if (input.ipDisposition !== undefined) {
+    if (!isIpDisposition(input.ipDisposition)) throw new StageError("VALIDATION", "Unknown IP disposition.");
+    patch.ipDisposition = input.ipDisposition;
+  }
+  if (input.dataSensitivity !== undefined) {
+    if (!isDataSensitivity(input.dataSensitivity)) throw new StageError("VALIDATION", "Unknown data sensitivity.");
+    patch.dataSensitivity = input.dataSensitivity;
+  }
+  if (input.supportExpectation !== undefined) patch.supportExpectation = input.supportExpectation?.trim() || null;
+  if (input.expectedCloseAt !== undefined) patch.expectedCloseAt = inputDate(input.expectedCloseAt, "Expected close date");
+  if (input.nextAction !== undefined) patch.nextAction = input.nextAction?.trim() || null;
+  if (input.nextActionDueAt !== undefined) patch.nextActionDueAt = inputDate(input.nextActionDueAt, "Next-action due date");
+  if (input.nextActionCourt !== undefined) {
+    if (!isNextActionCourt(input.nextActionCourt)) throw new StageError("VALIDATION", "Unknown next-action owner.");
+    patch.nextActionCourt = input.nextActionCourt;
+  }
+  if (input.champion !== undefined) patch.champion = input.champion?.trim() || null;
+  if (input.economicBuyer !== undefined) patch.economicBuyer = input.economicBuyer?.trim() || null;
+  if (input.compellingEvent !== undefined) patch.compellingEvent = input.compellingEvent?.trim() || null;
+  if (input.decisionProcess !== undefined) patch.decisionProcess = input.decisionProcess?.trim() || null;
+  if (input.budgetStatus !== undefined) {
+    if (!isBudgetStatus(input.budgetStatus)) throw new StageError("VALIDATION", "Unknown budget status.");
+    patch.budgetStatus = input.budgetStatus;
+  }
+  if (input.budgetEvidence !== undefined) patch.budgetEvidence = input.budgetEvidence?.trim() || null;
   if (Object.keys(patch).length === 0) return;
-  await db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId));
+  if (input.nextAction !== undefined || input.nextActionDueAt !== undefined) {
+    patch.actionUrgencyScore = actionUrgencyScore({
+      nextAction: patch.nextAction === undefined ? deal.nextAction : patch.nextAction,
+      nextActionDueAt: patch.nextActionDueAt === undefined ? deal.nextActionDueAt : patch.nextActionDueAt,
+      now: new Date(),
+    });
+  }
+  const changedFields = Object.keys(patch).filter((key) => key !== "actionUrgencyScore");
+  const commitmentChanged = input.nextAction !== undefined || input.nextActionDueAt !== undefined || input.nextActionCourt !== undefined;
+  const auditMetadata = {
+    changedFields,
+    ...(commitmentChanged
+      ? {
+          commitment: {
+            from: { action: deal.nextAction, dueAt: deal.nextActionDueAt?.toISOString() ?? null, court: deal.nextActionCourt },
+            to: {
+              action: patch.nextAction === undefined ? deal.nextAction : patch.nextAction,
+              dueAt: (patch.nextActionDueAt === undefined ? deal.nextActionDueAt : patch.nextActionDueAt)?.toISOString() ?? null,
+              court: patch.nextActionCourt === undefined ? deal.nextActionCourt : patch.nextActionCourt,
+            },
+          },
+        }
+      : {}),
+  };
+  await db.batch([
+    db.update(schema.deals).set(patch).where(eq(schema.deals.id, dealId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId: ctx.user.id,
+        action: "deal.updated",
+        entityType: "deal",
+        entityId: dealId,
+        metadata: auditMetadata,
+      }),
+    ),
+  ]);
 }
 
 /**
@@ -687,7 +840,24 @@ export type DealDetail = {
     fitScore: number | null;
     fitRationaleMd: string | null;
     priorityScore: number | null;
+    engagementHealthScore: number | null;
+    actionUrgencyScore: number | null;
     agentSpendCents: number;
+    engagementType: EngagementType | null;
+    deliveryModel: DeliveryModel | null;
+    ipDisposition: IpDisposition;
+    dataSensitivity: DataSensitivity;
+    supportExpectation: string | null;
+    expectedCloseAt: Date | null;
+    nextAction: string | null;
+    nextActionDueAt: Date | null;
+    nextActionCourt: NextActionCourt;
+    champion: string | null;
+    economicBuyer: string | null;
+    compellingEvent: string | null;
+    decisionProcess: string | null;
+    budgetStatus: BudgetStatus;
+    budgetEvidence: string | null;
   };
   /** Null until the account exists (account-less opportunity). */
   org: { id: string; name: string; status: string } | null;
@@ -793,7 +963,24 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       fitScore: deal.fitScore,
       fitRationaleMd: deal.fitRationaleMd,
       priorityScore: deal.priorityScore,
+      engagementHealthScore: deal.engagementHealthScore,
+      actionUrgencyScore: deal.actionUrgencyScore,
       agentSpendCents: deal.agentSpendCents,
+      engagementType: deal.engagementType,
+      deliveryModel: deal.deliveryModel,
+      ipDisposition: deal.ipDisposition,
+      dataSensitivity: deal.dataSensitivity,
+      supportExpectation: deal.supportExpectation,
+      expectedCloseAt: deal.expectedCloseAt,
+      nextAction: deal.nextAction,
+      nextActionDueAt: deal.nextActionDueAt,
+      nextActionCourt: deal.nextActionCourt,
+      champion: deal.champion,
+      economicBuyer: deal.economicBuyer,
+      compellingEvent: deal.compellingEvent,
+      decisionProcess: deal.decisionProcess,
+      budgetStatus: deal.budgetStatus,
+      budgetEvidence: deal.budgetEvidence,
     },
     org: org ? { id: org.id, name: org.name, status: org.status } : null,
     owner: owner ? { id: owner.id, name: owner.name } : null,

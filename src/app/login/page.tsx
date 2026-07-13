@@ -166,6 +166,8 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* OAuth starts at a route handler, not a navigable application page. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/sso/google"
               style={{

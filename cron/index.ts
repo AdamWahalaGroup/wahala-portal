@@ -25,7 +25,7 @@ export interface Env {
 
 const DAILY_CRON = "0 13 * * *";
 
-export default {
+const worker = {
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const db = drizzle(env.DB, { schema });
     const now = new Date(controller.scheduledTime);
@@ -53,3 +53,5 @@ export default {
     );
   },
 };
+
+export default worker;

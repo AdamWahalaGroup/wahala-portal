@@ -190,6 +190,13 @@
       "when": 1783886905431,
       "tag": "0026_glorious_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1783959826930,
+      "tag": "0027_common_tomorrow_man",
+      "breakpoints": true
     }
   ]
 }

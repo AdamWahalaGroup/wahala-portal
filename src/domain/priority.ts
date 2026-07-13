@@ -2,10 +2,11 @@
  * Priority math (docs/AGENT-LAYER-DESIGN.md) — pure, deterministic, cheap
  * enough to recompute hourly for every open deal.
  *
- *   priority = fit × value × stage-anchor × momentum
+ *   portfolio attractiveness = fit × value × stage-anchor
  *
  * It answers "Jason has 40 hours this week and 60 hours of people to talk to —
- * who's first?" Not win probability, not just deal size: best use of us, now.
+ * worth pursuing?" It is NOT the action queue. Explicit commitments and due
+ * dates decide what humans work next; a stale deal must not disappear.
  * Relative imports only — the cron worker bundles this via services/pulse.
  */
 
@@ -48,12 +49,10 @@ export type PriorityInput = {
   valueCents: number;
   /** Stage win-probability anchor 0–100 (SLA settings); null → 50. */
   anchorPct: number | null;
-  /** Momentum 0.1–1 from momentumFrom. */
-  momentum: number;
 };
 
 /**
- * Priority score, normalized so a $10k deal at fit 5 / anchor 50% / momentum 1
+ * Portfolio-attractiveness score, normalized so a $10k deal at fit 5 / anchor 50%
  * scores 25 — readable numbers, not floating dust. Log-scale on value so a
  * $200k deal doesn't drown every $15k deal regardless of fit.
  */
@@ -63,5 +62,5 @@ export function priorityScore(p: PriorityInput): number {
   const anchor = (p.anchorPct ?? 50) / 100;
   // log10($) : $1k→3, $10k→4, $100k→5 — value matters, but sub-linearly.
   const valueFactor = Math.log10(Math.max(1, p.valueCents / 100));
-  return Math.round(fit * anchor * valueFactor * p.momentum * 25 * 10) / 10;
+  return Math.round(fit * anchor * valueFactor * 25 * 10) / 10;
 }

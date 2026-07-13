@@ -8,7 +8,7 @@
  * work" suppresses and teaches the matcher. Zoom is an optional layer — the
  * no-Zoom degraded state is the launch reality.
  */
-import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -21,7 +21,6 @@ import {
   markSynced,
   createEventFor,
   rescheduleEventFor,
-  type SyncEvent,
 } from "@/services/integrations/google-calendar";
 import { createZoomMeeting, zoomConfigured } from "@/services/integrations/zoom";
 import { staffSsoDomains } from "@/auth/server-env";
@@ -446,7 +445,7 @@ export async function linkMeeting(
   if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
 
   let organizationId = target.organizationId ?? null;
-  let dealId = target.dealId ?? null;
+  const dealId = target.dealId ?? null;
   if (dealId) {
     const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
     if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");

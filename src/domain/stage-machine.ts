@@ -1,9 +1,10 @@
 /**
- * Stage state machine — the pay-as-you-go spine (PLAN.md §1).
+ * Stage state machine — the delivery payment spine
+ * (docs/OPERATING-MODEL.md).
  *
  * Pure, dependency-free decision logic: no DB, no Cloudflare, no auth. It answers
- * "is this transition legal, and does it violate the pay-gate?" so the rule that
- * matters most — NO DELIVERY BEFORE PAYMENT — is trivially unit-testable.
+ * "is this transition legal, and does it violate the configured pay-gate?" so
+ * upfront and on-delivery billing rules remain unit-testable.
  *
  * Persistence + authorization live in the service (src/services/stages.ts) and
  * policy (src/auth/policy.ts); they call into here.
@@ -213,7 +214,7 @@ export function assertMarkPaidOnDelivery(
   }
 }
 
-/** Over the configurable threshold, a quote needs a Wahala admin co-sign (PLAN.md §4). */
+/** Over the configurable threshold, a quote needs a Wahala admin co-sign. */
 export function requiresAdminApproval(totalAmountCents: number, thresholdCents: number): boolean {
   return totalAmountCents > thresholdCents;
 }

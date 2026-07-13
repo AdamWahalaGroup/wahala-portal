@@ -34,7 +34,7 @@ const TOAST_COPY: Record<string, { headline: string; sub: string }> = {
   discovery: { headline: "Deal started 🚀", sub: "Record the first call — the package fills itself." },
   proposal_out: { headline: "Proposal out →", sub: "The at-risk clock is running — chase a real yes/no." },
   negotiating: { headline: "They're engaged 🤝", sub: "Name the open terms; keep the substatus current." },
-  committed: { headline: "Committed 🎉", sub: "Agreement package seeded — deposit next; it gates the project." },
+  committed: { headline: "Contracting 🎉", sub: "Agreement package seeded — deposit next; it gates the project." },
 };
 
 const TOAST_MS = 6_000;

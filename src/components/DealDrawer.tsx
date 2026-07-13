@@ -25,6 +25,7 @@ import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
+import { NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
 const SUB_STATUSES = ["redlines with counsel", "verbal yes · terms open"];
 
@@ -69,7 +70,20 @@ export function DealDrawer({
   canManage,
   isAdmin = false,
 }: {
-  deal: { id: string; name: string; valueCents: number; stage: DealStage; daysInStage: number; stuck: boolean; origin: string; subStatus: string | null; projectId: string | null };
+  deal: {
+    id: string;
+    name: string;
+    valueCents: number;
+    stage: DealStage;
+    daysInStage: number;
+    stuck: boolean;
+    origin: string;
+    subStatus: string | null;
+    projectId: string | null;
+    nextAction: string | null;
+    nextActionDueAt: string | null;
+    nextActionCourt: NextActionCourt;
+  };
   org: { id: string; name: string; status: string } | null;
   owner: { name: string } | null;
   contact: { id: string; name: string; email: string | null; phone: string | null } | null;
@@ -110,6 +124,11 @@ export function DealDrawer({
     .filter((m) => m.status === "upcoming" && new Date(m.startsAt).getTime() > Date.now() - 90 * 60_000)
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
   const pastMeetings = process.meetings.filter((m) => m !== nextMeeting).slice(0, 3);
+  const commitmentTiming = nextActionTiming({
+    nextAction: deal.nextAction,
+    nextActionDueAt: deal.nextActionDueAt ? new Date(deal.nextActionDueAt) : null,
+    now: new Date(),
+  });
 
   async function reschedule(meetingId: string) {
     if (!rescheduleWhen) return;
@@ -398,7 +417,17 @@ export function DealDrawer({
               !terminal && (
                 <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
                   <div className="kicker" style={{ marginBottom: 6 }}>Next step</div>
-                  {nextMeeting ? (
+                  {deal.nextAction ? (
+                    <>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
+                      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                        <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: commitmentTiming.tone === "red" ? "#FBE3E3" : commitmentTiming.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: commitmentTiming.tone === "red" ? "#B91C1C" : commitmentTiming.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
+                          {commitmentTiming.label}
+                        </span>
+                        <span className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>court: {NEXT_ACTION_COURT_LABELS[deal.nextActionCourt]}</span>
+                      </div>
+                    </>
+                  ) : nextMeeting ? (
                     <>
                       <MeetingCard meeting={nextMeeting} canEdit={canManage} />
                       {rescheduling === nextMeeting.id && (
@@ -411,7 +440,10 @@ export function DealDrawer({
                       )}
                     </>
                   ) : (
-                    <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)" }}>{nextStepFor(deal.stage)}</p>
+                    <>
+                      <p style={{ margin: 0, fontSize: 13.5, color: "#B91C1C", fontWeight: 700 }}>No dated commitment recorded.</p>
+                      <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "var(--ink-soft)" }}>Stage guidance: {nextStepFor(deal.stage)}</p>
+                    </>
                   )}
                   <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                     {canManage && nextMeeting && (

@@ -1,7 +1,7 @@
 /**
  * Sales pipeline domain — pure logic, no DB.
  *
- * Stages are DISPOSITIONS, not a state machine (docs/brain_storming/synthesis.md):
+ * Stages are DISPOSITIONS, not a state machine (docs/SALES-PROCESS.md):
  * a deal may move from any stage to any stage, and stages may be skipped ("this and
  * this can happen in one phone call"). The portal enforces gates, reports on stages —
  * and there are no gates inside the sales funnel itself; the first hard gate is the
@@ -42,7 +42,7 @@ export const STAGE_META: Record<DealStage, StageMeta> = {
   discovery: { label: "Discovery", probabilityPct: 25, toward: "close" },
   proposal_out: { label: "Proposal out", probabilityPct: 55, toward: "close" },
   negotiating: { label: "Negotiating", probabilityPct: 75, toward: "close" },
-  committed: { label: "Committed", probabilityPct: 90, toward: "close" },
+  committed: { label: "Contracting", probabilityPct: 90, toward: "close" },
   won: { label: "Won", probabilityPct: 100, toward: null },
   lost: { label: "Lost", probabilityPct: 0, toward: null },
 };

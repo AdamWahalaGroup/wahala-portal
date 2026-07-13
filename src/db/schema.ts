@@ -1,10 +1,11 @@
 /**
  * Wahala Portal — database schema (Cloudflare D1 / SQLite via Drizzle).
  *
- * Encodes the Phase 1 data model from docs/PLAN.md §7. Key decisions baked in:
- *  - Pay-as-you-go STAGES are the billable spine; full payment before work.
- *  - INVARIANT (enforced in the service layer, see note on `stages`): a stage
- *    cannot move to `in_progress` until it is paid.
+ * Encodes the operating model in docs/OPERATING-MODEL.md. Key decisions baked in:
+ *  - Delivery PHASES (stored in `stages`) are the billable spine.
+ *  - INVARIANT (enforced in the service layer): each billing mode has an
+ *    explicit payment boundary. Upfront work cannot start unpaid; on-delivery
+ *    work cannot be accepted unpaid.
  *  - Project → Stages (client pays per stage) → Tasks (internal work).
  *  - Account Owner (relationship) + Lead Engineer (delivery); roster scales 1..N.
  *  - Tasks are client-visible by default; assignees may be a Wahala engineer OR a
@@ -13,6 +14,14 @@
  */
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+import {
+  BUDGET_STATUSES,
+  DATA_SENSITIVITIES,
+  DELIVERY_MODELS,
+  ENGAGEMENT_TYPES,
+  IP_DISPOSITIONS,
+  NEXT_ACTION_COURTS,
+} from "../domain/deal-operating-model";
 
 // ---- shared column helpers ----
 const pk = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
@@ -50,12 +59,12 @@ export const STAGE_STATUSES = [
 export const VISIBILITY = ["client_visible", "internal"] as const;
 export const BILLING_MODES = ["upfront", "on_delivery"] as const;
 export const LEAD_STATUSES = ["new", "qualified", "disqualified"] as const;
-// CRM restructure (docs/design_handoff_wahala_portal/CRM-RESTRUCTURE.md): a person is
+// CRM model (docs/OPERATING-MODEL.md): a person is
 // one Contact record forever — "lead" is the to_qualify STATE, not a thing. Passed
 // contacts are kept and searchable, never deleted.
 export const CONTACT_STATES = ["to_qualify", "qualified", "passed"] as const;
 // Sales STAGES are dispositions, not a state machine: free to skip, free to move,
-// never enforced (see docs/brain_storming/synthesis.md — "enforce gates, report on
+// never enforced (see docs/OPERATING-MODEL.md — enforce gates, report on
 // stages"). won/lost are terminal dispositions kept out of the funnel columns.
 // OPPORTUNITIES RESTRUCTURE (2026-07-09): an opportunity is not a new object — it
 // is the deal record at stage 'new'. Triage (contacts-as-column) is retired; the
@@ -315,6 +324,27 @@ export const deals = sqliteTable(
     // Free substatus chip shown on negotiating cards ("redlines with counsel",
     // "verbal yes · terms open"). Cleared on stage moves by the service layer.
     subStatus: text("sub_status"),
+    // Commercial shape. These are independent choices: what kind of work it is,
+    // how it is delivered, what happens to IP, and how sensitive the data is.
+    engagementType: text("engagement_type", { enum: ENGAGEMENT_TYPES }),
+    deliveryModel: text("delivery_model", { enum: DELIVERY_MODELS }),
+    ipDisposition: text("ip_disposition", { enum: IP_DISPOSITIONS }).notNull().default("undecided"),
+    dataSensitivity: text("data_sensitivity", { enum: DATA_SENSITIVITIES }).notNull().default("standard"),
+    supportExpectation: text("support_expectation"),
+    expectedCloseAt: integer("expected_close_at", { mode: "timestamp" }),
+    // The one explicit mutual commitment. The deal owner remains accountable for
+    // following it even when the ball is in the client's or a third party's court.
+    nextAction: text("next_action"),
+    nextActionDueAt: integer("next_action_due_at", { mode: "timestamp" }),
+    nextActionCourt: text("next_action_court", { enum: NEXT_ACTION_COURTS }).notNull().default("wahala"),
+    // MEDDPICC-lite evidence. Free text is deliberate for the first live deals;
+    // normalize contacts/decision workflows only after real usage shows the shape.
+    champion: text("champion"),
+    economicBuyer: text("economic_buyer"),
+    compellingEvent: text("compelling_event"),
+    decisionProcess: text("decision_process"),
+    budgetStatus: text("budget_status", { enum: BUDGET_STATUSES }).notNull().default("unknown"),
+    budgetEvidence: text("budget_evidence"),
     // Committed-stage deposit (manual, no PSP): amount + sent/paid marks. Create
     // project is gated on depositPaidAt (admins may force).
     depositCents: integer("deposit_cents").notNull().default(0),
@@ -328,12 +358,16 @@ export const deals = sqliteTable(
     postMortemMd: text("post_mortem_md"),
     // Agent layer (docs/AGENT-LAYER-DESIGN.md): fit = "value to the business"
     // 0–10, AI-scored by the deal pulse with a shown rationale, manually
-    // overridable. priorityScore is DERIVED (fit × value × anchor × momentum)
-    // but denormalized so the Home queue / list view sort without recompute.
+    // overridable. priorityScore is DERIVED (fit × value × stage anchor)
+    // but denormalized so list views and queue tie-breaks avoid recompute.
     // agentSpendCents = running total of ai_runs cost — the budget meter.
     fitScore: real("fit_score"),
     fitRationaleMd: text("fit_rationale_md"),
     fitScoredAt: integer("fit_scored_at", { mode: "timestamp" }),
+    // Health and action urgency are deliberately separate from portfolio
+    // attractiveness. A stale deal may be unhealthy AND urgently need follow-up.
+    engagementHealthScore: real("engagement_health_score"),
+    actionUrgencyScore: real("action_urgency_score"),
     priorityScore: real("priority_score"),
     agentSpendCents: real("agent_spend_cents").notNull().default(0),
     // Rough deal value for pipeline totals — a gut number, NOT a quote. Quoting

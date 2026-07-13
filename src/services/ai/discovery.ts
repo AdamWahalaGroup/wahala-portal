@@ -1,5 +1,5 @@
 /**
- * Discovery Package generator (R2 — docs/brain_storming/synthesis.md).
+ * Discovery Package generator (see docs/SALES-PROCESS.md).
  *
  * Paste a call transcript / meeting notes onto a deal and the model distills the
  * Discovery Package: the structured record of Jason's Phase 1 — business profile,

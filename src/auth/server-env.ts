@@ -24,9 +24,8 @@ export function emailFrom(): string {
 }
 
 /**
- * Quote total (in cents) above which a Wahala admin must co-sign (PLAN.md §4, §12).
- * Placeholder default of $5,000 pending the figure you + Jason set. Configure via
- * the ADMIN_APPROVAL_THRESHOLD_CENTS var.
+ * Quote total (in cents) above which a Wahala admin must co-sign. The default is
+ * an operating hypothesis; configure it with ADMIN_APPROVAL_THRESHOLD_CENTS.
  */
 export function adminApprovalThresholdCents(): number {
   const n = Number(vars().ADMIN_APPROVAL_THRESHOLD_CENTS);

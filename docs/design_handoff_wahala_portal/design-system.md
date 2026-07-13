@@ -1,24 +1,19 @@
-# Design system — tokens & core components
+# Interface design system
 
-> Part of the **Wahala Portal** design handoff — see [handoff index](README.md). Visual reference: the labeled frames in `Wahala Portal.dc.html`.
+> Maintained visual reference. Product behavior comes from the canonical
+> [documentation index](../README.md); the server remains authoritative.
 
-## Stack context (§9 — so the implementation maps to live data)
+## Stack context
 - **Framework:** Next.js (App Router, **React Server Components**) on **Cloudflare
   Workers** (via OpenNext). Data in **Cloudflare D1**; **magic-link** auth; **KV**
   sessions.
 - Keep the client bundle small. **Pages are server components**; only small
-  interactive pieces are **client islands** (see Build Note frame 13 + the
-  Server/Island table below).
-- **Routes today:** `/login`, `/dashboard`, `/dashboard/projects/:id`,
-  `/dashboard/phases/:id`.
-- **JSON API:** `GET/POST /api/projects`, `GET/POST /api/phases`,
-  `GET /api/phases/:id`, `POST /api/phases/:id/:action` where `:action` ∈
-  `send_quote | approve_quote | reject_quote | mark_paid | start_work | deliver |
-  accept | request_revision`.
-- **Naming note:** this lifecycle object is called **Phase** everywhere in the
-  product now — **Stage** is reserved for the deal pipeline
-  (`CRM-RESTRUCTURE.md`). The table below (still labeled by its old name in a
-  few places) describes Phase status.
+  interactive pieces are **client islands**.
+- **Primary route families:** `/dashboard/sales`, `/dashboard/accounts`,
+  `/dashboard/contacts`, `/dashboard/projects`, and `/dashboard/phases`.
+- **Naming:** a Deal has a sales stage. A Project contains one or more delivery
+  Phases. Some internal schema and domain identifiers still use `stage` for the
+  delivery object; do not expose that implementation legacy in new UI copy.
 
 ---
 
@@ -40,7 +35,7 @@
 | Cobalt wash | `#EEF0FE` (border `#DDE1FB`) | Brand-tinted surfaces, client bubble |
 
 > Primary action buttons are **Ink**, not cobalt — cobalt is reserved for brand
-> moments, focus, and links (Stripe-style restraint).
+> moments, focus, and links.
 
 ### Color — semantic phase status (badge = soft tint bg + dark text + solid dot)
 | Status | Dot / solid | Badge bg | Badge text |
@@ -82,7 +77,7 @@
 
 ---
 
-## Core Components (frame 01 — Foundations)
+## Core components
 Build these as shared components first; every screen composes them.
 
 - **StatusBadge** — the 9 statuses above. Pill: `padding:4px 11px 4px 9px`,
@@ -102,9 +97,8 @@ Build these as shared components first; every screen composes them.
     dots + progress track, with a single caption line **"Step {n} of {total} ·
     {current state}"** (e.g. "Step 5 of 7 · In progress") above or below. This is the
     primary fix — don't shrink-to-fit all 7 labels. (Horizontal-scroll is an
-    acceptable fallback but less preferred.) The compact dashboard-card stepper
-    (frame 03) is effectively this narrow mode at small size. (See component note
-    **C1 — Stepper · narrow fallback** on the canvas.)
+    acceptable fallback but less preferred.) Compact dashboard steppers use this
+    narrow mode at small sizes.
 - **ActionBar** — primary (Ink), secondary (white + `#D7D9DF` border),
   destructive (white + `#F0CACA` border + `#B91C1C` text), disabled
   (`#F1F2F4` bg, `#B4B9C1` text). **Render only the actions the server returns.**

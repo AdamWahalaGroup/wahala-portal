@@ -1,149 +1,106 @@
-# The Agent Layer — design
+# Deal Pulse and AI operating design
 
-*Distilled from Adam + Jason's session (11 Jul 2026). Round 1 lives on the
-`agent-layer` branch. This doc is the shared vocabulary — read it before
-arguing about architecture; then argue.*
+> Distilled from Adam and Jason's 11 July 2026 session and reconciled with the
+> operating model on 13 July 2026. Deal Pulse R1 is implemented. Its formulas,
+> thresholds, and cost assumptions are experiments until real outcomes calibrate
+> them.
 
----
+## Architecture
 
-## The questions we were circling, answered
+Deal Pulse is one stage-aware conductor over each Deal, not a collection of
+resident processes or one autonomous agent per stage. State lives in D1. An
+hourly scheduled pass performs deterministic checks, while bounded AI work runs
+less often and only when configuration, freshness, and budget allow it.
 
-**"Is it best to have an agent that's grounded to what's happening?"**
-Yes — and grounding means the **database**, not a chat window. Everything an
-agent needs to know is already recorded: `process_events` (append-only history
-of every stage move, nudge, call, with readiness snapshots), the 10-field
-discovery package with evidence, meetings and their reschedules, agreements and
-deposit marks, the account's durable `aiContextMd`. Agents **read state and
-write suggestions**. They never freewheel, and they never act on the outside
-world (no client emails, no signatures) without a human clicking.
+Grounding means current database state: events, discovery evidence, meetings,
+commercial records, account context, and the explicit next commitment. AI reads
+that state and writes drafts or suggestions. A human remains responsible for
+client communication and commercial actions.
 
-**"Is it an agent per swimlane? Agents that hand off the phases?"**
-No. **One conductor per deal — "the pulse" — same code for every deal,
-stage-aware behavior.** A swimlane agent would lose the deal's memory at every
-handoff and fight its neighbors over boundaries. The phases aren't different
-agents; they're different *behavior modes of the same conductor* (in Discovery
-it pushes for the package fields; at Proposal-out it watches the silent clock;
-at Committed it chases paper and deposit). The "handoff" already exists — it's
-the `stage_moved` event.
+Task-specific AI tools may support contact research, discovery extraction,
+proposal/SOW drafting, and delivery task breakdown. They share the same safety
+boundary; adding more agent names does not grant more authority.
 
-**"Now that agent's running any time there's a project — is that stupid cost?"**
-It's not running. **No resident processes.** State lives in D1; the conductor
-is a cron tick plus event triggers (the Zoom-transcript webhook already works
-exactly this way). The hourly pass is deterministic math — effectively free.
-The AI passes are cents each and budget-capped per deal. A portfolio of 50
-live deals costs single-digit dollars a month at mini-class model rates.
-"He's not always running. It's a service. Woken up with a cron job." — that
-was the right instinct, and it's the architecture.
-
-**"This orchestrator is always the same for every project. Root directive:
-nothing stalls."**
-Correct — and it's half-built. The nudge cron already detects stuck deals,
-silent proposals, and unaccepted opportunities against per-stage SLA windows
-you can edit at Settings → SLAs & nudges, with owner escalation emails. The
-pulse extends that engine; we are not building a second one.
-
-**"We want a fuck-load of agents before we get to project."**
-Agreed, and it's already true: the contact scout (with web recon) runs from
-first contact, the discovery distiller and package extractor run all through
-Discovery, the proposal and SOW writers at Proposal. The agent layer doesn't
-start at project — it starts the moment a contact exists.
-
----
-
-## Terminology (use these words)
+## Vocabulary
 
 | Term | Meaning |
 |---|---|
-| **Pulse** | The per-deal conductor. Not a process — a scheduled pass over one deal's grounded state. Emits scores + suggestions, respects the budget, escalates stalls. |
-| **MMA** (Master Money Agent) | The one global agent ABOVE the pulses. Portfolio view: allocates attention + budget across deals (the knobs), owns the punt list, writes the Monday brief. Round 2. |
-| **Micro-agents** | The task-specific fleet (scout, recon, discovery, extractor, proposal, SOW, taskgen, pulse). Cheap, narrow, admin-tunable per agent in Settings. |
-| **Suggestion box** | Where agents talk to humans: per-deal list of concrete suggested actions. Humans do / dismiss. Agents never act outward themselves. |
-| **Budget** | Real dollars of AI spend allowed per deal: "what's realistic to spend to get the check in the bank." |
-| **Park** | The kill switch's landing state: agent spend frozen, deal loudly flagged with whose ball dropped. Humans revive or mark lost. Never auto-lost. |
+| Deal Pulse | Scheduled evaluation of one Deal's grounded state. |
+| Task-specific tool | A narrow AI workflow such as discovery extraction or proposal drafting. |
+| Suggestion | A proposed human action that can be completed or dismissed. |
+| AI budget | A configurable cap on recorded model spend for a Deal. |
+| Park | A possible future human-controlled state that freezes AI spend without marking a Deal lost. |
+| Portfolio brief | A possible deterministic summary across Deals. Automatic allocation and punt decisions are parked. |
 
----
+## Independent signals
 
-## The three scores (+ the number that runs your week)
+1. **Discovery readiness (0–10)** measures how complete and evidenced the
+   discovery package is. It is not win probability.
+2. **Wahala fit (0–10)** estimates whether the work is attractive to Wahala,
+   considering technical fit, client quality, delivery risk, margin potential,
+   and reusable IP. AI supplies a rationale and a human may override it.
+3. **Engagement health** is deterministic. It reflects human touches, silence,
+   and meeting reschedules. The database currently retains the internal field
+   name `momentumScore` for compatibility.
+4. **Action urgency** is deterministic. Missing, overdue, and due-today next
+   commitments rise above future commitments.
+5. **Portfolio attractiveness** combines fit, value, and a stage anchor. It is a
+   relative attention signal, not forecast probability.
 
-1. **Readiness (0–10)** — already live. Thoroughness of discovery: 10 package
-   fields, ok/partial/missing. *"If our discovery call gets us to a 7, that's
-   a high chance this is gonna be a winner."* It is a percentage of
-   thoroughness, not of winning — we haven't won enough to know odds yet.
+The Home queue sorts action urgency first and portfolio attractiveness only as a
+tie-breaker. A neglected Deal must become more visible, not disappear because
+its engagement health declined.
 
-2. **Fit (0–10)** — NEW. The "value to the business" number from the
-   whiteboard: form / fit / function / Wahala value. Is this deal *right for
-   us* — margin potential, template reuse (our bonus money), tech fit, client
-   quality, realistic timeline. AI-scored against a rubric, rationale shown,
-   manually overridable. Refreshed by the pulse when stale or when the stage
-   moves. This is NOT win probability and NOT deal size.
+## Cost control
 
-3. **Momentum (deterministic)** — days since last touch, meeting reschedules
-   (three reschedules absolutely drops it), proposal-silent days. Computed
-   from events, no AI, recomputed hourly.
+Every supported AI run records the agent key, model, trigger, Deal/account
+linkage, token usage, estimated cost, and timestamp. The current budget cap is:
 
-**Priority = fit × value × stage-anchor × momentum-decay.** Deterministic,
-cheap, recomputed hourly, and it answers the question no CRM answers:
-*"Jason has 40 hours this week and 60 hours of people to talk to — who's
-first?"* Not just the highest value; the best use of us. Surfaced as a
-"Work this next" queue on Home, each entry carrying its ONE next action.
+```text
+max($2, 0.4% × deal value × stage anchor)
+```
 
----
+This is an uncalibrated safety limit, not a recommended level of spend or a
+pricing formula. At the cap, AI work stops for the Deal while deterministic
+checks continue. Humans may adjust the budget deliberately.
 
-## Money: budgets, spend, the kill switch
+Actual portfolio cost must be read from recorded runs. Do not claim a monthly
+cost before usage data supports it.
 
-- **Every AI run is recorded** — agent, model, tokens, cost in cents, what
-  triggered it, which deal. The deal drawer shows *"agent spend $4.20 of $37
-  budget."* We already compute the cost on every call today; we just throw it
-  away. Stop throwing it away.
-- **Budget per deal** = `max($2, 0.4% × deal value × stage win-anchor)`.
-  A $30k deal in Discovery (25%) gets $30 of agent runway; the same deal at
-  Committed (90%) gets $108. Spend scales with how real the money is.
-- **At budget**: the pulse stops spending AI on that deal, says so once, and
-  keeps doing the free deterministic checks. Humans can raise the budget.
-- **The kill switch = the escalation ladder**, and it ends in **Park**, not
-  Lost: suggestion → in-app nudge → named ball-drop (*"Jason dropped the ball:
-  proposal unsigned 12 days"* — no matter whose ball: ours, the client's, the
-  bank's) → "about to be parked" email → **PARK**: spend frozen, loud board
-  treatment, alert. A human revives it or marks it lost (the post-mortem
-  already writes itself). The system never buries a deal on its own.
+## Implemented R1
 
----
+- AI-run ledger and per-Deal spend total
+- Wahala fit rationale and portfolio-attractiveness score
+- deterministic engagement-health and action-urgency refresh
+- stage-aware, budget-gated AI suggestions
+- suggestion completion and dismissal
+- commitment-first “Work this next” queue
+- scheduled hourly deterministic and daily AI/nudge passes
 
-## What we're building, in order
+## Parked until real Deal outcomes exist
 
-- **R1 (this branch):** the money meter (persist every AI run + spend chip),
-  fit + priority scores, pulse v1 in the cron worker (hourly deterministic
-  pass + daily AI pass), the suggestion box on the deal drawer, the Home
-  "Work this next" queue.
-- **R2 — MMA:** capacity model (hours per human per week), the knobs,
-  punt list (fit below threshold → "this isn't for us," up to a stage cutoff),
-  Monday brief that extends today's admin digest.
-- **R3 — the full ladder:** park/revive flow, whose-court derivation,
-  delivery-side stalls (`clientWaitingDays` is defined but unwired today),
-  project-phase pulse with delivery thresholds.
-- **R4 — pricing engine:** programmatic quotes — token/template-based cost
-  model, speed multiplier (want the 20-week project in 10? price goes up),
-  floor weeks (no project quotes under the floor, ever), template work priced
-  at template cost. That margin is the bonus money.
+- automatic portfolio budget or staff allocation
+- automatic Deal parking, loss, or punt decisions
+- an autonomous “Master Money Agent”
+- client-facing autonomous email or scheduling
+- AI-set prices or delivery dates
+- token-based project pricing
+- artificial minimum timelines
+- formulas presented as forecast accuracy
 
-## What we are NOT building (deliberately)
+The next AI expansion should follow observed founder work, loss reasons, cycle
+time, delivery margin, and suggestion usefulness—not enthusiasm for a larger
+agent fleet.
 
-- **Zoom integration deepening** — copy/paste transcripts is fine; the
-  Fable time goes to the algorithms. (Google Meet is already paid for.)
-- **Agents that email clients autonomously** — they draft, humans send.
-- **Auto-lost** — park, never bury.
-- **VC anything.**
+## Data model
 
----
+- `ai_runs`: agent key, trigger, related Deal/contact/account, model, token and
+  cost estimates, and timestamp.
+- `suggestions`: related Deal, source agent, title, body, open/done/dismissed
+  status, resolver, and timestamp.
+- `deals`: fit score/rationale/freshness, denormalized portfolio attractiveness,
+  engagement health, action urgency, and cumulative AI spend.
 
-## R1 data model (for the engineers)
-
-- `ai_runs` — every AI call: agent key, trigger (user/cron/webhook), deal /
-  contact / org, model, tokens in/out, cost cents, timestamp.
-- `suggestions` — the suggestion box: deal, agent, title, body markdown,
-  status open/done/dismissed, resolver + timestamp.
-- `deals` gains: `fitScore`, `fitRationaleMd`, `fitScoredAt`,
-  `priorityScore`, `agentSpendCents` (running total).
-- Pulse cadence: hourly cron = deterministic recompute (momentum, priority);
-  daily cron = AI pass (fit refresh when stale/stage-moved, ≤3 suggestions per
-  deal, budget-gated), then the existing nudge engine.
+The canonical authority boundary remains in
+[`OPERATING-MODEL.md`](OPERATING-MODEL.md); the current queue and qualification
+workflow remain in [`SALES-PROCESS.md`](SALES-PROCESS.md).

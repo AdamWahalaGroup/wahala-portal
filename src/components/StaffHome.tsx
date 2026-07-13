@@ -11,6 +11,7 @@ import { staffRevenueOverview } from "@/services/staff-home";
 import { salesOverview } from "@/services/sales";
 import { calendarConnection } from "@/services/integrations/google-calendar";
 import { syncIfStale, todayMeetings, meetingInbox } from "@/services/meetings";
+import { NEXT_ACTION_COURT_LABELS, nextActionTiming } from "@/domain/deal-operating-model";
 
 function usd(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -112,13 +113,12 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
         <span style={{ marginLeft: "auto", color: "var(--muted-line)" }}>›</span>
       </Link>
 
-      {/* Work this next (agent layer) — the priority queue: fit × value × stage × momentum.
-          The answer to "40 hours this week, 60 hours of people to talk to." */}
+      {/* Work this next — dated commitments first. Portfolio attractiveness breaks
+          ties; a stale deal must never disappear because its health declined. */}
       {(() => {
         const queue = sales.columns
           .flatMap((c) => c.deals)
-          .filter((d) => d.priorityScore !== null)
-          .sort((a, b) => (b.priorityScore ?? 0) - (a.priorityScore ?? 0))
+          .sort((a, b) => b.actionUrgencyScore - a.actionUrgencyScore || (b.priorityScore ?? 0) - (a.priorityScore ?? 0))
           .slice(0, 5);
         if (queue.length === 0) return null;
         return (
@@ -126,15 +126,17 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span className="kicker" style={{ color: "#2536C4" }}>◆ Work this next</span>
               <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)" }}>
-                ranked by the pulse — fit × value × stage × momentum
+                commitments first · portfolio fit breaks ties
               </span>
             </div>
-            {queue.map((d, i) => (
-              <Link
-                key={d.id}
-                href={`/dashboard/sales/deals/${d.id}`}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderTop: i === 0 ? "none" : "1px solid var(--border-softer)", textDecoration: "none", color: "inherit" }}
-              >
+            {queue.map((d, i) => {
+              const timing = nextActionTiming({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now });
+              return (
+                <Link
+                  key={d.id}
+                  href={`/dashboard/sales/deals/${d.id}`}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderTop: i === 0 ? "none" : "1px solid var(--border-softer)", textDecoration: "none", color: "inherit" }}
+                >
                 <span className="mono" style={{ fontSize: 12, fontWeight: 800, color: "var(--muted-line)", flex: "none", width: 16 }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: 13.5, fontWeight: 700 }}>{d.name}</span>
@@ -145,6 +147,9 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
                     → {d.nextStep}
                   </div>
                 </div>
+                <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", flex: "none", background: timing.tone === "red" ? "#FBE3E3" : timing.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: timing.tone === "red" ? "#B91C1C" : timing.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
+                  {timing.label} · {NEXT_ACTION_COURT_LABELS[d.nextActionCourt]}
+                </span>
                 {d.fitScore !== null && (
                   <span
                     className="mono"
@@ -163,7 +168,8 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
                 )}
                 <span className="tabular" style={{ fontSize: 12, fontWeight: 800, color: "#2536C4", flex: "none" }}>{d.priorityScore}</span>
               </Link>
-            ))}
+              );
+            })}
           </section>
         );
       })()}

@@ -20,6 +20,7 @@ import * as schema from "../db/schema";
 import { resolveSla } from "../domain/sla";
 import { daysInStage } from "../domain/sales";
 import { momentumFrom, dealBudgetCents, priorityScore } from "../domain/priority";
+import { actionUrgencyScore } from "../domain/deal-operating-model";
 import { DEFAULT_AGENT_PROMPTS } from "./ai/prompts";
 import { recordAiRun } from "./ai/usage";
 
@@ -33,6 +34,9 @@ export type PulseEnv = {
 const APP_BASE = "https://portal.wahala-services.com";
 const OPEN_STAGES = ["new", "discovery", "proposal_out", "negotiating", "committed"] as const;
 const FIT_STALE_DAYS = 7;
+// A system nudge is not relationship activity. Only events caused by actual
+// human/client work can refresh engagement health.
+const TOUCH_EVENT_KINDS = ["stage_moved", "call_ingested", "field_edited", "nudge_acted"] as const;
 /** Per-run cap on AI refreshes — a backstop, not a schedule. */
 const MAX_AI_REFRESHES_PER_RUN = 20;
 
@@ -57,7 +61,7 @@ export async function runPulseTick(db: Db, now: Date): Promise<TickResult> {
     db
       .select({ dealId: schema.processEvents.dealId, last: sql<number>`max(${schema.processEvents.createdAt})` })
       .from(schema.processEvents)
-      .where(inArray(schema.processEvents.dealId, dealIds))
+      .where(and(inArray(schema.processEvents.dealId, dealIds), inArray(schema.processEvents.kind, [...TOUCH_EVENT_KINDS])))
       .groupBy(schema.processEvents.dealId)
       .all(),
     db
@@ -90,9 +94,14 @@ export async function runPulseTick(db: Db, now: Date): Promise<TickResult> {
       proposalSilentDays: silentByDeal.get(d.id) ?? 0,
     });
     const anchorPct = sla.probabilityAnchors[d.stage] ?? null;
-    const priority = priorityScore({ fit: d.fitScore, valueCents: d.valueCents, anchorPct, momentum });
-    if (priority !== d.priorityScore) {
-      await db.update(schema.deals).set({ priorityScore: priority }).where(eq(schema.deals.id, d.id)).run();
+    const priority = priorityScore({ fit: d.fitScore, valueCents: d.valueCents, anchorPct });
+    const urgency = actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now });
+    if (priority !== d.priorityScore || momentum !== d.engagementHealthScore || urgency !== d.actionUrgencyScore) {
+      await db
+        .update(schema.deals)
+        .set({ priorityScore: priority, engagementHealthScore: momentum, actionUrgencyScore: urgency })
+        .where(eq(schema.deals.id, d.id))
+        .run();
       updated++;
     }
   }
@@ -151,7 +160,10 @@ export async function runPulseAi(db: Db, env: PulseEnv, now: Date): Promise<Puls
   const system = cfgRow?.systemPrompt || DEFAULT_AGENT_PROMPTS.deal_pulse;
 
   const deals = await db.select().from(schema.deals).where(inArray(schema.deals.stage, [...OPEN_STAGES])).all();
-  const due = deals.filter((d) => fitIsStale(d, now));
+  // Oldest/unscored first so the per-run cap cannot starve later table rows.
+  const due = deals
+    .filter((d) => fitIsStale(d, now))
+    .sort((a, b) => (a.fitScoredAt?.getTime() ?? 0) - (b.fitScoredAt?.getTime() ?? 0));
   result.considered = due.length;
 
   const unreadNotifs = await db
@@ -220,8 +232,9 @@ export async function runPulseAi(db: Db, env: PulseEnv, now: Date): Promise<Puls
     });
 
     const fit = Math.max(0, Math.min(10, Math.round(out.fitScore)));
-    const momentum = 1; // fresh AI pass; the hourly tick refines momentum right after
-    const priority = priorityScore({ fit, valueCents: deal.valueCents, anchorPct, momentum });
+    // AI analysis is not a customer touch. Preserve the deterministic health
+    // score and update only portfolio attractiveness.
+    const priority = priorityScore({ fit, valueCents: deal.valueCents, anchorPct });
     await db
       .update(schema.deals)
       .set({ fitScore: fit, fitRationaleMd: out.fitRationaleMd?.trim() || null, fitScoredAt: now, priorityScore: priority })
@@ -288,7 +301,14 @@ async function groundedDigest(db: Db, deal: typeof schema.deals.$inferSelect, no
     `Stage: ${deal.stage} (${daysInStage(deal.stageEnteredAt, now)} days in stage) · value $${Math.round(deal.valueCents / 100).toLocaleString("en-US")} (gut number)`,
     `Account: ${org ? `${org.name} (${org.status})` : "none yet — opportunity on a contact"}`,
     `Readiness: ${deal.readinessScore ?? "unscored"} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
+    `Engagement type: ${deal.engagementType ?? "unclassified"} · delivery: ${deal.deliveryModel ?? "unclassified"}`,
+    `IP: ${deal.ipDisposition} · data sensitivity: ${deal.dataSensitivity}`,
+    `Next commitment: ${deal.nextAction ?? "MISSING"}${deal.nextActionDueAt ? ` · due ${deal.nextActionDueAt.toISOString().slice(0, 10)}` : " · due date MISSING"} · court: ${deal.nextActionCourt}`,
+    `Qualification: champion ${deal.champion ?? "unknown"} · economic buyer ${deal.economicBuyer ?? "unknown"} · budget ${deal.budgetStatus}`,
   ];
+  if (deal.compellingEvent) lines.push(`Compelling event: ${deal.compellingEvent}`);
+  if (deal.decisionProcess) lines.push(`Decision process: ${deal.decisionProcess}`);
+  if (deal.budgetEvidence) lines.push(`Budget evidence: ${deal.budgetEvidence}`);
   if (deal.discoveryNote) lines.push(`Discovery note: ${deal.discoveryNote}`);
   if (deal.notes) lines.push(`Deal notes: ${deal.notes.slice(0, 800)}`);
   if (pkg) {
