@@ -44,13 +44,13 @@ boundary; adding more agent names does not grant more authority.
 
 ## Independent signals
 
-1. **Solution clarity (0–10)** measures how complete and evidenced the eight
-   solution fields are. It answers whether Wahala can scope and price
+1. **Discovery Package (0–10)** measures how complete and evidenced the eight
+   discovery fields are. It answers whether Wahala can scope and price
    responsibly; it is not win probability.
 2. **Buying path (Unverified / Developing / Confirmed)** tracks champion,
    economic buyer, compelling event, decision process, and funding path. It
    answers whether the customer can credibly purchase; it is not folded into
-   solution clarity.
+   the Discovery Package score.
 3. **Wahala fit (0–10)** estimates whether the work is attractive to Wahala,
    considering technical fit, client quality, delivery risk, margin potential,
    and reusable IP. AI supplies a rationale and a human may override it.
@@ -122,7 +122,7 @@ agent fleet.
 - `deal_calls`: source transcript or notes, proposed discovery analysis, review
   status, reviewer, review time, and count of accepted evidence items.
 - `discovery_packages`: only the reviewed evidence accepted as current Deal
-  truth; the eight solution fields determine solution clarity. Buying-path
+  truth; the eight discovery fields determine DISCOVERY x/10. Buying-path
   evidence remains on the Deal for compatibility.
 
 The canonical authority boundary remains in

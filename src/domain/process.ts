@@ -36,7 +36,8 @@ export type PackageFieldKey = (typeof PACKAGE_FIELDS)[number];
 export type SolutionClarityFieldKey = (typeof SOLUTION_CLARITY_FIELDS)[number];
 export type PackageFieldStatus = "ok" | "partial" | "missing";
 export type PackageField = { status: PackageFieldStatus; evidence?: string | null; source?: string | null };
-export type PackageFields = Partial<Record<PackageFieldKey, PackageField>>;
+export type BuyingPathEvidenceFields = Partial<Record<BuyingPathFieldKey, PackageField>>;
+export type PackageFields = Partial<Record<PackageFieldKey, PackageField>> & { buyingPath?: BuyingPathEvidenceFields };
 
 export const PACKAGE_FIELD_LABELS: Record<PackageFieldKey, string> = {
   business_profile: "Business profile",
@@ -151,7 +152,7 @@ export const DISCOVERY_SCRIPT_GROUPS = [
 
 export const DISCOVERY_SCRIPT_FIELDS = DISCOVERY_SCRIPT_GROUPS.flatMap((group) => [...group.fields]) as SolutionClarityFieldKey[];
 
-/** Solution clarity 0–10 (one decimal): ok=1, partial=½, missing=0. */
+/** Discovery completeness 0–10 (one decimal): ok=1, partial=½, missing=0. */
 export function readinessFrom(fields: PackageFields): number {
   let sum = 0;
   for (const key of SOLUTION_CLARITY_FIELDS) {
@@ -238,6 +239,34 @@ export const BUYING_PATH_PROMPTS: Record<BuyingPathFieldKey, string> = {
   budget: "How will this be funded, and what concrete evidence supports that path?",
 };
 
+export const BUYING_PATH_GUIDANCE: Record<BuyingPathFieldKey, PackageFieldGuidance> = {
+  champion: {
+    meaning: "The person inside the customer who believes in the work and will actively help it move when Wahala is not in the room.",
+    why: "Interest from a friendly contact is not enough; a champion spends credibility and helps navigate the organization.",
+    ask: BUYING_PATH_PROMPTS.champion,
+  },
+  economicBuyer: {
+    meaning: "The person who can authorize the money and accept the final commercial decision, even if someone else signs the paperwork.",
+    why: "A proposal can stall indefinitely when it never reaches the person accountable for the spend.",
+    ask: BUYING_PATH_PROMPTS.economicBuyer,
+  },
+  compellingEvent: {
+    meaning: "A customer-owned reason to act by a real date, including the consequence if the customer does nothing.",
+    why: "Without a meaningful event or consequence, a useful project can remain optional forever.",
+    ask: BUYING_PATH_PROMPTS.compellingEvent,
+  },
+  decisionProcess: {
+    meaning: "The actual path from evaluation through approval, legal or procurement review, signature, and a final yes.",
+    why: "Knowing the steps and participants prevents surprise approvals and makes the close plan concrete.",
+    ask: BUYING_PATH_PROMPTS.decisionProcess,
+  },
+  budget: {
+    meaning: "The source of funds, its current approval state, and concrete evidence that the proposed work can be paid for.",
+    why: "Enthusiasm and authority do not guarantee that usable funds exist or can be released.",
+    ask: BUYING_PATH_PROMPTS.budget,
+  },
+};
+
 export type BuyingPathInput = {
   champion: string | null;
   economicBuyer: string | null;
@@ -252,20 +281,37 @@ export type BuyingPath = BuyingPathInput & {
   completed: number;
   total: number;
   missing: BuyingPathFieldKey[];
+  fields: BuyingPathEvidenceFields;
 };
 
-export function buyingPathFrom(input: BuyingPathInput): BuyingPath {
-  const complete: Record<BuyingPathFieldKey, boolean> = {
-    champion: !!input.champion?.trim(),
-    economicBuyer: !!input.economicBuyer?.trim(),
-    compellingEvent: !!input.compellingEvent?.trim(),
-    decisionProcess: !!input.decisionProcess?.trim(),
-    budget: (input.budgetStatus === "funding_path" || input.budgetStatus === "confirmed") && !!input.budgetEvidence?.trim(),
+export function buyingPathFrom(input: BuyingPathInput, stored: BuyingPathEvidenceFields = {}): BuyingPath {
+  const canonicalEvidence: Record<BuyingPathFieldKey, string | null> = {
+    champion: input.champion?.trim() || null,
+    economicBuyer: input.economicBuyer?.trim() || null,
+    compellingEvent: input.compellingEvent?.trim() || null,
+    decisionProcess: input.decisionProcess?.trim() || null,
+    budget: input.budgetEvidence?.trim() || null,
   };
-  const completed = BUYING_PATH_FIELDS.filter((key) => complete[key]).length;
+  const derivedComplete: Record<BuyingPathFieldKey, boolean> = {
+    champion: !!canonicalEvidence.champion,
+    economicBuyer: !!canonicalEvidence.economicBuyer,
+    compellingEvent: !!canonicalEvidence.compellingEvent,
+    decisionProcess: !!canonicalEvidence.decisionProcess,
+    budget: (input.budgetStatus === "funding_path" || input.budgetStatus === "confirmed") && !!canonicalEvidence.budget,
+  };
+  const fields = Object.fromEntries(BUYING_PATH_FIELDS.map((key) => {
+    const saved = stored[key];
+    return [key, {
+      status: saved?.status ?? (derivedComplete[key] ? "ok" : "missing"),
+      evidence: saved?.evidence ?? canonicalEvidence[key],
+      source: saved?.source ?? (canonicalEvidence[key] ? "existing deal" : null),
+    } satisfies PackageField];
+  })) as Record<BuyingPathFieldKey, PackageField>;
+  const completed = BUYING_PATH_FIELDS.filter((key) => fields[key].status === "ok").length;
+  const hasEvidence = BUYING_PATH_FIELDS.some((key) => fields[key].status !== "missing" || !!fields[key].evidence?.trim());
   const status: BuyingPathStatus = completed === BUYING_PATH_FIELDS.length
     ? "confirmed"
-    : completed === 0
+    : !hasEvidence
       ? "unverified"
       : "developing";
   return {
@@ -273,7 +319,8 @@ export function buyingPathFrom(input: BuyingPathInput): BuyingPath {
     status,
     completed,
     total: BUYING_PATH_FIELDS.length,
-    missing: BUYING_PATH_FIELDS.filter((key) => !complete[key]),
+    missing: BUYING_PATH_FIELDS.filter((key) => fields[key].status !== "ok"),
+    fields,
   };
 }
 
@@ -313,9 +360,9 @@ export function goalFor(stage: DealStage, readiness: number | null, daysInStage:
     case "discovery":
       return readiness !== null && readiness >= PROPOSAL_READY_AT
         ? buyingPathStatus === "confirmed"
-          ? "Solution clarity and buying path are established — draft and prepare the proposal."
-          : "Solution clarity is sufficient to draft — rough out the proposal, then confirm the buying path before sending."
-        : `Build solution clarity to ${PROPOSAL_READY_AT}/10 — then rough out the proposal.`;
+          ? "The Discovery Package and buying path are established — draft and prepare the proposal."
+          : "Discovery is sufficient to draft — rough out the proposal, then confirm the buying path before sending."
+        : `Build the Discovery Package to ${PROPOSAL_READY_AT}/10 — then rough out the proposal.`;
     case "proposal_out":
       return daysInStage >= 5 ? "Follow up on the proposal — the at-risk clock is running." : "Get the proposal read — chase a real yes/no, not silence.";
     case "negotiating":
@@ -350,8 +397,8 @@ export function nextBestActions(input: {
     if (!ready) {
       return list([
         ["Record the next call (or paste its transcript), then review the evidence AI proposes.", true],
-        ["Close the open solution gaps: workflow, pain, outcome, first scope, boundaries, and delivery timing.", false],
-        [`At ${PROPOSAL_READY_AT}/10 solution clarity, rough out the proposal.`, false],
+        ["Close the open Discovery Package gaps: workflow, pain, outcome, first scope, boundaries, and delivery timing.", false],
+        [`At DISCOVERY ${PROPOSAL_READY_AT}/10, rough out the proposal.`, false],
       ]);
     }
     return list([
@@ -392,7 +439,7 @@ export type ProcessExpectation = { key: string; text: string };
 /** What the model EXPECTED — post-mortem divergence lines come from these. */
 export const EXPECTATIONS: ProcessExpectation[] = [
   { key: "buying_path_before_proposal", text: "buying path confirmed before the proposal goes out" },
-  { key: "readiness_at_advance", text: `solution clarity ≥ ${PROPOSAL_READY_AT}/10 when advancing to Proposal out` },
+  { key: "readiness_at_advance", text: `Discovery Package ≥ ${PROPOSAL_READY_AT}/10 when advancing to Proposal out` },
   { key: "followup_after_send", text: "follow-up within 5 days of sending the proposal" },
   { key: "no_ignored_nudges", text: "nudges acted on, not overridden without cause" },
 ];

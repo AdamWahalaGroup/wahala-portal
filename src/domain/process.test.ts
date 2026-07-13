@@ -98,6 +98,18 @@ describe("buyingPathFrom", () => {
     expect(buyingPathFrom({ ...base, budgetStatus: "funding_path" }).status).toBe("confirmed");
     expect(buyingPathFrom({ ...base, budgetStatus: "confirmed" }).status).toBe("confirmed");
   });
+
+  it("honors explicit OK, Partial, and Missing classifications", () => {
+    const input = { champion: "Jamie", economicBuyer: "Morgan", compellingEvent: "Renewal", decisionProcess: "CEO then legal", budgetStatus: "confirmed" as const, budgetEvidence: "Approved" };
+    const path = buyingPathFrom(input, {
+      champion: { status: "partial", evidence: "Jamie likes it but has not agreed to sponsor it", source: "manual" },
+      economicBuyer: { status: "missing", evidence: "CEO is suspected but unconfirmed", source: "manual" },
+    });
+    expect(path.status).toBe("developing");
+    expect(path.completed).toBe(3);
+    expect(path.missing).toEqual(["champion", "economicBuyer"]);
+    expect(path.fields.champion?.status).toBe("partial");
+  });
 });
 
 describe("discovery guidance", () => {

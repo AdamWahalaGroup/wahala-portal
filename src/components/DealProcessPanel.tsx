@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BUYING_PATH_FIELDS, BUYING_PATH_LABELS, BUYING_PATH_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, manualFieldStatusForSave, nextCallPrompts, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, manualFieldStatusForSave, nextCallPrompts, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -60,7 +60,7 @@ export function ReadyPill({ score, tone }: { score: number | null; tone: "green"
   const c = TONE[tone];
   return (
     <span className="mono" style={{ fontSize: 10, fontWeight: 800, background: c.bg, color: c.fg, borderRadius: 999, padding: "3px 10px" }}>
-      {score === null ? "SOLUTION NOT SCORED" : `SOLUTION ${score.toFixed(1)}/10`}
+      {score === null ? "DISCOVERY NOT SCORED" : `DISCOVERY ${score.toFixed(1)}/10`}
     </span>
   );
 }
@@ -76,62 +76,49 @@ function Explain({ text }: { text: string }) {
   );
 }
 
-function buyingPathValue(path: BuyingPath, key: BuyingPathFieldKey): string | null {
-  if (path.missing.includes(key)) return null;
-  switch (key) {
-    case "champion": return path.champion;
-    case "economicBuyer": return path.economicBuyer;
-    case "compellingEvent": return path.compellingEvent;
-    case "decisionProcess": return path.decisionProcess;
-    case "budget": return path.budgetEvidence ? `${BUDGET_STATUS_LABELS[path.budgetStatus]} · ${path.budgetEvidence}` : null;
-  }
-}
-
 function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: BuyingPath; canManage: boolean }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<BuyingPathFieldKey | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    champion: path.champion ?? "",
-    economicBuyer: path.economicBuyer ?? "",
-    compellingEvent: path.compellingEvent ?? "",
-    decisionProcess: path.decisionProcess ?? "",
-    budgetStatus: path.budgetStatus,
-    budgetEvidence: path.budgetEvidence ?? "",
-  });
+  const [form, setForm] = useState<{ status: PackageFieldStatus | null; evidence: string; budgetStatus: BudgetStatus }>({ status: null, evidence: "", budgetStatus: path.budgetStatus });
   const colors = path.status === "confirmed"
     ? { bg: TONE.green.bg, fg: TONE.green.fg }
     : path.status === "developing"
       ? { bg: TONE.amber.bg, fg: TONE.amber.fg }
       : { bg: TONE.red.bg, fg: TONE.red.fg };
 
-  function openEditor() {
-    setForm({
-      champion: path.champion ?? "",
-      economicBuyer: path.economicBuyer ?? "",
-      compellingEvent: path.compellingEvent ?? "",
-      decisionProcess: path.decisionProcess ?? "",
-      budgetStatus: path.budgetStatus,
-      budgetEvidence: path.budgetEvidence ?? "",
-    });
+  const statusOptions: { value: PackageFieldStatus; label: string; color: (typeof TONE)[keyof typeof TONE] }[] = [
+    { value: "ok", label: "✓ ok", color: TONE.green },
+    { value: "partial", label: "– partial", color: TONE.amber },
+    { value: "missing", label: "✕ missing", color: TONE.red },
+  ];
+
+  function openEditor(key: BuyingPathFieldKey) {
+    const field = path.fields[key];
+    setForm({ status: field?.source ? field.status : null, evidence: field?.evidence ?? "", budgetStatus: path.budgetStatus });
     setError(null);
-    setEditing(true);
+    setEditing(key);
   }
 
   async function save() {
+    if (!editing) return;
+    if (!form.status && !form.evidence.trim()) {
+      setError("Enter what you learned, or explicitly choose Partial or Missing.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/deals/${dealId}`, {
+      const res = await fetch(`/api/deals/${dealId}/discovery`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ area: "buying_path", field: editing, status: manualFieldStatusForSave(form.status), evidence: form.evidence, budgetStatus: editing === "budget" ? form.budgetStatus : undefined }),
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) setError(data.message ?? `Failed (${res.status}).`);
       else {
-        setEditing(false);
+        setEditing(null);
         router.refresh();
       }
     } catch {
@@ -148,48 +135,49 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
         <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: colors.fg, background: colors.bg, borderRadius: 999, padding: "3px 9px" }}>
           {path.status.toUpperCase()} · {path.completed}/{path.total}
         </span>
-        {canManage && !editing && <button onClick={openEditor} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>edit</button>}
       </div>
       <p style={{ margin: "6px 0 9px", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
-        Can this customer actually buy? This is separate from understanding and pricing the solution.
+        Can this customer actually buy? Confirm the people, urgency, approval steps, and funding path behind a credible purchase.
       </p>
-
-      {editing ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>
-            <input style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12 }} placeholder="Champion — who drives this internally?" value={form.champion} onChange={(e) => setForm((current) => ({ ...current, champion: e.target.value }))} />
-            <input style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12 }} placeholder="Economic buyer — who authorizes spend?" value={form.economicBuyer} onChange={(e) => setForm((current) => ({ ...current, economicBuyer: e.target.value }))} />
-          </div>
-          <textarea style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12, minHeight: 58, fontFamily: "inherit", resize: "vertical" }} placeholder="Compelling event — why act now, and what happens if they do nothing?" value={form.compellingEvent} onChange={(e) => setForm((current) => ({ ...current, compellingEvent: e.target.value }))} />
-          <textarea style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12, minHeight: 58, fontFamily: "inherit", resize: "vertical" }} placeholder="Decision process — evaluation, approval, legal, procurement, signature" value={form.decisionProcess} onChange={(e) => setForm((current) => ({ ...current, decisionProcess: e.target.value }))} />
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, .7fr) minmax(210px, 1.3fr)", gap: 8 }}>
-            <select style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12, background: "var(--white)" }} value={form.budgetStatus} onChange={(e) => setForm((current) => ({ ...current, budgetStatus: e.target.value as BudgetStatus }))}>
-              {BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}
-            </select>
-            <input style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12 }} placeholder="Funding evidence — what did they actually say?" value={form.budgetEvidence} onChange={(e) => setForm((current) => ({ ...current, budgetEvidence: e.target.value }))} />
-          </div>
-          {error && <p style={{ margin: 0, color: "#B91C1C", fontSize: 11.5 }}>{error}</p>}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => void save()} disabled={busy} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{busy ? "Saving…" : "Save buying path"}</button>
-            <button onClick={() => setEditing(false)} disabled={busy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", columnGap: 16, rowGap: 7 }}>
-          {BUYING_PATH_FIELDS.map((key) => {
-            const value = buyingPathValue(path, key);
-            return (
-              <div key={key} style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
-                <span style={{ width: 16, height: 16, borderRadius: 999, background: value ? TONE.green.bg : TONE.red.bg, color: value ? TONE.green.fg : TONE.red.fg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flex: "none", marginTop: 1 }}>{value ? "✓" : "✕"}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700 }}>{BUYING_PATH_LABELS[key]}</div>
-                  <div style={{ fontSize: 10.5, color: value ? "var(--muted)" : "#B45309", lineHeight: 1.4 }}>{value ?? BUYING_PATH_PROMPTS[key]}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", columnGap: 16, rowGap: 7 }}>
+        {BUYING_PATH_FIELDS.map((key) => {
+          const field = path.fields[key];
+          const status = field?.status ?? "missing";
+          const color = status === "ok" ? TONE.green : status === "partial" ? TONE.amber : TONE.red;
+          const isEditing = editing === key;
+          const guidance = BUYING_PATH_GUIDANCE[key];
+          return (
+            <div key={key} style={{ padding: "5px 0" }}>
+              <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
+                <span style={{ width: 16, height: 16, borderRadius: 999, background: color.bg, color: color.fg, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flex: "none", marginTop: 1 }}>{status === "ok" ? "✓" : status === "partial" ? "–" : "✕"}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 700 }}>{BUYING_PATH_LABELS[key]}</span>
+                    <FieldHelp label={BUYING_PATH_LABELS[key]}>
+                      <span className="field-help__definitions"><span>{guidance.meaning}</span><span><b>Why it matters:</b> {guidance.why}</span><span><b>Ask or listen for:</b> {guidance.ask}</span></span>
+                    </FieldHelp>
+                    {canManage && <button onClick={() => isEditing ? setEditing(null) : openEditor(key)} className="mono" style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 9, fontWeight: 700, cursor: "pointer", padding: 0 }}>{isEditing ? "close" : "edit"}</button>}
+                  </div>
+                  {field?.evidence && !isEditing && <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", marginTop: 1 }}>{key === "budget" ? `${BUDGET_STATUS_LABELS[path.budgetStatus]} · ` : ""}{field.evidence}</div>}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+              {isEditing && (
+                <div style={{ margin: "7px 0 2px 23px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 5 }}>{statusOptions.map((option) => <button key={option.value} onClick={() => setForm((current) => ({ ...current, status: option.value }))} className="mono" style={{ border: form.status === option.value ? `1.5px solid ${option.color.fg}` : "1px solid #d7d9df", background: form.status === option.value ? option.color.bg : "var(--white)", color: form.status === option.value ? option.color.fg : "var(--muted)", borderRadius: 999, padding: "3px 9px", fontSize: 9.5, fontWeight: 800, cursor: "pointer" }}>{option.label}</button>)}</div>
+                  {key === "budget" && <select style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5, background: "var(--white)" }} value={form.budgetStatus} onChange={(e) => setForm((current) => ({ ...current, budgetStatus: e.target.value as BudgetStatus }))}>{BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}</select>}
+                  <textarea style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5, minHeight: 54, fontFamily: "inherit", resize: "vertical" }} placeholder="What did they say? (evidence)" maxLength={500} value={form.evidence} onChange={(e) => setForm((current) => ({ ...current, evidence: e.target.value }))} />
+                  {!form.status && form.evidence.trim() && <p className="mono" style={{ color: TONE.green.fg, fontSize: 9.5, margin: 0 }}>No status selected · Save will mark this OK.</p>}
+                  {error && <p style={{ margin: 0, color: TONE.red.fg, fontSize: 11 }}>{error}</p>}
+                  <div style={{ display: "flex", gap: 8 }}><button onClick={() => void save()} disabled={busy} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 7, padding: "5px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{busy ? "Saving…" : form.status ? "Save" : "Save as OK"}</button><button onClick={() => setEditing(null)} disabled={busy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>Cancel</button></div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 9, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.5 }}>
+        <b>What this tells you:</b> Unverified means the purchase path is still unknown. Developing means some evidence exists but at least one item is incomplete. Confirmed means all five items are supported well enough to send a proposal with confidence.
+      </div>
     </section>
   );
 }
@@ -282,7 +270,7 @@ function DiscoveryReviewCard({ dealId, review, onDone }: { dealId: string; revie
 
       {proposedPackage.length > 0 && (
         <div>
-          <div className="kicker" style={{ marginBottom: 5 }}>Solution clarity evidence</div>
+          <div className="kicker" style={{ marginBottom: 5 }}>Discovery Package evidence</div>
           {proposedPackage.map((key) => {
             const field = review.analysis.packageFields[key];
             return (
@@ -619,7 +607,7 @@ export function DealProcessPanel({
         style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <span className="kicker">Solution clarity · Discovery package</span>
+          <span className="kicker">Discovery Package</span>
           <span style={{ marginLeft: "auto" }}>
             <ReadyPill score={readiness} tone={tone} />
           </span>

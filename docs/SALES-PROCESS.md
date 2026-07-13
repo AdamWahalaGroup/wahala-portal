@@ -19,7 +19,7 @@ Stages report where a deal is; they do not force a conversation sequence.
 
 ## Recommended next step versus agreed follow-up
 
-The **Recommended next step** is system guidance from stage, solution clarity,
+The **Recommended next step** is system guidance from stage, Discovery Package,
 and buying path. In Discovery it will normally be to close a specific evidence
 gap, rough out a proposal, or confirm how the purchase will happen. It is not a
 new stage, a gate, or evidence that anyone agreed to act.
@@ -52,13 +52,13 @@ Do not compress discovery into one score. A Deal can be clear enough to scope
 while the customer's buying process remains uncertain, or have an eager buyer
 while the solution is still too vague to price responsibly.
 
-### Solution clarity (0–10)
+### Discovery Package (0–10)
 
 The Discovery Package measures whether Wahala understands enough to create a
 responsible scope and price. It does not measure win probability. Customer
 terminology and deferred scope matter for delivery quality, but do not prove
 that a buying motion exists. At **7/10**, Wahala has enough clarity to rough out
-a proposal; 10/10 means all eight solution fields have complete evidence.
+a proposal; DISCOVERY 10/10 means all eight package fields have complete evidence.
 
 For call coaching, present the package as a progressive conversation rather
 than unrelated fields:
@@ -75,7 +75,7 @@ the customer's decision process; that belongs in the buying path.
 For manual package entry, typing evidence and saving without choosing a status
 means **OK**. Choose Partial or Missing only when that is the deliberate
 classification. Partial and Missing remain in Ask on the next call; OK removes
-the prompt and increases solution clarity.
+the prompt and increases the DISCOVERY x/10 score.
 
 ### Buying path (Unverified / Developing / Confirmed)
 
@@ -93,6 +93,12 @@ are established but at least one material gap remains. A budget status of
 “spending authority known” is useful evidence, but does not by itself identify
 the funding path. Unknown is an acceptable answer; unsupported certainty is not.
 
+Each Buying path item uses the same manual classification as the Discovery
+Package: OK, Partial, or Missing, with field-specific help and evidence. OK
+requires evidence. Partial and Missing keep the overall path in Developing;
+they do not add a second “Ask on the next call” list. The card instead explains
+what Unverified, Developing, and Confirmed mean.
+
 Do not lead a first conversation with budget. Understand the pain and desired
 value first, then make the funding and authority questions relevant. The UI
 stores these facts separately, but an experienced seller can gather them in the
@@ -102,7 +108,7 @@ Record discovery evidence once, as a call transcript or meeting notes. AI may
 then propose five kinds of updates in a single pending review:
 
 - a long-form discovery memo;
-- evidence for the eight Solution clarity fields;
+- evidence for the eight Discovery Package fields;
 - Buying path evidence such as champion, economic buyer, compelling event,
   decision process, and funding path; and
 - commercial classifications such as engagement, delivery, IP, data
@@ -119,7 +125,7 @@ authority, low data sensitivity, acceptance of an action, or a calendar date.
 
 ## Proposal and contracting
 
-- Rough out or AI-draft a proposal once solution clarity is at least 7/10.
+- Rough out or AI-draft a proposal once DISCOVERY is at least 7/10.
 - Before sending, confirm the buying path. If either signal is weak, the portal
   warns and records an override but never creates a hard sales-stage gate.
 - Use one recommended proposal path when it is clearly best.
@@ -138,7 +144,7 @@ With little historical data, prioritize process visibility over rankings:
 - active deals with a dated agreed follow-up or scheduled meeting;
 - overdue Wahala/client commitments;
 - meeting reschedules and no-shows;
-- solution-clarity and buying-path coverage;
+- Discovery Package and buying-path coverage;
 - pending discovery analyses and accepted evidence rate;
 - founder hours spent to reach each gate;
 - proposals sent and decisions received;

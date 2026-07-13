@@ -352,7 +352,7 @@ export function DealDrawer({
             </div>
             <p style={{ margin: "7px 0 0", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", lineHeight: 1.45 }}>{process.goal}</p>
             <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>
-              System guidance from stage, solution clarity, and buying path · never a hard gate
+              System guidance from stage, Discovery Package, and buying path · never a hard gate
             </p>
             <div style={{ marginTop: 10 }}>{proposalCtaNode}</div>
           </section>
@@ -509,13 +509,13 @@ export function DealDrawer({
             <span style={{ fontSize: 12.5, fontWeight: 700, color: "#2536C4" }}>{process.goal}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-            <span className="kicker" style={{ color: "#5A6BD8" }}>Solution clarity</span>
+            <span className="kicker" style={{ color: "#5A6BD8" }}>Discovery Package</span>
             <span style={{ marginLeft: "auto" }}>
               <ReadyPill score={process.readiness} tone={readinessTone(process.readiness ?? 0)} />
             </span>
           </div>
           <p style={{ margin: "7px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
-            Solution clarity shows whether the work is understood well enough to scope and price. Buying path separately shows whether the customer can credibly approve and fund it.
+            DISCOVERY x/10 shows whether the work is understood well enough to scope and price. Buying path separately shows whether the customer can credibly approve and fund it.
           </p>
         </div>
       )}

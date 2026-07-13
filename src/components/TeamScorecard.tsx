@@ -140,7 +140,7 @@ export function TeamScorecard({ rows, signals, currentUserId }: { rows: Row[]; s
                 )}
 
                 {cell(
-                  "Solution clarity at advance",
+                  "Discovery at advance",
                   r.readinessAtAdvance !== null ? `${r.readinessAtAdvance.toFixed(1)}/10` : "—",
                   r.readinessAtAdvance !== null ? <Bar value={r.readinessAtAdvance} max={10} ok={r.readinessAtAdvance >= 7} /> : undefined,
                 )}

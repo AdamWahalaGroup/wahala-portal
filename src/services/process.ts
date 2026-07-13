@@ -35,7 +35,9 @@ import {
   type PackageFieldStatus,
   type NextAction,
   type BuyingPath,
+  type BuyingPathFieldKey,
   buyingPathFrom,
+  BUYING_PATH_FIELDS,
 } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
@@ -132,7 +134,7 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
     db.select({ status: schema.proposals.status, complexityScore: schema.proposals.complexityScore }).from(schema.proposals).where(eq(schema.proposals.dealId, dealId)),
   ]);
   const readiness = readinessFrom(fields);
-  const buyingPath = buyingPathFrom(deal);
+  const buyingPath = buyingPathFrom(deal, fields.buyingPath);
   const open = proposals.filter((p) => p.status !== "superseded" && p.status !== "declined");
   const proposalStatus = open.some((p) => p.status === "approved")
     ? ("approved" as const)
@@ -456,6 +458,26 @@ export async function applyCallReview(
         break;
     }
   }
+  const buyingPathUpdates: Partial<Record<BuyingPathFieldKey, PackageField>> = {};
+  for (const key of selection.qualificationFields) {
+    if (key === "champion" || key === "economicBuyer" || key === "compellingEvent" || key === "decisionProcess") {
+      const suggestion = analysis.qualification[key];
+      buyingPathUpdates[key] = { status: "ok", evidence: suggestion.value, source: suggestion.source };
+    }
+  }
+  if (selection.qualificationFields.includes("budgetStatus") || selection.qualificationFields.includes("budgetEvidence")) {
+    const budgetStatus = dealPatch.budgetStatus ?? deal.budgetStatus;
+    const budgetEvidence = dealPatch.budgetEvidence ?? deal.budgetEvidence;
+    const supported = (budgetStatus === "funding_path" || budgetStatus === "confirmed") && !!budgetEvidence?.trim();
+    const source = selection.qualificationFields.includes("budgetEvidence")
+      ? analysis.qualification.budgetEvidence.source
+      : analysis.qualification.budgetStatus.source;
+    buyingPathUpdates.budget = { status: supported ? "ok" : "partial", evidence: budgetEvidence, source };
+  }
+  const buyingPathChanged = Object.keys(buyingPathUpdates).length > 0;
+  if (buyingPathChanged) {
+    packageResult.fields.buyingPath = { ...currentPackage.buyingPath, ...buyingPathUpdates };
+  }
   for (const key of selection.commercialFields) {
     const suggestion = analysis.commercial[key];
     const value = acceptedSuggestion(suggestion, key);
@@ -528,7 +550,7 @@ export async function applyCallReview(
       }),
     ),
   ];
-  if (selection.packageFields.length > 0) {
+  if (selection.packageFields.length > 0 || buyingPathChanged) {
     const existing = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
     statements.splice(
       1,
@@ -586,7 +608,7 @@ export async function setPackageField(
   input: { status: string; evidence?: string },
 ): Promise<{ readiness: number; field: PackageField }> {
   assertSalesManager(ctx, "set_package_field");
-  if (!(SOLUTION_CLARITY_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown solution-clarity field.");
+  if (!(SOLUTION_CLARITY_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown Discovery Package field.");
   if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
   const evidence = input.evidence?.trim().slice(0, 500) || null;
 
@@ -621,6 +643,70 @@ export async function setPackageField(
   return { readiness, field: fields[fieldKey] as PackageField };
 }
 
+/** Manually classify one Buying path signal using the same evidence interaction as Discovery. */
+export async function setBuyingPathField(
+  ctx: AuthContext,
+  dealId: string,
+  key: string,
+  input: { status: string; evidence?: string; budgetStatus?: string },
+): Promise<{ buyingPath: BuyingPath; field: PackageField }> {
+  assertSalesManager(ctx, "set_buying_path_field");
+  if (!(BUYING_PATH_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown buying-path field.");
+  if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
+  const evidence = input.evidence?.trim().slice(0, 500) || null;
+  if (input.status === "ok" && !evidence) throw new StageError("VALIDATION", "Evidence is required before a buying-path item can be marked OK.");
+  const fieldKey = key as BuyingPathFieldKey;
+
+  const db = getDb();
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  const scope = ctx.accessScope;
+  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+
+  let budgetStatus = deal.budgetStatus;
+  if (fieldKey === "budget" && input.budgetStatus !== undefined) {
+    if (!isBudgetStatus(input.budgetStatus)) throw new StageError("VALIDATION", "Unknown budget status.");
+    budgetStatus = input.budgetStatus;
+  }
+  if (fieldKey === "budget" && input.status === "ok" && budgetStatus !== "funding_path" && budgetStatus !== "confirmed") {
+    throw new StageError("VALIDATION", "Funding path must be identified or budget confirmed before this item can be marked OK.");
+  }
+
+  const previous = await loadPackage(dealId);
+  const from = previous.buyingPath?.[fieldKey]?.status ?? "missing";
+  const field: PackageField = { status: input.status as PackageFieldStatus, evidence, source: "manual" };
+  const fields: PackageFields = { ...previous, buyingPath: { ...previous.buyingPath, [fieldKey]: field } };
+  const dealPatch: Partial<typeof schema.deals.$inferInsert> = fieldKey === "champion"
+    ? { champion: evidence }
+    : fieldKey === "economicBuyer"
+      ? { economicBuyer: evidence }
+      : fieldKey === "compellingEvent"
+        ? { compellingEvent: evidence }
+        : fieldKey === "decisionProcess"
+          ? { decisionProcess: evidence }
+          : { budgetStatus, budgetEvidence: evidence };
+
+  const existing = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
+  await db.batch([
+    existing
+      ? db.update(schema.discoveryPackages).set({ fields }).where(eq(schema.discoveryPackages.dealId, dealId))
+      : db.insert(schema.discoveryPackages).values({ dealId, fields }),
+    db.update(schema.deals).set(dealPatch).where(eq(schema.deals.id, dealId)),
+  ]);
+  const updatedDeal = { ...deal, ...dealPatch };
+  const buyingPath = buyingPathFrom(updatedDeal, fields.buyingPath);
+  await recordProcessEvent({
+    organizationId: deal.organizationId,
+    dealId,
+    ownerUserId: deal.ownerUserId,
+    actorUserId: ctx.user.id,
+    kind: "field_edited",
+    readinessScore: readinessFrom(fields),
+    metadata: { area: "buying_path", field: key, from, to: input.status, source: "manual" },
+  });
+  return { buyingPath, field };
+}
+
 export async function getCallTranscript(ctx: AuthContext, dealId: string, callId: string): Promise<{ title: string; recordedAt: Date; transcriptMd: string }> {
   assertStaff(ctx, "read_transcript");
   const { call } = await reviewContext(ctx, dealId, callId);
@@ -649,7 +735,7 @@ export async function readinessCheck(ctx: AuthContext, dealId: string): Promise<
   const fields = await loadPackage(dealId);
   const score = readinessFrom(fields);
   const failed = failedChecks(fields);
-  const buyingPath = buyingPathFrom(deal);
+  const buyingPath = buyingPathFrom(deal, fields.buyingPath);
   const readyToDraft = score >= PROPOSAL_READY_AT;
   const readyToSend = readyToDraft && buyingPath.status === "confirmed";
   return {
@@ -661,10 +747,10 @@ export async function readinessCheck(ctx: AuthContext, dealId: string): Promise<
     buyingPath,
     failed,
     recommendation: !readyToDraft
-      ? "Keep the draft, then close the open solution gaps so scope and price are defensible."
+      ? "Keep the draft, then close the open Discovery Package gaps so scope and price are defensible."
       : buyingPath.status !== "confirmed"
-        ? "The solution is clear enough to draft. Before sending, confirm the economic buyer, decision process, compelling event, champion, and funded path."
-        : "Solution clarity and the buying path support sending the proposal.",
+        ? "The Discovery Package is complete enough to draft. Before sending, confirm the economic buyer, decision process, compelling event, champion, and funded path."
+        : "The Discovery Package and buying path support sending the proposal.",
   };
 }
 
@@ -739,9 +825,9 @@ export async function generatePostMortem(dealId: string, actorUserId: string | n
   const timeline: string[] = [`- **captured** — ${fmt(deal.createdAt)}`];
   for (const m of moves) {
     const label = (s: string | null) => (s && s in STAGE_META ? STAGE_META[s as DealStage].label : (s ?? "?"));
-    timeline.push(`- **${label(m.fromStep)} → ${label(m.toStep)}** — ${fmt(m.createdAt)}${m.readinessScore !== null ? ` · solution clarity ${m.readinessScore}/10` : ""}`);
+    timeline.push(`- **${label(m.fromStep)} → ${label(m.toStep)}** — ${fmt(m.createdAt)}${m.readinessScore !== null ? ` · Discovery ${m.readinessScore}/10` : ""}`);
     if (m.toStep === "proposal_out" && m.readinessScore !== null && m.readinessScore < PROPOSAL_READY_AT) {
-      timeline.push(`  ⚠ proposal sent below solution-clarity threshold (${m.readinessScore}/${PROPOSAL_READY_AT} expected)`);
+      timeline.push(`  ⚠ proposal sent below the Discovery threshold (${m.readinessScore}/${PROPOSAL_READY_AT} expected)`);
     }
   }
 
@@ -755,7 +841,7 @@ export async function generatePostMortem(dealId: string, actorUserId: string | n
   const advBelow = moves.find((m) => m.toStep === "proposal_out" && m.readinessScore !== null && m.readinessScore < PROPOSAL_READY_AT);
   if (advBelow) {
     findings.push(
-      `**Proposal sent at ${advBelow.readinessScore}/10 solution clarity** (expected ≥ ${PROPOSAL_READY_AT}). The proposal was written on thin solution evidence → it argued price instead of the customer's own pain → holding one more discovery call would have either armed the proposal or saved the effort.`,
+      `**Proposal sent at DISCOVERY ${advBelow.readinessScore}/10** (expected ≥ ${PROPOSAL_READY_AT}). The proposal was written on thin discovery evidence → it argued price instead of the customer's own pain → holding one more discovery call would have either armed the proposal or saved the effort.`,
     );
   }
   if (overrides.length > 0) {
@@ -913,8 +999,8 @@ export function scorecardSignals(rows: ScorecardRow[]): { tone: "amber" | "green
   if (low && out.length < 2) {
     out.push({
       tone: "amber",
-      title: `${low.name} — low solution clarity at advance`,
-      body: `Average solution clarity at advance is ${low.readinessAtAdvance}/10 (expected ≥ ${PROPOSAL_READY_AT}). Ask which missing solution evidence would make scope and price safer.`,
+      title: `${low.name} — thin Discovery Package at advance`,
+      body: `Average Discovery at advance is ${low.readinessAtAdvance}/10 (expected ≥ ${PROPOSAL_READY_AT}). Ask which missing discovery evidence would make scope and price safer.`,
     });
   }
   const strong = rows.find((r) => r.readinessAtAdvance !== null && r.readinessAtAdvance >= PROPOSAL_READY_AT && (r.nudgeResponsePct ?? 0) >= 85);
@@ -922,7 +1008,7 @@ export function scorecardSignals(rows: ScorecardRow[]): { tone: "amber" | "green
     out.push({
       tone: "green",
       title: `${strong.name} — top process health`,
-      body: `${strong.readinessAtAdvance}/10 solution clarity at advance · ${strong.nudgeResponsePct}% nudge response.${strong.trainingMode ? " Suggest turning training mode off next month." : " Worth sharing their discovery routine at the Monday meeting."}`,
+      body: `${strong.readinessAtAdvance}/10 Discovery at advance · ${strong.nudgeResponsePct}% nudge response.${strong.trainingMode ? " Suggest turning training mode off next month." : " Worth sharing their discovery routine at the Monday meeting."}`,
     });
   }
   return out.slice(0, 2);

@@ -190,7 +190,7 @@ export function DealFieldsForm({
             <input style={inputStyle} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
-            <FieldLabel help="A rough portfolio-planning estimate, not a quote, forecast, or promise. Record the evidence behind it in the qualification section.">Estimated value ($)</FieldLabel>
+            <FieldLabel help="A rough portfolio-planning estimate, not a quote, forecast, or promise. Record funding evidence in the Buying path section.">Estimated value ($)</FieldLabel>
             <input style={inputStyle} inputMode="numeric" placeholder="Gut range anchor, not a quote" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))} />
           </div>
           <div>

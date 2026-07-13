@@ -389,10 +389,11 @@ export const deals = sqliteTable(
 );
 
 // ---- Discovery package (frames 38/39) — the structured record behind readiness ----
-// One row per deal; `fields` holds the 10 PACKAGE_FIELDS as
-// { [field]: { status: "ok"|"partial"|"missing", evidence?: string, source?: string } }.
-// AI may propose updates from a call; staff explicitly accept them. Readiness derives
-// only from the accepted record.
+// One row per deal; `fields` holds the Discovery Package evidence plus nested
+// Buying-path classifications. Each item is
+// { status: "ok"|"partial"|"missing", evidence?: string, source?: string }.
+// AI may propose updates from a call; staff explicitly accept them. DISCOVERY x/10
+// derives only from the eight accepted Discovery Package fields.
 export const discoveryPackages = sqliteTable(
   "discovery_packages",
   {
@@ -415,7 +416,7 @@ export const dealCalls = sqliteTable(
     recordedAt: integer("recorded_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
     durationMin: integer("duration_min"),
     transcriptMd: text("transcript_md").notNull(),
-    // How many of the 10 package fields this call's extraction filled or improved.
+    // How many of the eight Discovery Package fields this call filled or improved.
     fieldsExtracted: integer("fields_extracted").notNull().default(0),
     // One AI pass proposes the long-form memo, readiness evidence,
     // qualification facts, and commercial classifications. Nothing reaches the
