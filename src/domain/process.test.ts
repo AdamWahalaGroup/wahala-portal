@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, nextCallPrompts, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, type PackageFields } from "./process";
+import { applyManualField, manualFieldStatusForSave, nextCallPrompts, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;
@@ -23,6 +23,17 @@ describe("applyManualField", () => {
     const { fields: next } = applyManualField({}, "timeline", { status: "partial", evidence: "   " });
     expect(next.timeline).toEqual({ status: "partial", evidence: null, source: "manual" });
     expect(readinessFrom(next)).toBe(0.5);
+  });
+});
+
+describe("manualFieldStatusForSave", () => {
+  it("treats an unclassified evidence save as complete", () => {
+    expect(manualFieldStatusForSave(null)).toBe("ok");
+  });
+
+  it("preserves an explicit partial or missing classification", () => {
+    expect(manualFieldStatusForSave("partial")).toBe("partial");
+    expect(manualFieldStatusForSave("missing")).toBe("missing");
   });
 });
 

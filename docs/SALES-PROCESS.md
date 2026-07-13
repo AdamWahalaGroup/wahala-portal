@@ -30,6 +30,11 @@ than building a second task list inside the Deal. The agreed follow-up is Deal
 motion, not another field in the Discovery Package and not a step between
 Discovery and Proposal.
 
+In the Deal UI this appears as the compact **Customer motion** strip beneath the
+dominant Recommended next step. It expands only when someone records or edits a
+commitment. A missing commitment is a health signal, not a competing workflow
+instruction.
+
 Every active Deal has either a scheduled meeting or records:
 
 - one specific action;
@@ -75,6 +80,11 @@ than ten unrelated fields:
 Do not lead with budget. First understand enough pain and desired value to make
 the funding conversation relevant. Capture customer terminology throughout the
 conversation rather than interrogating it as a standalone vocabulary exercise.
+
+For manual package entry, typing evidence and saving without choosing a status
+means **OK**. Choose Partial or Missing only when that is the deliberate
+classification. Partial and Missing remain in Ask on the next call; OK removes
+the prompt and increases readiness.
 
 Record discovery evidence once, as a call transcript or meeting notes. AI may
 then propose five kinds of updates in a single pending review:

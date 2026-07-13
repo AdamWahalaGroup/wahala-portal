@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, manualFieldStatusForSave, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -283,7 +283,7 @@ export function DealProcessPanel({
   const [form, setForm] = useState({ title: "", duration: "", transcript: "" });
   const [openTranscript, setOpenTranscript] = useState<{ id: string; text: string } | null>(null);
   const [editing, setEditing] = useState<(typeof PACKAGE_FIELDS)[number] | null>(null);
-  const [editForm, setEditForm] = useState<{ status: PackageFieldStatus; evidence: string }>({ status: "missing", evidence: "" });
+  const [editForm, setEditForm] = useState<{ status: PackageFieldStatus | null; evidence: string }>({ status: null, evidence: "" });
   const [fieldBusy, setFieldBusy] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [askAll, setAskAll] = useState(false);
@@ -356,20 +356,24 @@ export function DealProcessPanel({
 
   function openFieldEditor(key: (typeof PACKAGE_FIELDS)[number]) {
     const f = fields[key];
-    setEditForm({ status: f?.status ?? "missing", evidence: f?.evidence ?? "" });
+    setEditForm({ status: f?.source ? f.status : null, evidence: f?.evidence ?? "" });
     setFieldError(null);
     setEditing(editing === key ? null : key);
   }
 
   async function saveField() {
     if (!editing) return;
+    if (!editForm.status && !editForm.evidence.trim()) {
+      setFieldError("Enter what you learned, or explicitly choose Partial or Missing.");
+      return;
+    }
     setFieldBusy(true);
     setFieldError(null);
     try {
       const res = await fetch(`/api/deals/${dealId}/discovery`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ field: editing, status: editForm.status, evidence: editForm.evidence }),
+        body: JSON.stringify({ field: editing, status: manualFieldStatusForSave(editForm.status), evidence: editForm.evidence }),
       });
       const d = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) setFieldError(d.message ?? `Failed (${res.status}).`);
@@ -460,6 +464,9 @@ export function DealProcessPanel({
               value={editForm.evidence}
               onChange={(e) => setEditForm((v) => ({ ...v, evidence: e.target.value }))}
             />
+            {!editForm.status && editForm.evidence.trim() && (
+              <p className="mono" style={{ color: "#15803D", fontSize: 9.5, margin: 0 }}>No status selected · Save will mark this OK.</p>
+            )}
             {fieldError && <p style={{ color: "#b00020", fontSize: 11, margin: 0 }}>{fieldError}</p>}
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button
@@ -467,7 +474,7 @@ export function DealProcessPanel({
                 disabled={fieldBusy}
                 style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 7, padding: "5px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
               >
-                {fieldBusy ? "Saving…" : "Save"}
+                {fieldBusy ? "Saving…" : editForm.status ? "Save" : "Save as OK"}
               </button>
               <button onClick={() => setEditing(null)} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
                 Cancel

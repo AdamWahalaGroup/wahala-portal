@@ -157,6 +157,7 @@ export function NewOpportunityModal({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmTypedRecords, setConfirmTypedRecords] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
@@ -216,9 +217,19 @@ export function NewOpportunityModal({
     }
   }
 
-  const canCreate = !!(pickedContact || (newContact && contactQuery.trim()));
+  const typedContactName = contactQuery.trim();
+  const typedAccountName = accountQuery.trim();
+  const hasUnselectedContact = !pickedContact && !newContact && !!typedContactName;
+  const hasUnselectedAccount = !pickedAccount && !createAccount && !!typedAccountName;
+  const unselectedRecordCount = Number(hasUnselectedContact) + Number(hasUnselectedAccount);
+  const canCreate = !!(pickedContact || typedContactName);
 
-  async function submit() {
+  async function submit(confirmUnselectedText = false) {
+    if (!confirmUnselectedText && (hasUnselectedContact || hasUnselectedAccount)) {
+      setConfirmTypedRecords(true);
+      return;
+    }
+    setConfirmTypedRecords(false);
     setBusy(true);
     setError(null);
     try {
@@ -227,10 +238,10 @@ export function NewOpportunityModal({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           contactId: pickedContact?.id,
-          contactName: !pickedContact && newContact ? contactQuery.trim() : undefined,
-          contactEmail: !pickedContact && newContact && contactEmail.trim() ? contactEmail.trim() : undefined,
+          contactName: !pickedContact && (newContact || confirmUnselectedText) ? typedContactName : undefined,
+          contactEmail: !pickedContact && (newContact || confirmUnselectedText) && contactEmail.trim() ? contactEmail.trim() : undefined,
           organizationId: pickedAccount?.id,
-          newAccountName: !pickedAccount && createAccount && accountQuery.trim() ? accountQuery.trim() : undefined,
+          newAccountName: !pickedAccount && (createAccount || confirmUnselectedText) && typedAccountName ? typedAccountName : undefined,
           need: need.trim() || undefined,
           estValueCents: value ? Math.round(parseFloat(value.replace(/[^0-9.]/g, "")) * 100) : undefined,
           source: source || undefined,
@@ -254,6 +265,31 @@ export function NewOpportunityModal({
 
   return (
     <ModalShell title="New opportunity" kicker="◔ a possible sale on a contact" onClose={onClose}>
+      {confirmTypedRecords && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="confirm-typed-records-title"
+          onClick={() => setConfirmTypedRecords(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(16,18,21,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div onClick={(event) => event.stopPropagation()} style={{ width: "100%", maxWidth: 390, background: "var(--white)", borderRadius: 14, padding: "19px 20px", boxShadow: "var(--shadow-modal)" }}>
+            <div className="kicker" id="confirm-typed-records-title">Create typed records?</div>
+            <p style={{ margin: "7px 0 10px", fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.5 }}>
+              You typed the following {unselectedRecordCount > 1 ? "names" : "name"} but did not choose a search result. Continue to create {unselectedRecordCount > 1 ? "them" : "it"} with this opportunity.
+            </p>
+            <div style={{ border: "1px solid var(--border)", background: "var(--surface)", borderRadius: 9, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 5 }}>
+              {!pickedContact && !newContact && typedContactName && <span style={{ fontSize: 12.5 }}><b>New contact:</b> {typedContactName}</span>}
+              {!pickedAccount && !createAccount && typedAccountName && <span style={{ fontSize: 12.5 }}><b>New account:</b> {typedAccountName}</span>}
+            </div>
+            <p className="mono" style={{ margin: "8px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>If either already exists, go back and select it to avoid a duplicate.</p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+              <button onClick={() => setConfirmTypedRecords(false)} style={{ background: "var(--white)", border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Go back</button>
+              <button onClick={() => void submit(true)} disabled={busy} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{busy ? "Creating…" : "Create and continue"}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <label style={labelStyle}>Contact</label>
       {pickedContact ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #d7d9df", borderRadius: 9, padding: "8px 11px", background: "var(--surface)" }}>
@@ -307,6 +343,9 @@ export function NewOpportunityModal({
           )}
         </div>
       )}
+      {hasUnselectedContact && !contactOpen && (
+        <p className="mono" style={{ margin: "5px 0 0", fontSize: 9.5, color: "#B45309" }}>Not selected · creation will be confirmed when you submit.</p>
+      )}
       {newContact && !pickedContact && (
         <>
           <label style={labelStyle}>Email <span style={{ textTransform: "none", fontWeight: 500, color: "#b4b9c1" }}>optional</span></label>
@@ -332,6 +371,9 @@ export function NewOpportunityModal({
           setAccountQuery("");
         }}
       />
+      {hasUnselectedAccount && (
+        <p className="mono" style={{ margin: "5px 0 0", fontSize: 9.5, color: "#B45309" }}>Typed account · creation will be confirmed when you submit.</p>
+      )}
 
       <label style={labelStyle}>What do they need</label>
       <textarea
@@ -371,7 +413,7 @@ export function NewOpportunityModal({
           Cancel
         </button>
         <button
-          onClick={submit}
+          onClick={() => void submit()}
           disabled={busy || !canCreate}
           style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 9, padding: "9px 15px", fontSize: 13, fontWeight: 700, cursor: busy || !canCreate ? "default" : "pointer", opacity: busy || !canCreate ? 0.55 : 1 }}
         >
