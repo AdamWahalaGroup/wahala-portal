@@ -5,8 +5,9 @@
  * small name / value / notes form. Fetch → router.refresh(), same as StageActions.
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
+import { FieldHelp } from "@/components/FieldHelp";
+import { nextCommitmentGuidance, STAGE_META, type DealStage } from "@/domain/sales";
 import {
   BUDGET_STATUSES,
   BUDGET_STATUS_LABELS,
@@ -59,71 +60,6 @@ const sectionStyle: React.CSSProperties = {
 
 function dateOnly(value: string | null): string {
   return value ? value.slice(0, 10) : "";
-}
-
-function FieldHelp({ children, label }: { children: React.ReactNode; label: string }) {
-  const descriptionId = useId();
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ left: 12, top: 12, width: 320, placeBelow: false });
-
-  function show(trigger: HTMLElement) {
-    const rect = trigger.getBoundingClientRect();
-    const gutter = 12;
-    const width = Math.min(380, window.innerWidth - gutter * 2);
-    const centered = rect.left + rect.width / 2 - width / 2;
-    const left = Math.max(gutter, Math.min(centered, window.innerWidth - width - gutter));
-    const placeBelow = rect.top < 140;
-    setPosition({
-      left,
-      top: placeBelow ? rect.bottom + 8 : rect.top - 8,
-      width,
-      placeBelow,
-    });
-    setOpen(true);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    const close = () => setOpen(false);
-    window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
-    return () => {
-      window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
-    };
-  }, [open]);
-
-  return (
-    <span className="field-help" onMouseLeave={() => setOpen(false)}>
-      <button
-        type="button"
-        className="field-help__trigger"
-        aria-label={`Explain ${label}`}
-        aria-describedby={open ? descriptionId : undefined}
-        onMouseEnter={(event) => show(event.currentTarget)}
-        onFocus={(event) => show(event.currentTarget)}
-        onBlur={() => setOpen(false)}
-      >
-        ?
-      </button>
-      {open && typeof document !== "undefined" && createPortal(
-        <span
-          id={descriptionId}
-          className="field-help__content"
-          role="tooltip"
-          style={{
-            left: position.left,
-            top: position.top,
-            width: position.width,
-            transform: position.placeBelow ? "none" : "translateY(-100%)",
-          }}
-        >
-          {children}
-        </span>,
-        document.body,
-      )}
-    </span>
-  );
 }
 
 function FieldLabel({ children, help }: { children: React.ReactNode; help?: React.ReactNode }) {
@@ -190,6 +126,7 @@ export function DealStageSelect({ dealId, stage, onMoved }: { dealId: string; st
 
 export function DealFieldsForm({
   dealId,
+  stage,
   name,
   valueCents,
   notes,
@@ -210,6 +147,7 @@ export function DealFieldsForm({
   budgetEvidence,
 }: {
   dealId: string;
+  stage: DealStage;
   name: string;
   valueCents: number;
   notes: string | null;
@@ -253,6 +191,7 @@ export function DealFieldsForm({
     budgetStatus,
     budgetEvidence: budgetEvidence ?? "",
   });
+  const commitmentGuidance = nextCommitmentGuidance(stage);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -350,14 +289,26 @@ export function DealFieldsForm({
       </section>
 
       <section style={{ ...sectionStyle, borderColor: "#C9D0FB", background: "#FAFBFF" }}>
-        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Next mutual commitment</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Next agreed action</div>
+          <span className="mono" style={{ marginLeft: "auto", fontSize: 9, fontWeight: 800, color: "#2536C4", background: "#EEF0FE", borderRadius: 999, padding: "2px 8px" }}>
+            {STAGE_META[stage].label}
+          </span>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
+          Record only the next concrete action someone actually agreed to complete—not every later step. When it is done, replace it with the next agreed action.
+        </p>
+        <div style={{ border: "1px solid #DDE1FB", background: "var(--white)", borderRadius: 9, padding: "9px 11px", fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
+          <b style={{ color: "#2536C4" }}>At this stage:</b> {commitmentGuidance.goal}
+          <span style={{ display: "block", marginTop: 3 }}><b>Example:</b> {commitmentGuidance.example}</span>
+        </div>
         <div>
-          <FieldLabel>Specific action</FieldLabel>
-          <input style={inputStyle} placeholder="Who will do what next?" value={form.nextAction} onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))} />
+          <FieldLabel help="Write one observable action with an owner. Do not enter a vague intention such as “follow up” or copy the full stage plan. Only record something the responsible party has actually accepted.">Specific action</FieldLabel>
+          <input style={inputStyle} placeholder="One owner + one observable action" value={form.nextAction} onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <div>
-            <FieldLabel>Due date</FieldLabel>
+            <FieldLabel help="The date the action is expected to be completed or the response is due. A commitment without a date cannot be managed or escalated.">Due date</FieldLabel>
             <input type="date" style={inputStyle} value={form.nextActionDueAt} onChange={(e) => setForm((f) => ({ ...f, nextActionDueAt: e.target.value }))} />
           </div>
           <div>

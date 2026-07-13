@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, nextCallPrompts, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -29,6 +29,7 @@ import {
   IP_DISPOSITION_LABELS,
 } from "@/domain/deal-operating-model";
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
+import { FieldHelp } from "@/components/FieldHelp";
 
 type Call = {
   id: string;
@@ -375,6 +376,7 @@ export function DealProcessPanel({
     const s = f?.status ?? "missing";
     const c = s === "ok" ? TONE.green : s === "partial" ? TONE.amber : TONE.red;
     const isEditing = editing === key;
+    const guidance = PACKAGE_FIELD_GUIDANCE[key];
     return (
       <div key={key} style={{ padding: "6px 0" }}>
         <div className="pkg-row" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -384,6 +386,13 @@ export function DealProcessPanel({
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
               <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{PACKAGE_FIELD_LABELS[key]}</span>
+              <FieldHelp label={PACKAGE_FIELD_LABELS[key]}>
+                <span className="field-help__definitions">
+                  <span>{guidance.meaning}</span>
+                  <span><b>Why it matters:</b> {guidance.why}</span>
+                  <span><b>Ask or listen for:</b> {guidance.ask}</span>
+                </span>
+              </FieldHelp>
               {canManage && (
                 <button
                   onClick={() => openFieldEditor(key)}
@@ -460,7 +469,6 @@ export function DealProcessPanel({
       {/* Discovery package card */}
       <section
         style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
-        title={trainingMode ? undefined : EXPLAIN.whyCompleteness}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <span className="kicker">Discovery package</span>

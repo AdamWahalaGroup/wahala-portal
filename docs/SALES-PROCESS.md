@@ -19,6 +19,12 @@ Stages report where a deal is; they do not force a conversation sequence.
 
 ## The next-commitment rule
 
+The UI calls this the **Next agreed action**. Stage guidance is the standard
+playbook; it is not evidence that a buyer or Wahala has actually committed to
+anything. Record only the next observable action a named party accepted, with a
+due date. When it is complete, replace it with the next agreed action rather
+than building a second task list inside the Deal.
+
 Every active Deal records:
 
 - one specific action;

@@ -423,7 +423,9 @@ export function DealDrawer({
             ) : (
               !terminal && (
                 <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
-                  <div className="kicker" style={{ marginBottom: 6 }}>Next step</div>
+                  <div className="kicker" style={{ marginBottom: 6 }}>
+                    {deal.nextAction ? "Next agreed action" : nextMeeting ? "Next scheduled meeting" : "Stage next step"}
+                  </div>
                   {deal.nextAction ? (
                     <>
                       <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
