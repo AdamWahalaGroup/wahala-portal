@@ -74,7 +74,7 @@ describe("discovery review", () => {
     expect(result.fields.pain_points?.evidence).toBe("Manual review is slow");
     expect(result.fields.business_profile?.status).toBe("ok");
     expect(result.fieldsImproved).toBe(1);
-    expect(result.readiness).toBe(2);
+    expect(result.readiness).toBe(2.5);
   });
 
   it("never lets an AI review downgrade accepted readiness evidence", () => {
@@ -83,7 +83,7 @@ describe("discovery review", () => {
     proposed.pain_points = { status: "partial", evidence: "Less certain", source: "new call" };
     const result = mergeReviewedPackage(current, proposed, ["pain_points"]);
     expect(result.fields.pain_points).toEqual(current.pain_points);
-    expect(result.readiness).toBe(1);
+    expect(result.readiness).toBe(1.3);
   });
 
   it("drops unknown or duplicate selection keys", () => {

@@ -21,6 +21,7 @@ import { resolveSla } from "../domain/sla";
 import { daysInStage } from "../domain/sales";
 import { momentumFrom, dealBudgetCents, priorityScore } from "../domain/priority";
 import { actionUrgencyScore } from "../domain/deal-operating-model";
+import { buyingPathFrom, readinessFrom, type PackageFields } from "../domain/process";
 import { DEFAULT_AGENT_PROMPTS } from "./ai/prompts";
 import { recordAiRun } from "./ai/usage";
 
@@ -307,15 +308,17 @@ async function groundedDigest(db: Db, deal: typeof schema.deals.$inferSelect, no
     db.select({ title: schema.suggestions.title }).from(schema.suggestions).where(and(eq(schema.suggestions.dealId, deal.id), inArray(schema.suggestions.status, ["open", "done"]))).all(),
   ]);
 
+  const solutionClarity = readinessFrom(((pkg?.fields ?? {}) as PackageFields));
+  const buyingPath = buyingPathFrom(deal);
   const lines: string[] = [
     `DEAL: ${deal.name}`,
     `Stage: ${deal.stage} (${daysInStage(deal.stageEnteredAt, now)} days in stage) · value $${Math.round(deal.valueCents / 100).toLocaleString("en-US")} (gut number)`,
     `Account: ${org ? `${org.name} (${org.status})` : "none yet — opportunity on a contact"}`,
-    `Readiness: ${deal.readinessScore ?? "unscored"} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
+    `Solution clarity: ${solutionClarity} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
     `Engagement type: ${deal.engagementType ?? "unclassified"} · delivery: ${deal.deliveryModel ?? "unclassified"}`,
     `IP: ${deal.ipDisposition} · data sensitivity: ${deal.dataSensitivity}`,
     `Agreed follow-up: ${deal.nextAction ?? "MISSING"}${deal.nextActionDueAt ? ` · due ${deal.nextActionDueAt.toISOString().slice(0, 10)}` : " · due date MISSING"} · court: ${deal.nextActionCourt}`,
-    `Qualification: champion ${deal.champion ?? "unknown"} · economic buyer ${deal.economicBuyer ?? "unknown"} · budget ${deal.budgetStatus}`,
+    `Buying path: ${buyingPath.status} (${buyingPath.completed}/${buyingPath.total}) · champion ${deal.champion ?? "unknown"} · economic buyer ${deal.economicBuyer ?? "unknown"} · budget ${deal.budgetStatus}`,
   ];
   if (deal.compellingEvent) lines.push(`Compelling event: ${deal.compellingEvent}`);
   if (deal.decisionProcess) lines.push(`Decision process: ${deal.decisionProcess}`);

@@ -8,8 +8,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FieldHelp } from "@/components/FieldHelp";
 import {
-  BUDGET_STATUSES,
-  BUDGET_STATUS_LABELS,
   DATA_SENSITIVITIES,
   DATA_SENSITIVITY_DESCRIPTIONS,
   DATA_SENSITIVITY_LABELS,
@@ -19,7 +17,6 @@ import {
   ENGAGEMENT_TYPE_LABELS,
   IP_DISPOSITIONS,
   IP_DISPOSITION_LABELS,
-  type BudgetStatus,
   type DataSensitivity,
   type DeliveryModel,
   type EngagementType,
@@ -131,12 +128,6 @@ export function DealFieldsForm({
   dataSensitivity,
   supportExpectation,
   expectedCloseAt,
-  champion,
-  economicBuyer,
-  compellingEvent,
-  decisionProcess,
-  budgetStatus,
-  budgetEvidence,
 }: {
   dealId: string;
   name: string;
@@ -148,12 +139,6 @@ export function DealFieldsForm({
   dataSensitivity: DataSensitivity;
   supportExpectation: string | null;
   expectedCloseAt: string | null;
-  champion: string | null;
-  economicBuyer: string | null;
-  compellingEvent: string | null;
-  decisionProcess: string | null;
-  budgetStatus: BudgetStatus;
-  budgetEvidence: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -169,12 +154,6 @@ export function DealFieldsForm({
     dataSensitivity,
     supportExpectation: supportExpectation ?? "",
     expectedCloseAt: dateOnly(expectedCloseAt),
-    champion: champion ?? "",
-    economicBuyer: economicBuyer ?? "",
-    compellingEvent: compellingEvent ?? "",
-    decisionProcess: decisionProcess ?? "",
-    budgetStatus,
-    budgetEvidence: budgetEvidence ?? "",
   });
 
   async function save(e: React.FormEvent) {
@@ -192,12 +171,6 @@ export function DealFieldsForm({
       dataSensitivity: form.dataSensitivity,
       supportExpectation: form.supportExpectation,
       expectedCloseAt: form.expectedCloseAt || null,
-      champion: form.champion,
-      economicBuyer: form.economicBuyer,
-      compellingEvent: form.compellingEvent,
-      decisionProcess: form.decisionProcess,
-      budgetStatus: form.budgetStatus,
-      budgetEvidence: form.budgetEvidence,
     });
     if (err) setError(err);
     else {
@@ -269,37 +242,6 @@ export function DealFieldsForm({
         </div>
       </section>
 
-      <section style={sectionStyle}>
-        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Qualification evidence</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          <div>
-            <FieldLabel help="A person inside the buyer who actively wants the outcome and will help the purchase move. A friendly contact is not automatically a champion.">Champion</FieldLabel>
-            <input style={inputStyle} placeholder="Who wants this internally?" value={form.champion} onChange={(e) => setForm((f) => ({ ...f, champion: e.target.value }))} />
-          </div>
-          <div>
-            <FieldLabel help="The person with authority to approve the money or make the final commercial decision. Record unknown until that authority is evidenced.">Economic buyer</FieldLabel>
-            <input style={inputStyle} placeholder="Who can authorize the spend?" value={form.economicBuyer} onChange={(e) => setForm((f) => ({ ...f, economicBuyer: e.target.value }))} />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <FieldLabel>Compelling event</FieldLabel>
-            <textarea style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit" }} placeholder="Why act now, and what happens if they do nothing?" value={form.compellingEvent} onChange={(e) => setForm((f) => ({ ...f, compellingEvent: e.target.value }))} />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <FieldLabel>Decision process</FieldLabel>
-            <textarea style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit" }} placeholder="Approvals, legal, procurement, evaluation, and timing" value={form.decisionProcess} onChange={(e) => setForm((f) => ({ ...f, decisionProcess: e.target.value }))} />
-          </div>
-          <div>
-            <FieldLabel help="How much buying evidence exists: unknown, authority identified, a funding path identified, or budget directly confirmed. A stated price tolerance alone is not confirmed budget.">Budget status</FieldLabel>
-            <select style={inputStyle} value={form.budgetStatus} onChange={(e) => setForm((f) => ({ ...f, budgetStatus: e.target.value as BudgetStatus }))}>
-              {BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}
-            </select>
-          </div>
-          <div>
-            <FieldLabel>Budget evidence</FieldLabel>
-            <input style={inputStyle} placeholder="Authority, range, or funding path" value={form.budgetEvidence} onChange={(e) => setForm((f) => ({ ...f, budgetEvidence: e.target.value }))} />
-          </div>
-        </div>
-      </section>
       <div>
         <FieldLabel>Notes</FieldLabel>
         <textarea

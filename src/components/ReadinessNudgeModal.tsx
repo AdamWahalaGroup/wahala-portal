@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * Training nudge — not proposal-ready (frame 39; trigger superseded by the 09 Jul b
- * delta). Fires on SEND: clicking Send in the proposal editor below the readiness
- * bar (there is no stage drag out of Discovery anymore). The failed checks quote
+ * Training nudge for weak send evidence. Fires on SEND when solution clarity is
+ * below threshold or the buying path is not confirmed. The failed checks quote
  * the transcript VERBATIM — the quotes are what make the nudge persuasive. The
  * nudge is never a gate: "Send anyway" runs the full send path and logs an override.
  * variant="advance" keeps the legacy stage-move copy for any remaining callers.
  */
 import { useEffect, useState } from "react";
+import { BUYING_PATH_LABELS, BUYING_PATH_PROMPTS, type BuyingPath, type BuyingPathFieldKey } from "@/domain/process";
 
 type Check = { field: string; label: string; status: string; evidence: string | null };
-type ReadinessData = { score: number; tone: string; ready: boolean; failed: Check[]; recommendation: string };
+type ReadinessData = { score: number; tone: string; ready: boolean; readyToDraft: boolean; readyToSend: boolean; buyingPath: BuyingPath; failed: Check[]; recommendation: string };
 
 export function ReadinessNudgeModal({
   dealId,
@@ -69,28 +69,29 @@ export function ReadinessNudgeModal({
     >
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: 16, boxShadow: "var(--shadow-modal)", width: "100%", maxWidth: 540, overflow: "hidden" }}>
         {/* Amber header strip */}
-        <div style={{ background: "#FFF7ED", borderBottom: "1px solid #FADCB4", padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "#FFF7ED", borderBottom: "1px solid #FADCB4", padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, background: "#FCEFDC", color: "#B45309", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, flex: "none" }}>
             ⚠
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: "-.01em", color: "#92400E" }}>Hold on — this deal isn&apos;t proposal-ready</div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: "-.01em", color: "#92400E" }}>Hold on — check the evidence before sending</div>
             <div className="mono" style={{ fontSize: 10, color: "#B45309", marginTop: 2 }}>{dealName} → Proposal out</div>
           </div>
           <span className="mono" style={{ fontSize: 10, fontWeight: 800, background: "#FBE3E3", color: "#B91C1C", borderRadius: 999, padding: "4px 11px", flex: "none" }}>
-            READINESS {data ? data.score.toFixed(1) : "…"}/10
+            SOLUTION {data ? data.score.toFixed(1) : "…"}/10
           </span>
+          {data && <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, background: data.buyingPath.status === "confirmed" ? "#DCF5E3" : "#FCEFDC", color: data.buyingPath.status === "confirmed" ? "#15803D" : "#B45309", borderRadius: 999, padding: "4px 10px", flex: "none" }}>BUYING {data.buyingPath.status.toUpperCase()}</span>}
         </div>
 
         <div style={{ padding: "16px 18px" }}>
           <p style={{ margin: 0, fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>
             {send
-              ? "A proposal written on this package argues price instead of the customer's own pain — sending this proposal now risks a pitch built on gaps."
-              : "A proposal written on this package argues price instead of the customer's own pain — the open fields below are what it would be guessing about."}
+              ? "Drafting and sending are different decisions. Solution clarity protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."
+              : "Solution clarity protects scope and price; the buying path shows whether the customer can credibly approve and fund the work."}
           </p>
 
           {/* Failed checks, evidence quoted verbatim */}
-          <div style={{ border: "1px solid var(--border)", borderRadius: 11, marginTop: 12, overflow: "hidden" }}>
+          {(data === null || failed.length > 0 || failedBare.length > 0) && <div style={{ border: "1px solid var(--border)", borderRadius: 11, marginTop: 12, overflow: "hidden" }}>
             {data === null ? (
               <p className="mono" style={{ margin: 0, padding: "10px 13px", fontSize: 10.5, color: "var(--muted-line)" }}>checking the package…</p>
             ) : (
@@ -110,7 +111,17 @@ export function ReadinessNudgeModal({
                 </div>
               ))
             )}
-          </div>
+          </div>}
+
+          {data && data.buyingPath.missing.length > 0 && (
+            <div style={{ border: "1px solid #FADCB4", background: "#FFFBF5", borderRadius: 11, marginTop: 12, padding: "10px 13px" }}>
+              <div className="kicker" style={{ color: "#B45309", marginBottom: 6 }}>Open buying-path evidence</div>
+              {data.buyingPath.missing.map((field) => {
+                const key = field as BuyingPathFieldKey;
+                return <div key={key} style={{ fontSize: 11.5, color: "var(--ink-soft)", padding: "3px 0" }}><b>{BUYING_PATH_LABELS[key]}:</b> {BUYING_PATH_PROMPTS[key]}</div>;
+              })}
+            </div>
+          )}
 
           {/* Recommendation */}
           <div style={{ display: "flex", gap: 9, alignItems: "flex-start", background: "var(--cobalt-wash)", border: "1px solid #DDE1FB", borderRadius: 11, padding: "11px 13px", marginTop: 12 }}>
@@ -121,7 +132,7 @@ export function ReadinessNudgeModal({
               <div style={{ fontSize: 12.5, fontWeight: 800, color: "#2536C4" }}>{send ? "Recommended: hold the send." : "Recommended: stay in Discovery"}</div>
               <p style={{ margin: "3px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
                 {send
-                  ? "Schedule a follow-up call with the named decision-maker and fill the gaps — the draft keeps."
+                  ? data?.recommendation ?? "Keep the draft and close the evidence gaps before sending."
                   : data?.recommendation ?? "One more call closing the open fields, then draft."}
               </p>
             </div>

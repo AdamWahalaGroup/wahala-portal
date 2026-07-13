@@ -111,12 +111,6 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
       dataSensitivity={deal.dataSensitivity}
       supportExpectation={deal.supportExpectation}
       expectedCloseAt={deal.expectedCloseAt?.toISOString() ?? null}
-      champion={deal.champion}
-      economicBuyer={deal.economicBuyer}
-      compellingEvent={deal.compellingEvent}
-      decisionProcess={deal.decisionProcess}
-      budgetStatus={deal.budgetStatus}
-      budgetEvidence={deal.budgetEvidence}
     />
   ) : (
     <p style={{ margin: 0, fontSize: 14, color: "var(--ink-soft)", whiteSpace: "pre-wrap" }}>{deal.notes || "No notes yet."}</p>
@@ -153,6 +147,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
           journeyIndex: process.journeyIndex,
           goal: process.goal,
           nextActions: process.nextActions,
+          buyingPath: process.buyingPath,
           calls: process.calls.map((c) => ({ ...c, recordedAt: c.recordedAt.toISOString() })),
           meetings: meetings.map((m) => ({
             id: m.id,

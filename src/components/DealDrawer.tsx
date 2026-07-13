@@ -23,7 +23,7 @@ import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
-import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
+import { EXPLAIN, readinessTone, type BuyingPath, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, type DealStage } from "@/domain/sales";
 import { NEXT_ACTION_COURTS, NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
@@ -46,6 +46,7 @@ export type DrawerProcess = {
   journeyIndex: number;
   goal: string;
   nextActions: { n: number; text: string; active: boolean }[];
+  buyingPath: BuyingPath;
   calls: {
     id: string;
     title: string;
@@ -351,7 +352,7 @@ export function DealDrawer({
             </div>
             <p style={{ margin: "7px 0 0", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", lineHeight: 1.45 }}>{process.goal}</p>
             <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>
-              System guidance from stage and readiness · never a hard gate
+              System guidance from stage, solution clarity, and buying path · never a hard gate
             </p>
             <div style={{ marginTop: 10 }}>{proposalCtaNode}</div>
           </section>
@@ -508,13 +509,13 @@ export function DealDrawer({
             <span style={{ fontSize: 12.5, fontWeight: 700, color: "#2536C4" }}>{process.goal}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-            <span className="kicker" style={{ color: "#5A6BD8" }}>Discovery package</span>
+            <span className="kicker" style={{ color: "#5A6BD8" }}>Solution clarity</span>
             <span style={{ marginLeft: "auto" }}>
               <ReadyPill score={process.readiness} tone={readinessTone(process.readiness ?? 0)} />
             </span>
           </div>
           <p style={{ margin: "7px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
-            Readiness shows whether the 10-field discovery package is complete enough to support a responsible proposal. AI proposes evidence from calls; a person decides what becomes Deal truth.
+            Solution clarity shows whether the work is understood well enough to scope and price. Buying path separately shows whether the customer can credibly approve and fund it.
           </p>
         </div>
       )}
@@ -599,6 +600,7 @@ export function DealDrawer({
                 fields={process.fields}
                 nextActions={process.nextActions}
                 calls={process.calls}
+                buyingPath={process.buyingPath}
                 openLog={logBump}
                 stage={deal.stage}
               />

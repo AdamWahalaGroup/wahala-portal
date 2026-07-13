@@ -19,9 +19,10 @@ Stages report where a deal is; they do not force a conversation sequence.
 
 ## Recommended next step versus agreed follow-up
 
-The **Recommended next step** is system guidance from stage and readiness. In
-Discovery that will normally be to close specific evidence gaps or start a
-proposal. It is not a new stage, a gate, or evidence that anyone agreed to act.
+The **Recommended next step** is system guidance from stage, solution clarity,
+and buying path. In Discovery it will normally be to close a specific evidence
+gap, rough out a proposal, or confirm how the purchase will happen. It is not a
+new stage, a gate, or evidence that anyone agreed to act.
 
 The **Agreed follow-up** is the next observable action a named party accepted,
 with a due date. A scheduled meeting satisfies this rule without a duplicate
@@ -45,61 +46,72 @@ Every active Deal has either a scheduled meeting or records:
 Missing and overdue commitments rise above general portfolio attractiveness in
 the Home queue. An automated nudge or AI refresh is not a relationship touch.
 
-## Qualification brief
+## Two independent discovery signals
 
-Before investing proposal-level effort, capture evidence for:
+Do not compress discovery into one score. A Deal can be clear enough to scope
+while the customer's buying process remains uncertain, or have an eager buyer
+while the solution is still too vague to price responsibly.
 
-- the problem and business impact;
-- the desired outcome and success measure;
-- compelling event and consequence of doing nothing;
-- internal champion;
-- economic buyer or spending authority;
-- budget status and funding path;
-- decision process and criteria;
-- alternatives, competition, and no-decision risk;
-- Wahala delivery/IP/data/support risk; and
-- agreed follow-up or scheduled next meeting.
-
-Unknown is an acceptable answer. Unsupported certainty is not.
-
-## Solution readiness
+### Solution clarity (0–10)
 
 The Discovery Package measures whether Wahala understands enough to create a
 responsible scope and price. It does not measure win probability. Customer
-terminology and deferred scope matter for delivery quality but should not be
-used as proof that a buying motion exists.
+terminology and deferred scope matter for delivery quality, but do not prove
+that a buying motion exists. At **7/10**, Wahala has enough clarity to rough out
+a proposal; 10/10 means all eight solution fields have complete evidence.
 
 For call coaching, present the package as a progressive conversation rather
-than ten unrelated fields:
+than unrelated fields:
 
-1. **Business & stakeholders:** business profile, then decision makers.
+1. **Business context:** what the customer does and who they serve.
 2. **Current reality:** current workflow, pain points, and the customer's own terminology.
 3. **Desired outcome & first scope:** success metrics, MVP priorities, and deferred scope.
-4. **Buying reality:** budget posture and timeline.
+4. **Delivery timing:** requested delivery timing, dependencies, and constraints.
 
-Do not lead with budget. First understand enough pain and desired value to make
-the funding conversation relevant. Capture customer terminology throughout the
-conversation rather than interrogating it as a standalone vocabulary exercise.
+Capture customer terminology throughout the conversation rather than
+interrogating it as a standalone vocabulary exercise. Delivery timing is not
+the customer's decision process; that belongs in the buying path.
 
 For manual package entry, typing evidence and saving without choosing a status
 means **OK**. Choose Partial or Missing only when that is the deliberate
 classification. Partial and Missing remain in Ask on the next call; OK removes
-the prompt and increases readiness.
+the prompt and increases solution clarity.
+
+### Buying path (Unverified / Developing / Confirmed)
+
+The Buying path asks whether the customer can credibly make the purchase. It is
+Confirmed only when evidence exists for all five signals:
+
+- an internal champion who will help the purchase move;
+- the economic buyer who can authorize the commercial decision;
+- a compelling event and consequence of doing nothing;
+- the evaluation, approval, legal, procurement, and signature process; and
+- an identified funding path with concrete evidence.
+
+Unverified means none of these signals is established. Developing means some
+are established but at least one material gap remains. A budget status of
+“spending authority known” is useful evidence, but does not by itself identify
+the funding path. Unknown is an acceptable answer; unsupported certainty is not.
+
+Do not lead a first conversation with budget. Understand the pain and desired
+value first, then make the funding and authority questions relevant. The UI
+stores these facts separately, but an experienced seller can gather them in the
+same natural conversation.
 
 Record discovery evidence once, as a call transcript or meeting notes. AI may
 then propose five kinds of updates in a single pending review:
 
 - a long-form discovery memo;
-- evidence for the ten Discovery Package fields;
-- qualification evidence such as champion, economic buyer, compelling event,
-  decision process, and budget; and
+- evidence for the eight Solution clarity fields;
+- Buying path evidence such as champion, economic buyer, compelling event,
+  decision process, and funding path; and
 - commercial classifications such as engagement, delivery, IP, data
   sensitivity, and support; and
 - an agreed follow-up only when the source explicitly states the responsible
   party, accepted action, and exact calendar date.
 
 A staff member applies or dismisses the analysis. Applying is item-level:
-accepted facts update the Deal and recompute readiness; rejected or unchecked
+accepted facts update the Deal and recompute its signals; rejected or unchecked
 items do nothing. Existing human-entered evidence is not selected for overwrite
 by default. Commercial classifications and agreed follow-ups are never selected by default. In
 particular, AI must not infer favorable IP ownership, a funded budget, buyer
@@ -107,6 +119,9 @@ authority, low data sensitivity, acceptance of an action, or a calendar date.
 
 ## Proposal and contracting
 
+- Rough out or AI-draft a proposal once solution clarity is at least 7/10.
+- Before sending, confirm the buying path. If either signal is weak, the portal
+  warns and records an override but never creates a hard sales-stage gate.
 - Use one recommended proposal path when it is clearly best.
 - Use multiple options only when they represent a real customer tradeoff.
 - Use paid discovery when uncertainty is too high for responsible fixed pricing.
@@ -123,7 +138,7 @@ With little historical data, prioritize process visibility over rankings:
 - active deals with a dated agreed follow-up or scheduled meeting;
 - overdue Wahala/client commitments;
 - meeting reschedules and no-shows;
-- qualification and solution-readiness coverage;
+- solution-clarity and buying-path coverage;
 - pending discovery analyses and accepted evidence rate;
 - founder hours spent to reach each gate;
 - proposals sent and decisions received;

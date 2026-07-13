@@ -37,6 +37,7 @@ import {
   type IpDisposition,
   type NextActionCourt,
 } from "@/domain/deal-operating-model";
+import { readinessFrom, type PackageFields } from "@/domain/process";
 
 export function assertStaff(ctx: AuthContext, action: string): void {
   if (!ctx.isStaff) {
@@ -366,7 +367,7 @@ export type DealItem = {
   msaOnFile: boolean;
   /** Chip: born from / running as paid discovery. */
   paidDiscovery: boolean;
-  /** Proposal-readiness snapshot (0–10) — drives the frame-39 nudge on advance. */
+  /** Solution-clarity snapshot (0–10) — used by send-time coaching. */
   readinessScore: number | null;
   /** Set once Create project → ran — the board's won-drag guard reads it. */
   projectId: string | null;
@@ -392,7 +393,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const projectIds = [...new Set(rows.map((d) => d.projectId).filter((v): v is string => !!v))];
   const now = new Date();
 
-  const [orgs, owners, people, sentProposals, agRows, projects, upcomingMeetings] = await Promise.all([
+  const [orgs, owners, people, sentProposals, agRows, projects, upcomingMeetings, discoveryPackages] = await Promise.all([
     orgIds.length > 0
       ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
       : Promise.resolve([] as { id: string; name: string }[]),
@@ -422,11 +423,16 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       .select({ dealId: schema.meetings.dealId, title: schema.meetings.title, startsAt: schema.meetings.startsAt })
       .from(schema.meetings)
       .where(and(inArray(schema.meetings.dealId, dealIds), eq(schema.meetings.status, "upcoming"), gte(schema.meetings.startsAt, now))),
+    db
+      .select({ dealId: schema.discoveryPackages.dealId, fields: schema.discoveryPackages.fields })
+      .from(schema.discoveryPackages)
+      .where(inArray(schema.discoveryPackages.dealId, dealIds)),
   ]);
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const ownerName = new Map(owners.map((u) => [u.id, u.name]));
   const contactById = new Map(people.map((c) => [c.id, c]));
   const projectKind = new Map(projects.map((p) => [p.id, p.kind]));
+  const solutionClarityByDeal = new Map(discoveryPackages.map((pkg) => [pkg.dealId, readinessFrom((pkg.fields ?? {}) as PackageFields)]));
   const latestSent = new Map<string, Date>();
   for (const p of sentProposals) {
     if (!p.sentAt) continue;
@@ -495,7 +501,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       depositDue: d.stage === "committed" && !d.depositPaidAt,
       msaOnFile: !!d.organizationId && msaOrgs.has(d.organizationId),
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
-      readinessScore: d.readinessScore,
+      readinessScore: solutionClarityByDeal.get(d.id) ?? 0,
       projectId: d.projectId,
       fitScore: d.fitScore,
       engagementHealthScore: d.engagementHealthScore,
@@ -522,6 +528,8 @@ export async function setDealStage(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   if (deal.stage === stage) return;
+  const discoveryPackage = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
+  const solutionClarity = readinessFrom((discoveryPackage?.fields ?? {}) as PackageFields);
 
   // Stage moves clear stage-specific labels and the completed commitment. Every
   // new open stage must state its own dated next commitment; closed deals have
@@ -602,7 +610,7 @@ export async function setDealStage(
     kind: "stage_moved",
     fromStep: deal.stage,
     toStep: stage,
-    readinessScore: deal.readinessScore,
+    readinessScore: solutionClarity,
     metadata: reason?.trim() ? { reason: reason.trim() } : null,
   });
   if (opts.override) {
@@ -614,7 +622,7 @@ export async function setDealStage(
       kind: "nudge_overridden",
       fromStep: deal.stage,
       toStep: stage,
-      readinessScore: deal.readinessScore,
+      readinessScore: solutionClarity,
       metadata: { via: "advance_anyway" },
     });
   }
@@ -900,7 +908,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
 
-  const [org, owner, contact, auditRows] = await Promise.all([
+  const [org, owner, contact, auditRows, discoveryPackage] = await Promise.all([
     deal.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null,
     deal.ownerUserId ? db.query.users.findFirst({ where: eq(schema.users.id, deal.ownerUserId) }) : null,
     deal.primaryContactId ? db.query.contacts.findFirst({ where: eq(schema.contacts.id, deal.primaryContactId) }) : null,
@@ -909,6 +917,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       .from(schema.auditLog)
       .where(and(eq(schema.auditLog.entityType, "deal"), eq(schema.auditLog.entityId, dealId)))
       .orderBy(desc(schema.auditLog.createdAt)),
+    db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) }),
   ]);
   if (deal.organizationId && !org) throw new StageError("NOT_FOUND", "Deal not found.");
 
@@ -975,7 +984,7 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
       depositCents: deal.depositCents,
       depositSentAt: deal.depositSentAt,
       depositPaidAt: deal.depositPaidAt,
-      readinessScore: deal.readinessScore,
+      readinessScore: readinessFrom((discoveryPackage?.fields ?? {}) as PackageFields),
       postMortemMd: deal.postMortemMd,
       projectId: deal.projectId,
       fitScore: deal.fitScore,

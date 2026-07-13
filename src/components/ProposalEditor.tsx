@@ -20,6 +20,7 @@ import { ProposalStatusPill } from "@/components/SalesChips";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { canAmendPhase } from "@/domain/proposal-math";
 import { PROPOSAL_READY_AT } from "@/domain/process";
+import type { BuyingPathStatus } from "@/domain/process";
 import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
 
 type Option = {
@@ -38,9 +39,10 @@ type Proposal = {
   id: string;
   dealId: string;
   dealName: string;
-  /** 09 Jul b — send IS the advance; the readiness nudge fires on Send. */
+  /** Send is the advance; solution-clarity and buying-path coaching fires here. */
   dealStage: string | null;
   dealReadiness: number | null;
+  dealBuyingPathStatus: BuyingPathStatus;
   organizationId: string | null;
   organizationName: string;
   version: number;
@@ -212,9 +214,11 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
   // ---------------------------------------------------------------- send (09 Jul b: stage follows the proposal)
 
-  // Sending is the ONLY forward path out of Discovery — the readiness nudge fires here now.
+  // Sending is the only forward path out of Discovery; evidence coaching fires here.
   const sendWillAdvance = proposal.dealStage === "discovery" || proposal.dealStage === "new";
-  const belowReady = sendWillAdvance && (proposal.dealReadiness ?? 0) < PROPOSAL_READY_AT;
+  const belowSolutionClarity = (proposal.dealReadiness ?? 0) < PROPOSAL_READY_AT;
+  const buyingPathUnconfirmed = proposal.dealBuyingPathStatus !== "confirmed";
+  const sendNeedsNudge = sendWillAdvance && (belowSolutionClarity || buyingPathUnconfirmed);
 
   function recordSendOverride() {
     return fetch(`/api/deals/${proposal.dealId}/readiness`, {
@@ -236,10 +240,13 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
         }
         setError(null);
         setConfirmSend(false);
-        if (belowReady && !trainingMode) {
+        if (sendNeedsNudge && !trainingMode) {
           // Frame 39's training-off inline variant, now on Send: quiet, logged.
           void recordSendOverride();
-          setFlash(`Sent — deal moved to "Proposal out" · ⚠ below proposal-ready (${(proposal.dealReadiness ?? 0).toFixed(1)}/10), logged to the deal`);
+          const reason = belowSolutionClarity
+            ? `solution clarity ${(proposal.dealReadiness ?? 0).toFixed(1)}/10`
+            : `buying path ${proposal.dealBuyingPathStatus}`;
+          setFlash(`Sent — deal moved to "Proposal out" · ⚠ ${reason}, override logged`);
         } else {
           setFlash(data.movedToProposalOut ? 'Sent — deal moved to "Proposal out"' : "Sent — share link is live");
         }
@@ -253,7 +260,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
   function onSendClick() {
     // Training mode + below the bar → the nudge decides: hold the send, or send anyway.
-    if (belowReady && trainingMode) setNudge(true);
+    if (sendNeedsNudge && trainingMode) setNudge(true);
     else setConfirmSend(true);
   }
 
