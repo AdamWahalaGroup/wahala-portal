@@ -151,10 +151,13 @@ function calendarDaysUntil(due: Date, now: Date): number {
 export function actionUrgencyScore(input: {
   nextAction: string | null;
   nextActionDueAt: Date | null;
+  nextMeetingAt?: Date | null;
   now: Date;
 }): number {
-  if (!input.nextAction?.trim() || !input.nextActionDueAt) return 100;
-  const daysUntil = calendarDaysUntil(input.nextActionDueAt, input.now);
+  const hasExplicitAction = !!input.nextAction?.trim();
+  const dueAt = hasExplicitAction ? input.nextActionDueAt : input.nextMeetingAt;
+  if (!dueAt) return 100;
+  const daysUntil = calendarDaysUntil(dueAt, input.now);
   if (daysUntil < 0) return Math.min(100, 90 + Math.abs(daysUntil) * 2);
   if (daysUntil === 0) return 90;
   if (daysUntil === 1) return 80;
@@ -169,7 +172,7 @@ export function nextActionTiming(input: {
   nextActionDueAt: Date | null;
   now: Date;
 }): { tone: "red" | "amber" | "neutral"; label: string } {
-  if (!input.nextAction?.trim()) return { tone: "red", label: "next commitment missing" };
+  if (!input.nextAction?.trim()) return { tone: "red", label: "follow-up missing" };
   if (!input.nextActionDueAt) return { tone: "red", label: "due date missing" };
   const daysUntil = calendarDaysUntil(input.nextActionDueAt, input.now);
   if (daysUntil < -1) return { tone: "red", label: `${Math.abs(daysUntil)}d overdue` };

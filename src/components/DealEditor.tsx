@@ -7,7 +7,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FieldHelp } from "@/components/FieldHelp";
-import { nextCommitmentGuidance, STAGE_META, type DealStage } from "@/domain/sales";
 import {
   BUDGET_STATUSES,
   BUDGET_STATUS_LABELS,
@@ -20,14 +19,11 @@ import {
   ENGAGEMENT_TYPE_LABELS,
   IP_DISPOSITIONS,
   IP_DISPOSITION_LABELS,
-  NEXT_ACTION_COURTS,
-  NEXT_ACTION_COURT_LABELS,
   type BudgetStatus,
   type DataSensitivity,
   type DeliveryModel,
   type EngagementType,
   type IpDisposition,
-  type NextActionCourt,
 } from "@/domain/deal-operating-model";
 
 const STAGE_OPTIONS: { value: string; label: string }[] = [
@@ -126,7 +122,6 @@ export function DealStageSelect({ dealId, stage, onMoved }: { dealId: string; st
 
 export function DealFieldsForm({
   dealId,
-  stage,
   name,
   valueCents,
   notes,
@@ -136,9 +131,6 @@ export function DealFieldsForm({
   dataSensitivity,
   supportExpectation,
   expectedCloseAt,
-  nextAction,
-  nextActionDueAt,
-  nextActionCourt,
   champion,
   economicBuyer,
   compellingEvent,
@@ -147,7 +139,6 @@ export function DealFieldsForm({
   budgetEvidence,
 }: {
   dealId: string;
-  stage: DealStage;
   name: string;
   valueCents: number;
   notes: string | null;
@@ -157,9 +148,6 @@ export function DealFieldsForm({
   dataSensitivity: DataSensitivity;
   supportExpectation: string | null;
   expectedCloseAt: string | null;
-  nextAction: string | null;
-  nextActionDueAt: string | null;
-  nextActionCourt: NextActionCourt;
   champion: string | null;
   economicBuyer: string | null;
   compellingEvent: string | null;
@@ -181,9 +169,6 @@ export function DealFieldsForm({
     dataSensitivity,
     supportExpectation: supportExpectation ?? "",
     expectedCloseAt: dateOnly(expectedCloseAt),
-    nextAction: nextAction ?? "",
-    nextActionDueAt: dateOnly(nextActionDueAt),
-    nextActionCourt,
     champion: champion ?? "",
     economicBuyer: economicBuyer ?? "",
     compellingEvent: compellingEvent ?? "",
@@ -191,7 +176,6 @@ export function DealFieldsForm({
     budgetStatus,
     budgetEvidence: budgetEvidence ?? "",
   });
-  const commitmentGuidance = nextCommitmentGuidance(stage);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -208,9 +192,6 @@ export function DealFieldsForm({
       dataSensitivity: form.dataSensitivity,
       supportExpectation: form.supportExpectation,
       expectedCloseAt: form.expectedCloseAt || null,
-      nextAction: form.nextAction,
-      nextActionDueAt: form.nextActionDueAt || null,
-      nextActionCourt: form.nextActionCourt,
       champion: form.champion,
       economicBuyer: form.economicBuyer,
       compellingEvent: form.compellingEvent,
@@ -286,39 +267,6 @@ export function DealFieldsForm({
             <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
           </div>
         </div>
-      </section>
-
-      <section style={{ ...sectionStyle, borderColor: "#C9D0FB", background: "#FAFBFF" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Next agreed action</div>
-          <span className="mono" style={{ marginLeft: "auto", fontSize: 9, fontWeight: 800, color: "#2536C4", background: "#EEF0FE", borderRadius: 999, padding: "2px 8px" }}>
-            {STAGE_META[stage].label}
-          </span>
-        </div>
-        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
-          Record only the next concrete action someone actually agreed to complete—not every later step. When it is done, replace it with the next agreed action.
-        </p>
-        <div style={{ border: "1px solid #DDE1FB", background: "var(--white)", borderRadius: 9, padding: "9px 11px", fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
-          <b style={{ color: "#2536C4" }}>At this stage:</b> {commitmentGuidance.goal}
-          <span style={{ display: "block", marginTop: 3 }}><b>Example:</b> {commitmentGuidance.example}</span>
-        </div>
-        <div>
-          <FieldLabel help="Write one observable action with an owner. Do not enter a vague intention such as “follow up” or copy the full stage plan. Only record something the responsible party has actually accepted.">Specific action</FieldLabel>
-          <input style={inputStyle} placeholder="One owner + one observable action" value={form.nextAction} onChange={(e) => setForm((f) => ({ ...f, nextAction: e.target.value }))} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          <div>
-            <FieldLabel help="The date the action is expected to be completed or the response is due. A commitment without a date cannot be managed or escalated.">Due date</FieldLabel>
-            <input type="date" style={inputStyle} value={form.nextActionDueAt} onChange={(e) => setForm((f) => ({ ...f, nextActionDueAt: e.target.value }))} />
-          </div>
-          <div>
-            <FieldLabel help="Who must act next. The Wahala Deal owner still owns follow-up and escalation even when the client or a third party has the ball.">Whose court?</FieldLabel>
-            <select style={inputStyle} value={form.nextActionCourt} onChange={(e) => setForm((f) => ({ ...f, nextActionCourt: e.target.value as NextActionCourt }))}>
-              {NEXT_ACTION_COURTS.map((value) => <option key={value} value={value}>{NEXT_ACTION_COURT_LABELS[value]}</option>)}
-            </select>
-          </div>
-        </div>
-        <p className="mono" style={{ margin: 0, fontSize: 9.5, color: "var(--muted-line)" }}>The deal owner remains accountable for follow-up even when the ball is elsewhere.</p>
       </section>
 
       <section style={sectionStyle}>

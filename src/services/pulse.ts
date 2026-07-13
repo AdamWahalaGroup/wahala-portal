@@ -14,7 +14,7 @@
  * The pulse never talks to clients and never mutates sales state — it scores,
  * suggests, and meters money.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { resolveSla } from "../domain/sla";
@@ -57,7 +57,7 @@ export async function runPulseTick(db: Db, now: Date): Promise<TickResult> {
   if (deals.length === 0) return { openDeals: 0, updated: 0 };
   const dealIds = deals.map((d) => d.id);
 
-  const [lastEvents, reschedules, sentProposals] = await Promise.all([
+  const [lastEvents, reschedules, sentProposals, upcomingMeetings] = await Promise.all([
     db
       .select({ dealId: schema.processEvents.dealId, last: sql<number>`max(${schema.processEvents.createdAt})` })
       .from(schema.processEvents)
@@ -71,9 +71,20 @@ export async function runPulseTick(db: Db, now: Date): Promise<TickResult> {
       .groupBy(schema.meetings.dealId)
       .all(),
     db.select().from(schema.proposals).where(and(eq(schema.proposals.status, "sent"), inArray(schema.proposals.dealId, dealIds))).all(),
+    db
+      .select({ dealId: schema.meetings.dealId, startsAt: schema.meetings.startsAt })
+      .from(schema.meetings)
+      .where(and(inArray(schema.meetings.dealId, dealIds), eq(schema.meetings.status, "upcoming"), gte(schema.meetings.startsAt, now)))
+      .all(),
   ]);
   const lastEventByDeal = new Map(lastEvents.map((r) => [r.dealId, r.last]));
   const rescheduleByDeal = new Map(reschedules.map((r) => [r.dealId, r.count ?? 0]));
+  const nextMeetingByDeal = new Map<string, Date>();
+  for (const meeting of upcomingMeetings) {
+    if (!meeting.dealId) continue;
+    const current = nextMeetingByDeal.get(meeting.dealId);
+    if (!current || meeting.startsAt < current) nextMeetingByDeal.set(meeting.dealId, meeting.startsAt);
+  }
   const silentByDeal = new Map<string, number>();
   for (const p of sentProposals) {
     if (!p.sentAt || p.respondedAt) continue;
@@ -95,7 +106,7 @@ export async function runPulseTick(db: Db, now: Date): Promise<TickResult> {
     });
     const anchorPct = sla.probabilityAnchors[d.stage] ?? null;
     const priority = priorityScore({ fit: d.fitScore, valueCents: d.valueCents, anchorPct });
-    const urgency = actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now });
+    const urgency = actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, nextMeetingAt: nextMeetingByDeal.get(d.id) ?? null, now });
     if (priority !== d.priorityScore || momentum !== d.engagementHealthScore || urgency !== d.actionUrgencyScore) {
       await db
         .update(schema.deals)
@@ -303,7 +314,7 @@ async function groundedDigest(db: Db, deal: typeof schema.deals.$inferSelect, no
     `Readiness: ${deal.readinessScore ?? "unscored"} / 10${deal.subStatus ? ` · substatus: ${deal.subStatus}` : ""}`,
     `Engagement type: ${deal.engagementType ?? "unclassified"} · delivery: ${deal.deliveryModel ?? "unclassified"}`,
     `IP: ${deal.ipDisposition} · data sensitivity: ${deal.dataSensitivity}`,
-    `Next commitment: ${deal.nextAction ?? "MISSING"}${deal.nextActionDueAt ? ` · due ${deal.nextActionDueAt.toISOString().slice(0, 10)}` : " · due date MISSING"} · court: ${deal.nextActionCourt}`,
+    `Agreed follow-up: ${deal.nextAction ?? "MISSING"}${deal.nextActionDueAt ? ` · due ${deal.nextActionDueAt.toISOString().slice(0, 10)}` : " · due date MISSING"} · court: ${deal.nextActionCourt}`,
     `Qualification: champion ${deal.champion ?? "unknown"} · economic buyer ${deal.economicBuyer ?? "unknown"} · budget ${deal.budgetStatus}`,
   ];
   if (deal.compellingEvent) lines.push(`Compelling event: ${deal.compellingEvent}`);

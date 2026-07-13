@@ -24,10 +24,12 @@ import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { EXPLAIN, readinessTone, type PackageFields } from "@/domain/process";
-import { FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
-import { NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
+import { FUNNEL_STAGES, STAGE_META, type DealStage } from "@/domain/sales";
+import { NEXT_ACTION_COURTS, NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
 const SUB_STATUSES = ["redlines with counsel", "verbal yes · terms open"];
+
+const dateOnly = (value: string | null) => value?.slice(0, 10) ?? "";
 
 const nextStageOf = (s: DealStage): DealStage | null => {
   const i = (FUNNEL_STAGES as readonly DealStage[]).indexOf(s);
@@ -122,6 +124,14 @@ export function DealDrawer({
   const [logBump, setLogBump] = useState(0);
   const [rescheduling, setRescheduling] = useState<string | null>(null);
   const [rescheduleWhen, setRescheduleWhen] = useState("");
+  const [editingFollowUp, setEditingFollowUp] = useState(false);
+  const [followUpBusy, setFollowUpBusy] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [followUpForm, setFollowUpForm] = useState({
+    action: deal.nextAction ?? "",
+    dueAt: dateOnly(deal.nextActionDueAt),
+    court: deal.nextActionCourt,
+  });
   // Achievement moment (Jason feedback) — fired by the stage select + Done→next.
   const [moment, setMoment] = useState<StageMoment | null>(null);
   const fireMoment = (to: string) => setMoment(stageMomentFor(deal.stage, to, { id: deal.id, name: deal.name, organizationName: org?.name ?? deal.name }));
@@ -150,6 +160,38 @@ export function DealDrawer({
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  function openFollowUpEditor() {
+    setFollowUpForm({ action: deal.nextAction ?? "", dueAt: dateOnly(deal.nextActionDueAt), court: deal.nextActionCourt });
+    setFollowUpError(null);
+    setEditingFollowUp(true);
+  }
+
+  async function saveFollowUp(clear = false) {
+    setFollowUpBusy(true);
+    setFollowUpError(null);
+    try {
+      const res = await fetch(`/api/deals/${deal.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          nextAction: clear ? null : followUpForm.action,
+          nextActionDueAt: clear ? null : followUpForm.dueAt,
+          nextActionCourt: clear ? "wahala" : followUpForm.court,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) setFollowUpError(data.message ?? `Failed (${res.status}).`);
+      else {
+        setEditingFollowUp(false);
+        router.refresh();
+      }
+    } catch {
+      setFollowUpError("Network error — please try again.");
+    } finally {
+      setFollowUpBusy(false);
     }
   }
   const terminal = deal.stage === "won" || deal.stage === "lost";
@@ -294,8 +336,116 @@ export function DealDrawer({
         </section>
       )}
 
-      {/* Proposal CTA — directly under the value (prototype layout; read-only shortcut when lost) */}
-      <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
+      {/* Workflow guidance and relationship follow-up are deliberately separate. */}
+      {!terminal ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+          <section style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Recommended next step</div>
+              <span className="mono" style={{ marginLeft: "auto", fontSize: 9, fontWeight: 800, color: "#2536C4", background: "#EEF0FE", borderRadius: 999, padding: "2px 8px" }}>
+                {meta.label}
+              </span>
+            </div>
+            <p style={{ margin: "7px 0 0", fontSize: 13.5, fontWeight: 700, color: "var(--ink)", lineHeight: 1.45 }}>{process.goal}</p>
+            <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>
+              System guidance from stage and readiness · never a hard gate
+            </p>
+            <div style={{ marginTop: 10 }}>{proposalCtaNode}</div>
+          </section>
+
+          <section style={{ border: "1px solid var(--border)", background: "var(--white)", borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div className="kicker">Agreed follow-up</div>
+              {canManage && !editingFollowUp && (
+                <button onClick={openFollowUpEditor} style={{ marginLeft: "auto", border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                  {deal.nextAction ? "edit" : nextMeeting ? "+ add separate action" : "+ record follow-up"}
+                </button>
+              )}
+            </div>
+            <p style={{ margin: "5px 0 0", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
+              What someone actually agreed to do by a date. This measures deal motion; it does not sit between Discovery and Proposal.
+            </p>
+
+            {editingFollowUp ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                <input
+                  style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 10px", fontSize: 12.5 }}
+                  placeholder="One person or party + one observable action"
+                  value={followUpForm.action}
+                  onChange={(e) => setFollowUpForm((current) => ({ ...current, action: e.target.value }))}
+                />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
+                  <input
+                    type="date"
+                    aria-label="Follow-up due date"
+                    style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 10px", fontSize: 12.5 }}
+                    value={followUpForm.dueAt}
+                    onChange={(e) => setFollowUpForm((current) => ({ ...current, dueAt: e.target.value }))}
+                  />
+                  <select
+                    aria-label="Whose court"
+                    style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 10px", fontSize: 12.5, background: "var(--white)" }}
+                    value={followUpForm.court}
+                    onChange={(e) => setFollowUpForm((current) => ({ ...current, court: e.target.value as NextActionCourt }))}
+                  >
+                    {NEXT_ACTION_COURTS.map((court) => <option key={court} value={court}>{NEXT_ACTION_COURT_LABELS[court]}</option>)}
+                  </select>
+                </div>
+                {followUpError && <p style={{ margin: 0, color: "#b00020", fontSize: 11.5 }}>{followUpError}</p>}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => void saveFollowUp()}
+                    disabled={followUpBusy || !followUpForm.action.trim() || !followUpForm.dueAt}
+                    style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {followUpBusy ? "Saving…" : "Save follow-up"}
+                  </button>
+                  <button onClick={() => setEditingFollowUp(false)} disabled={followUpBusy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  {deal.nextAction && (
+                    <button onClick={() => void saveFollowUp(true)} disabled={followUpBusy} style={{ marginLeft: "auto", border: 0, background: "none", color: "#B91C1C", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>Clear</button>
+                  )}
+                </div>
+              </div>
+            ) : deal.nextAction ? (
+              <div style={{ marginTop: 9 }}>
+                <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
+                <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 7 }}>
+                  <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: commitmentTiming.tone === "red" ? "#FBE3E3" : commitmentTiming.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: commitmentTiming.tone === "red" ? "#B91C1C" : commitmentTiming.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
+                    {commitmentTiming.label}
+                  </span>
+                  <span className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>court: {NEXT_ACTION_COURT_LABELS[deal.nextActionCourt]}</span>
+                </div>
+              </div>
+            ) : nextMeeting ? (
+              <div style={{ marginTop: 9 }}>
+                <MeetingCard meeting={nextMeeting} canEdit={canManage} />
+                <p className="mono" style={{ margin: "5px 0 0", fontSize: 9.5, color: "#15803D" }}>✓ This scheduled meeting counts as the Deal&apos;s dated follow-up.</p>
+                {rescheduling === nextMeeting.id && (
+                  <div style={{ display: "flex", gap: 7, marginTop: 8, alignItems: "center" }}>
+                    <input type="datetime-local" style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 12, flex: 1 }} value={rescheduleWhen} onChange={(e) => setRescheduleWhen(e.target.value)} />
+                    <button onClick={() => void reschedule(nextMeeting.id)} disabled={busy || !rescheduleWhen} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      {busy ? "…" : "Update event"}
+                    </button>
+                  </div>
+                )}
+                {canManage && (
+                  <button
+                    onClick={() => setRescheduling((value) => (value === nextMeeting.id ? null : nextMeeting.id))}
+                    disabled={busy}
+                    style={{ marginTop: 8, background: "var(--white)", color: "var(--ink-soft)", border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Reschedule
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p style={{ margin: "9px 0 0", fontSize: 12.5, color: "#B45309", fontWeight: 600 }}>No dated follow-up recorded. Proposal work is still available, but the Deal has no reciprocal motion to track.</p>
+            )}
+          </section>
+        </div>
+      ) : (
+        <div style={{ marginTop: 14 }}>{proposalCtaNode}</div>
+      )}
       {suggestionsNode && <div style={{ marginTop: 10 }}>{suggestionsNode}</div>}
       {ndaNode && <div style={{ marginTop: 10 }}>{ndaNode}</div>}
 
@@ -415,59 +565,8 @@ export function DealDrawer({
             {/* Stages-vs-gates explainer under the step chip (training mode) */}
             {process.trainingMode && !terminal && <StagesVsGatesCallout />}
 
-            {/* Committed leads with the agreement package + handoff (frame 34);
-                every other open stage gets the next-step card — upgraded to a real
-                Google event when one exists (frame 42). */}
-            {committed ? (
-              agreementsNode
-            ) : (
-              !terminal && (
-                <div style={{ border: "1.5px solid #C9D0FB", background: "#FAFBFF", borderRadius: 12, padding: "13px 15px" }}>
-                  <div className="kicker" style={{ marginBottom: 6 }}>
-                    {deal.nextAction ? "Next agreed action" : nextMeeting ? "Next scheduled meeting" : "Stage next step"}
-                  </div>
-                  {deal.nextAction ? (
-                    <>
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{deal.nextAction}</p>
-                      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
-                        <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: commitmentTiming.tone === "red" ? "#FBE3E3" : commitmentTiming.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: commitmentTiming.tone === "red" ? "#B91C1C" : commitmentTiming.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
-                          {commitmentTiming.label}
-                        </span>
-                        <span className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>court: {NEXT_ACTION_COURT_LABELS[deal.nextActionCourt]}</span>
-                      </div>
-                    </>
-                  ) : nextMeeting ? (
-                    <>
-                      <MeetingCard meeting={nextMeeting} canEdit={canManage} />
-                      {rescheduling === nextMeeting.id && (
-                        <div style={{ display: "flex", gap: 7, marginTop: 8, alignItems: "center" }}>
-                          <input type="datetime-local" style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 12, flex: 1 }} value={rescheduleWhen} onChange={(e) => setRescheduleWhen(e.target.value)} />
-                          <button onClick={() => reschedule(nextMeeting.id)} disabled={busy || !rescheduleWhen} style={{ border: 0, background: "var(--ink)", color: "var(--white)", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                            {busy ? "…" : "Update event"}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13.5, color: "#B91C1C", fontWeight: 700 }}>No dated commitment recorded.</p>
-                      <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "var(--ink-soft)" }}>Stage guidance: {nextStepFor(deal.stage)}</p>
-                    </>
-                  )}
-                  <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    {canManage && nextMeeting && (
-                      <button
-                        onClick={() => setRescheduling((v) => (v === nextMeeting.id ? null : nextMeeting.id))}
-                        disabled={busy}
-                        style={{ background: "var(--white)", color: "var(--ink-soft)", border: "1px solid #d7d9df", borderRadius: 8, padding: "8px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                      >
-                        Reschedule
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            )}
+            {/* Contracting keeps its agreement and payment gates in the body. */}
+            {committed && agreementsNode}
 
             {/* After the call · analyzed automatically, accepted by a human */}
             {!terminal && nextMeeting && (

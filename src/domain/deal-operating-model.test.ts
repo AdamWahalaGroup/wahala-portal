@@ -15,6 +15,10 @@ describe("actionUrgencyScore", () => {
     expect(actionUrgencyScore({ nextAction: "Send questions", nextActionDueAt: null, now })).toBe(100);
   });
 
+  it("treats an upcoming scheduled meeting as a dated follow-up", () => {
+    expect(actionUrgencyScore({ nextAction: null, nextActionDueAt: null, nextMeetingAt: new Date("2026-07-20T15:00:00.000Z"), now })).toBe(45);
+  });
+
   it("makes overdue work more urgent than future work", () => {
     const overdue = actionUrgencyScore({ nextAction: "Follow up", nextActionDueAt: new Date("2026-07-10T12:00:00.000Z"), now });
     const future = actionUrgencyScore({ nextAction: "Hold discovery", nextActionDueAt: new Date("2026-07-20T12:00:00.000Z"), now });
@@ -32,7 +36,7 @@ describe("actionUrgencyScore", () => {
 
 describe("nextActionTiming", () => {
   it("explains missing and overdue commitments", () => {
-    expect(nextActionTiming({ nextAction: null, nextActionDueAt: null, now }).label).toBe("next commitment missing");
+    expect(nextActionTiming({ nextAction: null, nextActionDueAt: null, now }).label).toBe("follow-up missing");
     expect(nextActionTiming({ nextAction: "Follow up", nextActionDueAt: new Date("2026-07-11T12:00:00.000Z"), now }).label).toBe("2d overdue");
   });
 });

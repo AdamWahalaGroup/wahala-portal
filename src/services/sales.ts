@@ -12,7 +12,7 @@
  * RBAC: any staff can view and start opportunities; deal edits and stage moves
  * need admin or account_owner (same tier as quoting).
  */
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -344,6 +344,8 @@ export type DealItem = {
   nextAction: string | null;
   nextActionDueAt: Date | null;
   nextActionCourt: NextActionCourt;
+  nextMeetingAt: Date | null;
+  nextMeetingTitle: string | null;
   actionUrgencyScore: number;
   /** Scout opinion carried on the (shared) contact record. */
   scoutMd: string | null;
@@ -388,8 +390,9 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const contactIds = [...new Set(rows.map((d) => d.primaryContactId).filter((v): v is string => !!v))];
   const dealIds = rows.map((d) => d.id);
   const projectIds = [...new Set(rows.map((d) => d.projectId).filter((v): v is string => !!v))];
+  const now = new Date();
 
-  const [orgs, owners, people, sentProposals, agRows, projects] = await Promise.all([
+  const [orgs, owners, people, sentProposals, agRows, projects, upcomingMeetings] = await Promise.all([
     orgIds.length > 0
       ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
       : Promise.resolve([] as { id: string; name: string }[]),
@@ -415,6 +418,10 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
     projectIds.length > 0
       ? db.select({ id: schema.projects.id, kind: schema.projects.kind }).from(schema.projects).where(inArray(schema.projects.id, projectIds))
       : Promise.resolve([]),
+    db
+      .select({ dealId: schema.meetings.dealId, title: schema.meetings.title, startsAt: schema.meetings.startsAt })
+      .from(schema.meetings)
+      .where(and(inArray(schema.meetings.dealId, dealIds), eq(schema.meetings.status, "upcoming"), gte(schema.meetings.startsAt, now))),
   ]);
   const orgName = new Map(orgs.map((o) => [o.id, o.name]));
   const ownerName = new Map(owners.map((u) => [u.id, u.name]));
@@ -437,7 +444,13 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
     pkgByDeal.set(a.dealId, p);
   }
 
-  const now = new Date();
+  const nextMeetingByDeal = new Map<string, { title: string; startsAt: Date }>();
+  for (const meeting of upcomingMeetings) {
+    if (!meeting.dealId) continue;
+    const current = nextMeetingByDeal.get(meeting.dealId);
+    if (!current || meeting.startsAt < current.startsAt) nextMeetingByDeal.set(meeting.dealId, meeting);
+  }
+
   return rows.map((d) => {
     const contact = d.primaryContactId ? contactById.get(d.primaryContactId) : undefined;
     const sentAt = latestSent.get(d.id) ?? null;
@@ -447,6 +460,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
     const withDeposit = d.depositCents > 0 || d.stage === "committed";
     const docsTotal = d.stage === "committed" ? (pkg?.total ?? 0) + (withDeposit ? 1 : 0) : null;
     const docsDone = d.stage === "committed" ? (pkg?.done ?? 0) + (withDeposit && d.depositPaidAt ? 1 : 0) : null;
+    const nextMeeting = nextMeetingByDeal.get(d.id) ?? null;
     return {
       id: d.id,
       name: d.name,
@@ -462,11 +476,13 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       stuck: isStuckWith(d.stage, d.stageEnteredAt, now, sla),
       stageEnteredAt: d.stageEnteredAt,
       notes: d.notes,
-      nextStep: d.nextAction ?? nextStepFor(d.stage),
+      nextStep: d.nextAction ?? (nextMeeting ? `Scheduled: ${nextMeeting.title}` : nextStepFor(d.stage)),
       nextAction: d.nextAction,
       nextActionDueAt: d.nextActionDueAt,
       nextActionCourt: d.nextActionCourt,
-      actionUrgencyScore: actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now }),
+      nextMeetingAt: nextMeeting?.startsAt ?? null,
+      nextMeetingTitle: nextMeeting?.title ?? null,
+      actionUrgencyScore: actionUrgencyScore({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, nextMeetingAt: nextMeeting?.startsAt ?? null, now }),
       scoutMd: contact?.aiAnalysisMd ?? null,
       scoutScore: contact?.aiScore ?? null,
       scoutVerdict: contact?.aiVerdict ?? null,

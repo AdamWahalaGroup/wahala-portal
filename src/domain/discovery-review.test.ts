@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PACKAGE_FIELDS, type PackageFields } from "./process";
 import {
   mergeReviewedPackage,
+  normalizeDiscoveryAnalysis,
   recommendedDiscoverySelection,
   sanitizeDiscoverySelection,
   type DiscoveryAnalysis,
@@ -34,6 +35,14 @@ function analysis(): DiscoveryAnalysis {
       dataSensitivity: { suggested: true, value: "high_risk", evidence: "Deposition audio", source: "call — 00:04" },
       supportExpectation: { suggested: false, value: "", evidence: "", source: "" },
     },
+    followUp: {
+      suggested: true,
+      action: "Jamie will send the sample files",
+      dueAt: "2026-07-17",
+      court: "client",
+      evidence: "Jamie agreed to send the files Friday",
+      source: "call — 00:18",
+    },
   };
 }
 
@@ -47,6 +56,7 @@ describe("discovery review", () => {
     expect(recommended.packageFields).toEqual(["pain_points"]);
     expect(recommended.qualificationFields).toEqual(["champion", "budgetStatus", "budgetEvidence"]);
     expect(recommended.commercialFields).toEqual([]);
+    expect(recommended.applyFollowUp).toBe(false);
   });
 
   it("does not recommend overwriting existing human qualification", () => {
@@ -82,10 +92,12 @@ describe("discovery review", () => {
       packageFields: ["pain_points", "pain_points", "invalid" as never],
       qualificationFields: ["champion", "invalid" as never],
       commercialFields: ["dataSensitivity", "invalid" as never],
+      applyFollowUp: true,
     });
     expect(clean.packageFields).toEqual(["pain_points"]);
     expect(clean.qualificationFields).toEqual(["champion"]);
     expect(clean.commercialFields).toEqual(["dataSensitivity"]);
+    expect(clean.applyFollowUp).toBe(true);
   });
 
   it("treats malformed API selections as empty instead of throwing", () => {
@@ -94,6 +106,20 @@ describe("discovery review", () => {
       packageFields: [],
       qualificationFields: [],
       commercialFields: [],
+      applyFollowUp: false,
+    });
+  });
+
+  it("normalizes reviews stored before follow-up extraction existed", () => {
+    const older = analysis();
+    delete (older as Partial<DiscoveryAnalysis>).followUp;
+    expect(normalizeDiscoveryAnalysis(older).followUp).toEqual({
+      suggested: false,
+      action: "",
+      dueAt: "",
+      court: "",
+      evidence: "",
+      source: "",
     });
   });
 });

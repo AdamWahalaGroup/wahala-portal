@@ -130,7 +130,12 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
               </span>
             </div>
             {queue.map((d, i) => {
-              const timing = nextActionTiming({ nextAction: d.nextAction, nextActionDueAt: d.nextActionDueAt, now });
+              const meetingIsFollowUp = !d.nextAction && !!d.nextMeetingAt;
+              const timing = nextActionTiming({
+                nextAction: meetingIsFollowUp ? d.nextMeetingTitle ?? "Scheduled meeting" : d.nextAction,
+                nextActionDueAt: meetingIsFollowUp ? d.nextMeetingAt : d.nextActionDueAt,
+                now,
+              });
               return (
                 <Link
                   key={d.id}
@@ -148,7 +153,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
                   </div>
                 </div>
                 <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "2px 8px", flex: "none", background: timing.tone === "red" ? "#FBE3E3" : timing.tone === "amber" ? "#FCEFDC" : "#F1F2F4", color: timing.tone === "red" ? "#B91C1C" : timing.tone === "amber" ? "#B45309" : "var(--ink-soft)" }}>
-                  {timing.label} · {NEXT_ACTION_COURT_LABELS[d.nextActionCourt]}
+                  {timing.label} · {meetingIsFollowUp ? "Meeting" : NEXT_ACTION_COURT_LABELS[d.nextActionCourt]}
                 </span>
                 {d.fitScore !== null && (
                   <span

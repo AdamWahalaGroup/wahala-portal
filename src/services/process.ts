@@ -40,6 +40,7 @@ import {
   DISCOVERY_REVIEW_ENUMS,
   QUALIFICATION_REVIEW_FIELDS,
   mergeReviewedPackage,
+  normalizeDiscoveryAnalysis,
   recommendedDiscoverySelection,
   sanitizeDiscoverySelection,
   type DiscoveryAnalysis,
@@ -52,6 +53,8 @@ import {
   isDeliveryModel,
   isEngagementType,
   isIpDisposition,
+  isNextActionCourt,
+  actionUrgencyScore,
 } from "@/domain/deal-operating-model";
 import { getDraftProvider, type DraftUsage } from "@/services/ai/provider";
 import { resolveAgentConfig } from "@/services/ai/agent-config";
@@ -179,7 +182,7 @@ const evidenceSuggestionSchema = (values?: readonly string[]) => ({
 const discoveryAnalysisSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["discoveryMd", "packageFields", "fieldsImproved", "qualification", "commercial"],
+  required: ["discoveryMd", "packageFields", "fieldsImproved", "qualification", "commercial", "followUp"],
   properties: {
     discoveryMd: { type: "string" },
     packageFields: {
@@ -226,6 +229,19 @@ const discoveryAnalysisSchema = {
         ipDisposition: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.ipDisposition),
         dataSensitivity: evidenceSuggestionSchema(DISCOVERY_REVIEW_ENUMS.dataSensitivity),
         supportExpectation: evidenceSuggestionSchema(),
+      },
+    },
+    followUp: {
+      type: "object",
+      additionalProperties: false,
+      required: ["suggested", "action", "dueAt", "court", "evidence", "source"],
+      properties: {
+        suggested: { type: "boolean" },
+        action: { type: "string" },
+        dueAt: { type: "string" },
+        court: { type: "string", enum: [...DISCOVERY_REVIEW_ENUMS.nextActionCourt] },
+        evidence: { type: "string" },
+        source: { type: "string" },
       },
     },
   },
@@ -289,11 +305,11 @@ export async function ingestCallCore(
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
   });
-  const analysis: DiscoveryAnalysis = {
+  const analysis = normalizeDiscoveryAnalysis({
     ...output,
     discoveryMd: output.discoveryMd.trim(),
     fieldsImproved: Math.max(0, Math.min(PACKAGE_FIELDS.length, Math.round(output.fieldsImproved))),
-  };
+  });
   const recommended = recommendedDiscoverySelection(deal, previous, analysis);
   const callId = crypto.randomUUID();
 
@@ -367,8 +383,9 @@ async function reviewContext(ctx: AuthContext, dealId: string, callId: string) {
 export async function getCallReview(ctx: AuthContext, dealId: string, callId: string): Promise<DiscoveryReviewView | null> {
   assertStaff(ctx, "read_discovery_review");
   const { deal, call } = await reviewContext(ctx, dealId, callId);
-  const analysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
-  if (!analysis) return null;
+  const storedAnalysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
+  if (!storedAnalysis) return null;
+  const analysis = normalizeDiscoveryAnalysis(storedAnalysis);
   const currentPackage = await loadPackage(dealId);
   return {
     callId,
@@ -394,14 +411,16 @@ export async function applyCallReview(
   assertSalesManager(ctx, "apply_discovery_review");
   const { db, deal, call } = await reviewContext(ctx, dealId, callId);
   if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
-  const analysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
-  if (!analysis) throw new StageError("INVALID_STATE", "This call has no reviewable analysis.");
+  const storedAnalysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
+  if (!storedAnalysis) throw new StageError("INVALID_STATE", "This call has no reviewable analysis.");
+  const analysis = normalizeDiscoveryAnalysis(storedAnalysis);
   const selection = sanitizeDiscoverySelection(requested);
   if (
     !selection.applyDiscoveryMd &&
     selection.packageFields.length === 0 &&
     selection.qualificationFields.length === 0 &&
-    selection.commercialFields.length === 0
+    selection.commercialFields.length === 0 &&
+    !selection.applyFollowUp
   ) {
     throw new StageError("VALIDATION", "Select at least one evidence update, or dismiss the review.");
   }
@@ -454,10 +473,33 @@ export async function applyCallReview(
       case "supportExpectation": dealPatch.supportExpectation = value; break;
     }
   }
+  if (selection.applyFollowUp) {
+    const suggestion = analysis.followUp;
+    const action = suggestion.action.trim();
+    const dueAt = suggestion.dueAt.trim();
+    if (!suggestion.suggested || !action || !dueAt || !suggestion.evidence.trim()) {
+      throw new StageError("VALIDATION", "The analysis has no explicit, evidence-backed follow-up to apply.");
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueAt)) {
+      throw new StageError("VALIDATION", "The suggested follow-up does not have an exact calendar date.");
+    }
+    const parsedDueAt = new Date(`${dueAt}T00:00:00.000Z`);
+    if (Number.isNaN(parsedDueAt.getTime()) || parsedDueAt.toISOString().slice(0, 10) !== dueAt) {
+      throw new StageError("VALIDATION", "The suggested follow-up date is invalid.");
+    }
+    if (!isNextActionCourt(suggestion.court)) {
+      throw new StageError("VALIDATION", "The suggested follow-up has no valid responsible party.");
+    }
+    dealPatch.nextAction = action;
+    dealPatch.nextActionDueAt = parsedDueAt;
+    dealPatch.nextActionCourt = suggestion.court;
+    dealPatch.actionUrgencyScore = actionUrgencyScore({ nextAction: action, nextActionDueAt: parsedDueAt, now: new Date() });
+  }
 
   const acceptedEvidence = {
     qualification: Object.fromEntries(selection.qualificationFields.map((key) => [key, analysis.qualification[key]])),
     commercial: Object.fromEntries(selection.commercialFields.map((key) => [key, analysis.commercial[key]])),
+    followUp: selection.applyFollowUp ? analysis.followUp : null,
   };
   const statements: unknown[] = [
     db.update(schema.deals).set(dealPatch).where(eq(schema.deals.id, dealId)),

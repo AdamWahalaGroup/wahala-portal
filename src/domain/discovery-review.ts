@@ -4,11 +4,13 @@ import {
   DELIVERY_MODELS,
   ENGAGEMENT_TYPES,
   IP_DISPOSITIONS,
+  NEXT_ACTION_COURTS,
   type BudgetStatus,
   type DataSensitivity,
   type DeliveryModel,
   type EngagementType,
   type IpDisposition,
+  type NextActionCourt,
 } from "./deal-operating-model";
 import {
   PACKAGE_FIELDS,
@@ -66,6 +68,14 @@ export type DiscoveryAnalysis = {
     dataSensitivity: EvidenceSuggestion<"" | DataSensitivity>;
     supportExpectation: EvidenceSuggestion;
   };
+  followUp: {
+    suggested: boolean;
+    action: string;
+    dueAt: string;
+    court: "" | NextActionCourt;
+    evidence: string;
+    source: string;
+  };
 };
 
 export type DiscoveryReviewSelection = {
@@ -73,6 +83,7 @@ export type DiscoveryReviewSelection = {
   packageFields: PackageFieldKey[];
   qualificationFields: QualificationReviewField[];
   commercialFields: CommercialReviewField[];
+  applyFollowUp: boolean;
 };
 
 export type DiscoveryReviewRecommendation = DiscoveryReviewSelection;
@@ -116,6 +127,22 @@ export function sanitizeDiscoverySelection(input: unknown): DiscoveryReviewSelec
     packageFields: [...new Set(packageFields.filter(isPackageFieldKey))],
     qualificationFields: [...new Set(qualificationFields.filter(isQualificationReviewField))],
     commercialFields: [...new Set(commercialFields.filter(isCommercialReviewField))],
+    applyFollowUp: record.applyFollowUp === true,
+  };
+}
+
+/** Stored reviews created before follow-up extraction remain reviewable. */
+export function normalizeDiscoveryAnalysis(analysis: DiscoveryAnalysis): DiscoveryAnalysis {
+  return {
+    ...analysis,
+    followUp: analysis.followUp ?? {
+      suggested: false,
+      action: "",
+      dueAt: "",
+      court: "",
+      evidence: "",
+      source: "",
+    },
   };
 }
 
@@ -172,6 +199,8 @@ export function recommendedDiscoverySelection(
     qualificationFields,
     // Commercial/legal decisions always require an affirmative opt-in.
     commercialFields: [],
+    // Commitments affect the Deal's operating cadence and always require confirmation.
+    applyFollowUp: false,
   };
 }
 
@@ -181,4 +210,5 @@ export const DISCOVERY_REVIEW_ENUMS = {
   deliveryModel: ["", ...DELIVERY_MODELS],
   ipDisposition: ["", ...IP_DISPOSITIONS],
   dataSensitivity: ["", ...DATA_SENSITIVITIES],
+  nextActionCourt: ["", ...NEXT_ACTION_COURTS],
 } as const;

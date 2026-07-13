@@ -13,17 +13,19 @@ hourly scheduled pass performs deterministic checks, while bounded AI work runs
 less often and only when configuration, freshness, and budget allow it.
 
 Grounding means current database state: events, discovery evidence, meetings,
-commercial records, account context, and the explicit next commitment. AI reads
+commercial records, account context, and the explicit agreed follow-up. AI reads
 that state and writes drafts or suggestions. A human remains responsible for
 client communication and commercial actions.
 
 Discovery uses one evidence-ingestion workflow. A transcript or set of meeting
 notes produces a pending analysis containing a proposed long-form memo,
-Discovery Package evidence, qualification evidence, and commercial
-classifications. The Deal does not change until a staff member reviews the
-proposal and applies selected items. Commercial classifications are always
-unselected by default; AI must never silently decide IP ownership, engagement
-shape, delivery model, support obligations, or data risk.
+Discovery Package evidence, qualification evidence, commercial
+classifications, and—only with explicit source evidence—a proposed agreed
+follow-up. The Deal does not change until a staff member reviews the proposal
+and applies selected items. Commercial classifications and follow-ups are
+always unselected by default; AI must never silently decide IP ownership,
+engagement shape, delivery model, support obligations, data risk, or a human
+commitment.
 
 Task-specific AI tools may support contact research, discovery extraction,
 proposal/SOW drafting, and delivery task breakdown. They share the same safety
@@ -50,8 +52,9 @@ boundary; adding more agent names does not grant more authority.
 3. **Engagement health** is deterministic. It reflects human touches, silence,
    and meeting reschedules. The database currently retains the internal field
    name `momentumScore` for compatibility.
-4. **Action urgency** is deterministic. Missing, overdue, and due-today next
-   commitments rise above future commitments.
+4. **Action urgency** is deterministic. Missing, overdue, and due-today agreed
+   follow-ups rise above future follow-ups. A scheduled meeting counts when no
+   separate action is recorded.
 5. **Portfolio attractiveness** combines fit, value, and a stage anchor. It is a
    relative attention signal, not forecast probability.
 

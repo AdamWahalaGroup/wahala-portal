@@ -102,7 +102,6 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   const fieldsNode = canManage && !lost ? (
     <DealFieldsForm
       dealId={deal.id}
-      stage={deal.stage}
       name={deal.name}
       valueCents={deal.valueCents}
       notes={deal.notes}
@@ -112,9 +111,6 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
       dataSensitivity={deal.dataSensitivity}
       supportExpectation={deal.supportExpectation}
       expectedCloseAt={deal.expectedCloseAt?.toISOString() ?? null}
-      nextAction={deal.nextAction}
-      nextActionDueAt={deal.nextActionDueAt?.toISOString() ?? null}
-      nextActionCourt={deal.nextActionCourt}
       champion={deal.champion}
       economicBuyer={deal.economicBuyer}
       compellingEvent={deal.compellingEvent}
