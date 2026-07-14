@@ -863,22 +863,19 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                               <span className="mono" style={{ flex: "none", borderRadius: 999, background: "#E6E9FF", color: "#3443B8", padding: "5px 8px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em" }}>
                                 PHASE {i + 1}
                               </span>
-                              <input
-                                aria-label={`Phase ${i + 1} title`}
-                                value={ph.name}
-                                onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
-                                style={{ ...inputStyle, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 800, padding: "8px 10px" }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
-                                title={expanded ? "Collapse phase details" : "Expand phase details"}
-                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
-                                aria-expanded={expanded}
-                                style={{ flex: "none", width: 28, height: 28, border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
-                              >
-                                {expanded ? "▴" : "▾"}
-                              </button>
+                              <div style={{ flex: 1, minWidth: 0, display: "grid", gap: 3 }}>
+                                <input
+                                  aria-label={`Phase ${i + 1} title`}
+                                  value={ph.name}
+                                  onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
+                                  style={{ ...inputStyle, width: "100%", minWidth: 0, fontSize: 15, fontWeight: 800, padding: "8px 10px" }}
+                                />
+                                {!expanded && (
+                                  <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", paddingLeft: 1 }}>
+                                    {detailSummary}
+                                  </div>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
@@ -917,6 +914,16 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                                   <span style={{ color: "var(--ink-soft)", fontSize: 11, fontWeight: 700 }}>weeks</span>
                                 </div>
                               </label>
+                              <button
+                                type="button"
+                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
+                                title={expanded ? "Collapse phase details" : "Expand phase details"}
+                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
+                                aria-expanded={expanded}
+                                style={{ flex: "none", width: 26, height: 32, marginLeft: "auto", alignSelf: "flex-end", border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
+                              >
+                                {expanded ? "▴" : "▾"}
+                              </button>
                             </div>
                           </>
                         )}
@@ -926,32 +933,36 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                               <span className="mono" style={{ flex: "none", borderRadius: 999, background: "#E6E9FF", color: "#3443B8", padding: "5px 8px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em" }}>
                                 PHASE {i + 1}
                               </span>
-                              <h4 style={{ flex: 1, minWidth: 0, margin: 0, color: "var(--ink)", fontSize: 15, lineHeight: 1.25 }}>{ph.name}</h4>
+                              <div style={{ flex: 1, minWidth: 0, display: "grid", gap: 3 }}>
+                                <h4 style={{ margin: 0, color: "var(--ink)", fontSize: 15, lineHeight: 1.25 }}>{ph.name}</h4>
+                                {!expanded && (
+                                  <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)" }}>
+                                    {detailSummary}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)", paddingBottom: 7 }}>
+                                <Money cents={ph.amountCents} /> · {ph.weeks} weeks
+                                {o.id === proposal.selectedOptionId && (
+                                  <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
+                                    {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
+                                  </span>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setPhaseExpanded(o.id, i, !expanded)}
                                 title={expanded ? "Collapse phase details" : "Expand phase details"}
                                 aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
                                 aria-expanded={expanded}
-                                style={{ flex: "none", width: 28, height: 28, border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
+                                style={{ flex: "none", width: 26, height: 32, marginLeft: "auto", border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
                               >
                                 {expanded ? "▴" : "▾"}
                               </button>
                             </div>
-                            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
-                              <Money cents={ph.amountCents} /> · {ph.weeks} weeks
-                              {o.id === proposal.selectedOptionId && (
-                                <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
-                                  {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
-                                </span>
-                              )}
-                            </div>
                           </>
-                        )}
-                        {!expanded && (
-                          <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", paddingLeft: 1 }}>
-                            {detailSummary}
-                          </div>
                         )}
                       </div>
                       {expanded && (
