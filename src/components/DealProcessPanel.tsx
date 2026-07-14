@@ -8,7 +8,7 @@
  * strings become tooltips when training is off).
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, PROPOSAL_READY_AT, manualFieldStatusForSave, nextCallPrompts, packageStatusForBudget, proposalReadinessFrom, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
@@ -76,6 +76,31 @@ function Explain({ text }: { text: string }) {
   );
 }
 
+function ProcessSectionHeader({ title, trailing }: { title: string; trailing?: ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 9,
+        flexWrap: "wrap",
+        minHeight: 24,
+        marginBottom: 8,
+        padding: "7px 9px",
+        background: "#F6F7FB",
+        border: "1px solid #E4E7F0",
+        borderRadius: 9,
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 3, height: 20, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
+      <span className="kicker" style={{ color: "#303642", fontSize: 10.5, fontWeight: 900, letterSpacing: ".09em" }}>
+        {title}
+      </span>
+      {trailing && <span style={{ marginLeft: "auto" }}>{trailing}</span>}
+    </div>
+  );
+}
+
 function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: BuyingPath; canManage: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState<BuyingPathFieldKey | null>(null);
@@ -135,12 +160,14 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
 
   return (
     <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-        <span className="kicker">Buying path</span>
+      <ProcessSectionHeader
+        title="Buying path"
+        trailing={
         <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: colors.fg, background: colors.bg, borderRadius: 999, padding: "3px 9px" }}>
           {path.status.toUpperCase()} · {path.completed}/{path.total}
         </span>
-      </div>
+        }
+      />
       <p style={{ margin: "6px 0 9px", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
         Can this customer actually buy? Confirm the people, urgency, approval steps, and funding path behind a credible purchase.
       </p>
@@ -637,12 +664,12 @@ export function DealProcessPanel({
           <section
             style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
           >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <span className="kicker">Discovery Package</span>
-          <span style={{ marginLeft: "auto" }}>
+        <ProcessSectionHeader
+          title="Discovery Package"
+          trailing={
             <ReadyPill score={readiness} tone={tone} />
-          </span>
-        </div>
+          }
+        />
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {DISCOVERY_SCRIPT_GROUPS.map((group, index) => (
             <div key={group.key} style={{ borderTop: index === 0 ? undefined : "1px solid var(--border-softer)", paddingTop: index === 0 ? 2 : 10 }}>
