@@ -32,7 +32,7 @@ import {
   type PathCount,
 } from "@/domain/proposal-math";
 import { assertSalesManager } from "@/services/sales";
-import { draftProposalProse } from "@/services/ai/proposal";
+import { buildProposalEvidenceContext, draftProposalProse } from "@/services/ai/proposal";
 import { recordAiRun } from "@/services/ai/usage";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
@@ -409,8 +409,14 @@ export async function roughDraftProposal(
 ): Promise<{ proposalId: string; usage: DraftUsage | null }> {
   const deal = await loadDealForCreate(ctx, dealId, "rough_draft_proposal");
   const db = getDb();
-  const org = deal.organizationId ? await db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null;
+  const [org, discoveryPackage] = await Promise.all([
+    deal.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, deal.organizationId) }) : null,
+    db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) }),
+  ]);
   const [version, approvers] = await Promise.all([nextVersionFor(dealId), approversSnapshot(deal)]);
+  const packageFields = (discoveryPackage?.fields ?? {}) as PackageFields;
+  const buyingPath = buyingPathFrom(deal, packageFields.buyingPath);
+  const evidenceContext = buildProposalEvidenceContext({ packageFields, buyingPath });
 
   const shapes = buildOptionShapes(input.pathCount, deal.valueCents);
   const complexityScore = defaultComplexity(deal.valueCents);
@@ -426,6 +432,7 @@ export async function roughDraftProposal(
       dealName: deal.name,
       discoveryNote: deal.discoveryNote,
       discoveryMd: deal.discoveryMd,
+      evidenceContext,
       clientMemoryMd: org?.aiContextMd ?? null,
       weightingNote: input.note ?? null,
       shapes: shapes.map((s) => ({ label: s.label, name: s.name, phased: !!s.phases, phaseCount: s.phases?.length ?? 0, timelineNote: s.timelineNote })),
