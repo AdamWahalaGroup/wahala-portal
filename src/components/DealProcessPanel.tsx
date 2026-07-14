@@ -76,7 +76,7 @@ function Explain({ text }: { text: string }) {
   );
 }
 
-function ProcessSectionHeader({ title, trailing }: { title: string; trailing?: ReactNode }) {
+export function ProcessSectionHeader({ title, trailing }: { title: string; trailing?: ReactNode }) {
   return (
     <div
       style={{
