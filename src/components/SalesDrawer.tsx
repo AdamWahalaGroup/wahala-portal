@@ -13,11 +13,14 @@ import { useRouter } from "next/navigation";
 export function SalesDrawer({
   routeEcho,
   footer,
+  width = "default",
   children,
 }: {
   /** Mono breadcrumb-ish echo shown top-center (e.g. "sales / deal / Meridian"). */
   routeEcho?: string;
   footer?: React.ReactNode;
+  /** Deal rooms need more horizontal room for evidence cards; other sales drawers stay compact. */
+  width?: "default" | "wide";
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -85,7 +88,7 @@ export function SalesDrawer({
           top: 0,
           right: 0,
           height: "100vh",
-          width: "min(520px, 100vw)",
+          width: width === "wide" ? "min(680px, 100vw)" : "min(520px, 100vw)",
           background: "var(--surface-soft)",
           borderLeft: "1px solid var(--border)",
           boxShadow: "-24px 0 60px -24px rgba(0,0,0,.28)",
