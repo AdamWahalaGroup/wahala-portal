@@ -139,6 +139,11 @@ authority, low data sensitivity, acceptance of an action, or a calendar date.
 - Use multiple options only when they represent a real customer tradeoff.
 - Use paid discovery when uncertainty is too high for responsible fixed pricing.
 - AI may draft; a human sets price and approves client-facing claims.
+- The proposal drafting agent receives the complete structured Discovery Package
+  and Buying path snapshot, including missing and partial classifications. It uses
+  Discovery evidence to ground client-facing language and treats Buying path as
+  private internal context, surfacing only client-suitable facts that materially
+  affect scope, timing, or assumptions.
 - Public proposal approval means intent to proceed, not booked revenue.
 - Binding execution belongs in a counsel-approved e-signature flow.
 - Do not start delivery until the applicable agreement and payment gates pass.
