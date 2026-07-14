@@ -4,8 +4,8 @@
  * Deal drawer (interactive-prototype card layout, 2026-07-07): NO tabs — the
  * proposal CTA sits directly under the value ("Rough out a draft" / "+ Blank
  * proposal", or "View full proposal →"), then the horizontal 4-step stage
- * stepper, the training/readiness card, and "Move to {next}" / "Mark lost"
- * (stages are dispositions; backward/skip moves live on the board). The body
+ * stepper, the training/readiness card, and "Move to {next}"; the quiet
+ * "Mark lost" disposition lives at the bottom of the drawer. The body
  * below keeps the working surfaces: meetings, discovery package, scout,
  * contact, deal record. History left the drawer (backend intact, new surface
  * TBD); at Committed the agreement package + Create-project renders inline.
@@ -18,12 +18,12 @@ import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 import { ScoreChip, STAGE_COLORS } from "@/components/SalesChips";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
-import { DealProcessPanel, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { DealProcessPanel, ProcessSectionHeader, StagesVsGatesCallout } from "@/components/DealProcessPanel";
 import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
-import { EXPLAIN, readinessTone, type BuyingPath, type PackageFields } from "@/domain/process";
+import { readinessTone, type BuyingPath, type PackageFields } from "@/domain/process";
 import { FUNNEL_STAGES, STAGE_META, type DealStage } from "@/domain/sales";
 import { NEXT_ACTION_COURTS, NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
@@ -511,39 +511,17 @@ export function DealDrawer({
         </div>
       )}
 
-      {/* Stage actions — dispositions, never gates. Discovery has NO advance button
-          (09 Jul b): the Proposal-out stage is event-driven — sending the proposal
-          moves the deal. Mark lost stays. */}
-      {canManage && !terminal && !committed && next && (
+      {/* Discovery advances when a proposal is sent; other open stages retain
+          their explicit forward action. Mark lost lives in the drawer footer. */}
+      {canManage && !terminal && !committed && next && deal.stage !== "discovery" && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ display: "flex", gap: 9 }}>
-            {deal.stage === "discovery" ? (
-              <div
-                className="mono"
-                style={{ flex: 1, border: "1.5px dashed #C9D0FB", background: "#FAFBFF", color: "#2536C4", borderRadius: 10, padding: "11px 14px", fontSize: 11, lineHeight: 1.5, textAlign: "center" }}
-              >
-                Sending the proposal moves this deal to Proposal out automatically.
-              </div>
-            ) : (
-              <button
-                onClick={() => void moveNext()}
-                disabled={busy}
-                style={{ flex: 1, background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
-              >
-                {busy ? "Moving…" : deal.stage === "new" ? "Accept → start Discovery" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
-              </button>
-            )}
-            <button
-              onClick={markLost}
-              disabled={busy}
-              style={{ background: "var(--white)", color: "#B91C1C", border: "1px solid #F4CFCF", borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}
-            >
-              Mark lost
-            </button>
-          </div>
-          <div className="mono" title={EXPLAIN.stagesVsGates} style={{ fontSize: 9.5, color: "var(--muted-line)", textAlign: "center", marginTop: 8 }}>
-            {deal.stage === "discovery" ? "the nudge is never a gate — overrides are logged to the deal" : "stages are never gates — overrides are logged to the deal"}
-          </div>
+          <button
+            onClick={() => void moveNext()}
+            disabled={busy}
+            style={{ width: "100%", background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 10, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
+          >
+            {busy ? "Moving…" : deal.stage === "new" ? "Accept → start Discovery" : `Move to ${next === "won" ? "Won" : STAGE_META[next].label}`}
+          </button>
         </div>
       )}
 
@@ -579,6 +557,12 @@ export function DealDrawer({
                 ))}
               </section>
             )}
+
+            {/* Establish the commercial record before evaluating proposal readiness. */}
+            <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
+              <ProcessSectionHeader title="Deal record" />
+              {fieldsNode}
+            </section>
 
             {/* Discovery package + next best action + recorded calls (frame 38) */}
             {!terminal && (
@@ -631,12 +615,6 @@ export function DealDrawer({
               </section>
             )}
 
-            {/* Deal record (fields) */}
-            <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
-              <div className="kicker" style={{ marginBottom: 10 }}>Deal record</div>
-              {fieldsNode}
-            </section>
-
             {/* Provenance */}
             {provenance && (
               <section>
@@ -668,6 +646,15 @@ export function DealDrawer({
             Log a call
           </button>
           <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, color: "var(--muted-line)" }}>Schedule = future · Log = past</span>
+          {!committed && (
+            <button
+              onClick={markLost}
+              disabled={busy}
+              style={{ background: "var(--white)", color: "#B91C1C", border: "1px solid #F4CFCF", borderRadius: 9, padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
+            >
+              Mark lost
+            </button>
+          )}
         </div>
       )}
 
