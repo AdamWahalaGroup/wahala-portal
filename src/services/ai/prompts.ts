@@ -207,6 +207,9 @@ value, evidence, and source. Use suggested=false and value="" without concrete
 support. A friendly contact is not a champion. An economic buyer must have stated
 authority. Budget excitement or price tolerance is not confirmed budget. Allowed
 budgetStatus values are "", unknown, authority_known, funding_path, confirmed.
+Use authority_known for a possible but not yet verified funding source; spending
+authority itself belongs under economicBuyer. Use funding_path only when the
+source of funds is identified, and confirmed only when funds are approved or available.
 
 4) commercial — propose engagementType, deliveryModel, ipDisposition,
 dataSensitivity, and supportExpectation, each with suggested/value/evidence/source.

@@ -99,7 +99,7 @@ export const DATA_SENSITIVITY_DESCRIPTIONS: Record<DataSensitivity, string> = {
 
 export const BUDGET_STATUS_LABELS: Record<BudgetStatus, string> = {
   unknown: "Unknown",
-  authority_known: "Spending authority known",
+  authority_known: "Possible funding source",
   funding_path: "Funding path identified",
   confirmed: "Budget confirmed",
 };

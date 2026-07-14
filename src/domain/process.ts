@@ -211,6 +211,13 @@ export function manualFieldStatusForSave(selected: PackageFieldStatus | null): P
   return selected ?? "ok";
 }
 
+/** Funding maturity is already a status scale, so it owns the field classification. */
+export function packageStatusForBudget(status: BudgetStatus): PackageFieldStatus {
+  if (status === "unknown") return "missing";
+  if (status === "authority_known") return "partial";
+  return "ok";
+}
+
 // ---------------------------------------------------------------- next-call prompts
 // One concrete ask per package field — the tactical companion to the strategic
 // "next best action" card. Derived, no AI call; a missing field IS the question.

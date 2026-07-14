@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, PROPOSAL_READY_AT, manualFieldStatusForSave, nextCallPrompts, proposalReadinessFrom, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, PROPOSAL_READY_AT, manualFieldStatusForSave, nextCallPrompts, packageStatusForBudget, proposalReadinessFrom, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -103,8 +103,13 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
 
   async function save() {
     if (!editing) return;
-    if (!form.status && !form.evidence.trim()) {
+    const status = editing === "budget" ? packageStatusForBudget(form.budgetStatus) : manualFieldStatusForSave(form.status);
+    if (editing !== "budget" && !form.status && !form.evidence.trim()) {
       setError("Enter what you learned, or explicitly choose Partial or Missing.");
+      return;
+    }
+    if (status !== "missing" && !form.evidence.trim()) {
+      setError("Enter the evidence supporting this selection.");
       return;
     }
     setBusy(true);
@@ -113,7 +118,7 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
       const res = await fetch(`/api/deals/${dealId}/discovery`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ area: "buying_path", field: editing, status: manualFieldStatusForSave(form.status), evidence: form.evidence, budgetStatus: editing === "budget" ? form.budgetStatus : undefined }),
+        body: JSON.stringify({ area: "buying_path", field: editing, status, evidence: form.evidence, budgetStatus: editing === "budget" ? form.budgetStatus : undefined }),
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) setError(data.message ?? `Failed (${res.status}).`);
@@ -163,12 +168,17 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
               </div>
               {isEditing && (
                 <div style={{ margin: "7px 0 2px 23px", display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", gap: 5 }}>{statusOptions.map((option) => <button key={option.value} onClick={() => setForm((current) => ({ ...current, status: option.value }))} className="mono" style={{ border: form.status === option.value ? `1.5px solid ${option.color.fg}` : "1px solid #d7d9df", background: form.status === option.value ? option.color.bg : "var(--white)", color: form.status === option.value ? option.color.fg : "var(--muted)", borderRadius: 999, padding: "3px 9px", fontSize: 9.5, fontWeight: 800, cursor: "pointer" }}>{option.label}</button>)}</div>
-                  {key === "budget" && <select style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5, background: "var(--white)" }} value={form.budgetStatus} onChange={(e) => setForm((current) => ({ ...current, budgetStatus: e.target.value as BudgetStatus }))}>{BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}</select>}
+                  {key !== "budget" && <div style={{ display: "flex", gap: 5 }}>{statusOptions.map((option) => <button key={option.value} onClick={() => setForm((current) => ({ ...current, status: option.value }))} className="mono" style={{ border: form.status === option.value ? `1.5px solid ${option.color.fg}` : "1px solid #d7d9df", background: form.status === option.value ? option.color.bg : "var(--white)", color: form.status === option.value ? option.color.fg : "var(--muted)", borderRadius: 999, padding: "3px 9px", fontSize: 9.5, fontWeight: 800, cursor: "pointer" }}>{option.label}</button>)}</div>}
+                  {key === "budget" && (
+                    <>
+                      <select style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5, background: "var(--white)" }} value={form.budgetStatus} onChange={(e) => { const budgetStatus = e.target.value as BudgetStatus; setForm((current) => ({ ...current, budgetStatus, status: packageStatusForBudget(budgetStatus) })); }}>{BUDGET_STATUSES.map((value) => <option key={value} value={value}>{BUDGET_STATUS_LABELS[value]}</option>)}</select>
+                      <p className="mono" style={{ margin: 0, fontSize: 9.5, color: "var(--muted-line)" }}>Unknown = Missing · Possible source = Partial · Identified or confirmed = OK</p>
+                    </>
+                  )}
                   <textarea style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "6px 8px", fontSize: 11.5, minHeight: 54, fontFamily: "inherit", resize: "vertical" }} placeholder="What did they say? (evidence)" maxLength={500} value={form.evidence} onChange={(e) => setForm((current) => ({ ...current, evidence: e.target.value }))} />
-                  {!form.status && form.evidence.trim() && <p className="mono" style={{ color: TONE.green.fg, fontSize: 9.5, margin: 0 }}>No status selected · Save will mark this OK.</p>}
+                  {key !== "budget" && !form.status && form.evidence.trim() && <p className="mono" style={{ color: TONE.green.fg, fontSize: 9.5, margin: 0 }}>No status selected · Save will mark this OK.</p>}
                   {error && <p style={{ margin: 0, color: TONE.red.fg, fontSize: 11 }}>{error}</p>}
-                  <div style={{ display: "flex", gap: 8 }}><button onClick={() => void save()} disabled={busy} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 7, padding: "5px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{busy ? "Saving…" : form.status ? "Save" : "Save as OK"}</button><button onClick={() => setEditing(null)} disabled={busy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>Cancel</button></div>
+                  <div style={{ display: "flex", gap: 8 }}><button onClick={() => void save()} disabled={busy} style={{ background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 7, padding: "5px 11px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{busy ? "Saving…" : key === "budget" ? "Save funding status" : form.status ? "Save" : "Save as OK"}</button><button onClick={() => setEditing(null)} disabled={busy} style={{ border: 0, background: "none", color: "var(--muted)", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>Cancel</button></div>
                 </div>
               )}
             </div>

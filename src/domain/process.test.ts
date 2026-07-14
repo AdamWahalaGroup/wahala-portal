@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, buyingPathFrom, goalFor, manualFieldStatusForSave, nextBestActions, nextCallPrompts, proposalReadinessFrom, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, SOLUTION_CLARITY_FIELDS, type PackageFields } from "./process";
+import { applyManualField, buyingPathFrom, goalFor, manualFieldStatusForSave, nextBestActions, nextCallPrompts, packageStatusForBudget, proposalReadinessFrom, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, SOLUTION_CLARITY_FIELDS, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;
@@ -42,6 +42,15 @@ describe("manualFieldStatusForSave", () => {
   it("preserves an explicit partial or missing classification", () => {
     expect(manualFieldStatusForSave("partial")).toBe("partial");
     expect(manualFieldStatusForSave("missing")).toBe("missing");
+  });
+});
+
+describe("packageStatusForBudget", () => {
+  it("derives one evidence classification from funding maturity", () => {
+    expect(packageStatusForBudget("unknown")).toBe("missing");
+    expect(packageStatusForBudget("authority_known")).toBe("partial");
+    expect(packageStatusForBudget("funding_path")).toBe("ok");
+    expect(packageStatusForBudget("confirmed")).toBe("ok");
   });
 });
 
