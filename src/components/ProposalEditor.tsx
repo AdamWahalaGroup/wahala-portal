@@ -82,31 +82,85 @@ const btn = (tone: "ink" | "green" | "plain" | "cobalt", disabled = false): Reac
   opacity: disabled ? 0.55 : 1,
 });
 
+type ScopeListKey = Exclude<keyof ProposalScopeDetails, "objective">;
+
+function ScopeItemCards({ label, items, placeholder, onChange }: {
+  label: string;
+  items: string[];
+  placeholder: string;
+  onChange: (items: string[]) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
+      <span className="kicker" style={{ fontSize: 8.5 }}>{label}</span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {items.map((item, index) => (
+          <div key={index} style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, border: "1px solid #d7d9df", borderRadius: 9, background: "var(--white)", padding: "3px 5px 3px 9px" }}>
+            <input
+              value={item}
+              onChange={(event) => onChange(items.map((current, itemIndex) => itemIndex === index ? event.target.value : current))}
+              onBlur={() => {
+                if (!item.trim()) onChange(items.filter((_, itemIndex) => itemIndex !== index));
+              }}
+              placeholder={placeholder}
+              style={{ flex: 1, minWidth: 0, border: 0, outline: 0, background: "transparent", color: "var(--ink)", fontSize: 12, lineHeight: 1.35, padding: "5px 0" }}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+              title={`Remove ${label.toLowerCase()} item`}
+              aria-label={`Remove ${label.toLowerCase()} item`}
+              style={{ width: 24, height: 24, flex: "none", border: 0, borderRadius: 7, background: "var(--surface-soft)", color: "var(--muted)", cursor: "pointer", fontSize: 13, lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange([...items, ""])}
+        style={{ alignSelf: "flex-start", border: "1px dashed #C9D0FB", borderRadius: 999, background: "#FAFBFF", color: "var(--cobalt-text)", padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+      >
+        + Add {label.toLowerCase()}
+      </button>
+    </div>
+  );
+}
+
 function ScopeDetailsEditor({ details, onChange, compact = false }: {
   details: ProposalScopeDetails;
-  onChange: (key: keyof ProposalScopeDetails, value: string) => void;
+  onChange: (key: keyof ProposalScopeDetails, value: string | string[]) => void;
   compact?: boolean;
 }) {
-  const rows: { key: keyof ProposalScopeDetails; label: string; placeholder: string }[] = [
-    { key: "objective", label: "Objective", placeholder: "Client outcome this delivery creates" },
-    { key: "scopeItems", label: "Included scope", placeholder: "One included capability per line" },
-    { key: "deliverables", label: "Deliverables", placeholder: "One tangible output per line" },
-    { key: "acceptanceCriteria", label: "Acceptance", placeholder: "One testable acceptance condition per line" },
-    { key: "exclusions", label: "Not included", placeholder: "One explicit exclusion or deferred capability per line" },
+  const rows: { key: ScopeListKey; label: string; placeholder: string }[] = [
+    { key: "scopeItems", label: "Included scope", placeholder: "Included capability" },
+    { key: "deliverables", label: "Deliverables", placeholder: "Tangible output" },
+    { key: "acceptanceCriteria", label: "Acceptance", placeholder: "Testable acceptance condition" },
+    { key: "exclusions", label: "Not included", placeholder: "Excluded or deferred capability" },
   ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-      {rows.map((row) => (
-        <label key={row.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span className="kicker" style={{ fontSize: 8.5 }}>{row.label}</span>
-          <textarea
-            value={row.key === "objective" ? details.objective : linesToText(details[row.key] as string[])}
-            onChange={(event) => onChange(row.key, event.target.value)}
+    <div style={{ display: "grid", gap: 9 }}>
+      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <span className="kicker" style={{ fontSize: 8.5 }}>Objective</span>
+        <textarea
+          value={details.objective}
+          onChange={(event) => onChange("objective", event.target.value)}
+          placeholder="Client outcome this delivery creates"
+          style={{ ...inputStyle, minHeight: compact ? 58 : 68, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }}
+        />
+      </label>
+      <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 9 }}>
+        {rows.map((row) => (
+          <ScopeItemCards
+            key={row.key}
+            label={row.label}
+            items={details[row.key]}
             placeholder={row.placeholder}
-            style={{ ...inputStyle, minHeight: compact ? 58 : 72, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }}
+            onChange={(items) => onChange(row.key, items)}
           />
-        </label>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -143,8 +197,6 @@ const fmtWhen = (v: Date | string | null) =>
   v ? new Date(v).toLocaleDateString("en-US", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
 
 const blankScope = (): ProposalScopeDetails => ({ objective: "", scopeItems: [], deliverables: [], acceptanceCriteria: [], exclusions: [] });
-const linesToText = (lines: string[]) => lines.join("\n");
-const textToLines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
 
 function useDebounced<A extends unknown[]>(fn: (...args: A) => void, ms: number) {
   const t = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -258,19 +310,19 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     saveOption(optionId);
   }
 
-  function patchOptionScope(optionId: string, key: keyof ProposalScopeDetails, value: string) {
+  function patchOptionScope(optionId: string, key: keyof ProposalScopeDetails, value: string | string[]) {
     const option = opts.find((item) => item.id === optionId);
     if (!option) return;
     const scope = option.scopeDetails ?? blankScope();
     patchOpt(optionId, {
       scopeDetails: {
         ...scope,
-        [key]: key === "objective" ? value : textToLines(value),
+        [key]: value,
       },
     });
   }
 
-  function patchPhaseScope(optionId: string, phaseIndex: number, key: keyof ProposalScopeDetails, value: string) {
+  function patchPhaseScope(optionId: string, phaseIndex: number, key: keyof ProposalScopeDetails, value: string | string[]) {
     const option = opts.find((item) => item.id === optionId);
     if (!option?.phases) return;
     patchOpt(optionId, {
@@ -279,7 +331,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
             ...phase,
             scopeDetails: {
               ...(phase.scopeDetails ?? blankScope()),
-              [key]: key === "objective" ? value : textToLines(value),
+              [key]: value,
             },
           }
         : phase),
