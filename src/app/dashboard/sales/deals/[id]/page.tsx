@@ -117,7 +117,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   );
 
   return (
-    <SalesDrawer routeEcho={`sales / deal / ${deal.name}`}>
+    <SalesDrawer routeEcho={`sales / deal / ${deal.name}`} width="wide">
       <DealDrawer
         deal={{
           id: deal.id,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyManualField, buyingPathFrom, goalFor, manualFieldStatusForSave, nextBestActions, nextCallPrompts, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, SOLUTION_CLARITY_FIELDS, type PackageFields } from "./process";
+import { applyManualField, buyingPathFrom, goalFor, manualFieldStatusForSave, nextBestActions, nextCallPrompts, proposalReadinessFrom, readinessFrom, ASK_PROMPTS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, SOLUTION_CLARITY_FIELDS, type PackageFields } from "./process";
 
 const allOk = (): PackageFields =>
   Object.fromEntries(PACKAGE_FIELDS.map((k) => [k, { status: "ok", evidence: "e", source: "call" }])) as PackageFields;
@@ -113,6 +113,12 @@ describe("buyingPathFrom", () => {
 });
 
 describe("discovery guidance", () => {
+  it("keeps draft and send readiness as separate milestones", () => {
+    expect(proposalReadinessFrom(6.9, "confirmed")).toEqual({ readyToDraft: false, readyToSend: false });
+    expect(proposalReadinessFrom(7, "developing")).toEqual({ readyToDraft: true, readyToSend: false });
+    expect(proposalReadinessFrom(7, "confirmed")).toEqual({ readyToDraft: true, readyToSend: true });
+  });
+
   it("allows drafting at sufficient solution clarity while naming the open buying path", () => {
     expect(goalFor("discovery", 10, 2, "developing")).toContain("sufficient to draft");
     expect(goalFor("discovery", 10, 2, "developing")).toContain("before sending");

@@ -9,7 +9,7 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, manualFieldStatusForSave, nextCallPrompts, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
+import { BUYING_PATH_FIELDS, BUYING_PATH_GUIDANCE, BUYING_PATH_LABELS, DISCOVERY_SCRIPT_FIELDS, DISCOVERY_SCRIPT_GROUPS, EXPLAIN, PACKAGE_FIELDS, PACKAGE_FIELD_GUIDANCE, PACKAGE_FIELD_LABELS, PROPOSAL_READY_AT, manualFieldStatusForSave, nextCallPrompts, proposalReadinessFrom, type BuyingPath, type BuyingPathFieldKey, type PackageFields, type PackageFieldStatus } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
   COMMERCIAL_REVIEW_LABELS,
@@ -599,13 +599,34 @@ export function DealProcessPanel({
   // Tactical per-field asks — hidden once the asking window has passed (committed).
   const prompts = stage === "committed" ? [] : nextCallPrompts(fields);
   const shownPrompts = askAll ? prompts : prompts.slice(0, 3);
+  const discoveryScore = readiness ?? 0;
+  const { readyToDraft, readyToSend } = proposalReadinessFrom(discoveryScore, buyingPath.status);
+  const readinessGuidance = !readyToDraft
+    ? `Not ready to draft yet. Raise DISCOVERY from ${discoveryScore.toFixed(1)}/10 to at least ${PROPOSAL_READY_AT}/10 by closing the open package fields.`
+    : !readyToSend
+      ? `Ready to draft. Keep the proposal internal while the Buying path is ${buyingPath.status}; confirm all five buying items before sending.`
+      : "Ready to draft and send. The Discovery Package is sufficient and the Buying path is confirmed.";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Discovery package card */}
-      <section
-        style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
-      >
+      <section style={{ background: "#FAFBFF", border: "1.5px solid #C9D0FB", borderRadius: 14, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span className="kicker" style={{ color: "var(--cobalt-text)" }}>Proposal readiness</span>
+          <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 9px", background: readyToDraft ? TONE.green.bg : TONE.red.bg, color: readyToDraft ? TONE.green.fg : TONE.red.fg }}>
+            DRAFT {readyToDraft ? "READY" : "NOT READY"}
+          </span>
+          <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 9px", background: readyToSend ? TONE.green.bg : readyToDraft ? TONE.amber.bg : TONE.red.bg, color: readyToSend ? TONE.green.fg : readyToDraft ? TONE.amber.fg : TONE.red.fg }}>
+            SEND {readyToSend ? "READY" : "NOT READY"}
+          </span>
+        </div>
+        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>{readinessGuidance}</p>
+        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>Evidence milestones · not a win forecast and never a hard gate</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+          {/* Discovery package card */}
+          <section
+            style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
+          >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <span className="kicker">Discovery Package</span>
           <span style={{ marginLeft: "auto" }}>
@@ -654,9 +675,11 @@ export function DealProcessPanel({
             <Explain text={EXPLAIN.whyCompleteness} />
           </div>
         )}
-      </section>
+          </section>
 
-      <BuyingPathCard dealId={dealId} path={buyingPath} canManage={canManage} />
+          <BuyingPathCard dealId={dealId} path={buyingPath} canManage={canManage} />
+        </div>
+      </section>
 
       {/* Next best action (training mode only) */}
       {trainingMode && nextActions.length > 0 && (
