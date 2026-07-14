@@ -145,11 +145,57 @@ describe("contract snapshot", () => {
   });
 
   it("lump-sum options snapshot as a single pseudo-phase card", () => {
-    const lump = { id: "optA", name: "Standard rollout", priceCents: 15_000_000, recommended: false, phases: null };
+    const lump = {
+      id: "optA",
+      name: "Standard rollout",
+      priceCents: 15_000_000,
+      recommended: false,
+      phases: null,
+      scopeDetails: {
+        objective: "Give reporters a secure transcription workflow.",
+        scopeItems: ["Reporter RBAC", "Audio upload and speech-to-text"],
+        deliverables: ["Reporter portal", "Editable rough transcript"],
+        acceptanceCriteria: ["A reporter can upload audio and review the generated draft."],
+        exclusions: ["Final certified transcripts", "Scopist role"],
+      },
+    };
     const phases = buildContractPhases(lump);
     expect(phases).toHaveLength(1);
     expect(phases[0].weeks).toBeNull();
-    expect(phases[0].acceptanceText).toBe("Delivered scope meets agreed requirements and passes review.");
+    expect(phases[0]).toMatchObject({
+      objective: "Give reporters a secure transcription workflow.",
+      scopeText: "Reporter RBAC\nAudio upload and speech-to-text",
+      deliverablesText: "Reporter portal\nEditable rough transcript",
+      acceptanceText: "A reporter can upload audio and review the generated draft.",
+    });
+    const contract = contractDefaults({ dealId: "d", complexityScore: 2, option: lump, approvers: null, generatedAt: "t" });
+    expect(contract.outOfScopeEnabled).toBe(true);
+    expect(contract.outOfScopeText).toContain("Final certified transcripts");
+  });
+
+  it("copies phased scope into the SOW and treats scope edits as contract changes", () => {
+    const detailed = {
+      ...option,
+      phases: option.phases.map((phase, index) => index === 0 ? {
+        ...phase,
+        scopeDetails: {
+          objective: "Pilot the reporter workflow.",
+          scopeItems: ["Reporter access", "Audio upload"],
+          deliverables: ["Working pilot"],
+          acceptanceCriteria: ["Pilot reporter completes one transcription."],
+          exclusions: [],
+        },
+      } : phase),
+    };
+    const contractPhases = buildContractPhases(detailed);
+    expect(contractPhases[0].scopeText).toBe("Reporter access\nAudio upload");
+    const changed = {
+      ...detailed,
+      phases: detailed.phases.map((phase, index) => index === 0
+        ? { ...phase, scopeDetails: { ...phase.scopeDetails!, deliverables: ["Production-ready pilot"] } }
+        : phase),
+    };
+    expect(phaseSignature(buildContractPhases(changed))).not.toBe(phaseSignature(contractPhases));
   });
 
   it("staleness flips on rename, amount, or weeks", () => {

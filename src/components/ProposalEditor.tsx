@@ -21,13 +21,14 @@ import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { canAmendPhase } from "@/domain/proposal-math";
 import { proposalReadinessFrom } from "@/domain/process";
 import type { BuyingPathStatus } from "@/domain/process";
-import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
+import type { Approver, ProposalContract, ProposalCoverageReview, ProposalPhase, ProposalScopeDetails } from "@/domain/proposal-doc";
 
 type Option = {
   id: string;
   label: string;
   name: string;
   summaryMd: string;
+  scopeDetails: ProposalScopeDetails | null;
   timelineNote: string | null;
   priceCents: number;
   priceNote: string | null;
@@ -48,6 +49,7 @@ type Proposal = {
   version: number;
   status: "draft" | "sent" | "approved" | "declined" | "superseded";
   executiveSummaryMd: string | null;
+  coverage: ProposalCoverageReview | null;
   complexityScore: number | null;
   complexityRationale: string | null;
   shareToken: string | null;
@@ -80,8 +82,69 @@ const btn = (tone: "ink" | "green" | "plain" | "cobalt", disabled = false): Reac
   opacity: disabled ? 0.55 : 1,
 });
 
+function ScopeDetailsEditor({ details, onChange, compact = false }: {
+  details: ProposalScopeDetails;
+  onChange: (key: keyof ProposalScopeDetails, value: string) => void;
+  compact?: boolean;
+}) {
+  const rows: { key: keyof ProposalScopeDetails; label: string; placeholder: string }[] = [
+    { key: "objective", label: "Objective", placeholder: "Client outcome this delivery creates" },
+    { key: "scopeItems", label: "Included scope", placeholder: "One included capability per line" },
+    { key: "deliverables", label: "Deliverables", placeholder: "One tangible output per line" },
+    { key: "acceptanceCriteria", label: "Acceptance", placeholder: "One testable acceptance condition per line" },
+    { key: "exclusions", label: "Not included", placeholder: "One explicit exclusion or deferred capability per line" },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+      {rows.map((row) => (
+        <label key={row.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span className="kicker" style={{ fontSize: 8.5 }}>{row.label}</span>
+          <textarea
+            value={row.key === "objective" ? details.objective : linesToText(details[row.key] as string[])}
+            onChange={(event) => onChange(row.key, event.target.value)}
+            placeholder={row.placeholder}
+            style={{ ...inputStyle, minHeight: compact ? 58 : 72, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function ScopeDetailsRead({ details }: { details: ProposalScopeDetails | null | undefined }) {
+  if (!details) return null;
+  const sections = [
+    { label: "Objective", lines: details.objective ? [details.objective] : [] },
+    { label: "Included scope", lines: details.scopeItems },
+    { label: "Deliverables", lines: details.deliverables },
+    { label: "Acceptance", lines: details.acceptanceCriteria },
+    { label: "Not included", lines: details.exclusions },
+  ].filter((section) => section.lines.length > 0);
+  if (sections.length === 0) return null;
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {sections.map((section) => (
+        <div key={section.label}>
+          <div className="kicker" style={{ fontSize: 8.5, marginBottom: 3 }}>{section.label}</div>
+          {section.lines.length === 1 ? (
+            <div style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.45 }}>{section.lines[0]}</div>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.5 }}>
+              {section.lines.map((line, index) => <li key={index}>{line}</li>)}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const fmtWhen = (v: Date | string | null) =>
   v ? new Date(v).toLocaleDateString("en-US", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+
+const blankScope = (): ProposalScopeDetails => ({ objective: "", scopeItems: [], deliverables: [], acceptanceCriteria: [], exclusions: [] });
+const linesToText = (lines: string[]) => lines.join("\n");
+const textToLines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
 
 function useDebounced<A extends unknown[]>(fn: (...args: A) => void, ms: number) {
   const t = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,15 +239,51 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     if (!o) return;
     void api(`/api/proposals/${proposal.id}/options/${optionId}`, "PATCH", {
       name: o.name,
+      summaryMd: o.summaryMd,
+      scopeDetails: o.scopeDetails,
       timelineNote: o.timelineNote ?? "",
       priceCents: o.priceDollars ? Math.round(parseFloat(o.priceDollars) * 100) || 0 : 0,
-      phases: o.phases ? o.phases.map((p) => ({ name: p.name, amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0, weeks: p.weeks })) : null,
+      phases: o.phases ? o.phases.map((p) => ({
+        name: p.name,
+        amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0,
+        weeks: p.weeks,
+        internalNote: p.internalNote,
+        scopeDetails: p.scopeDetails,
+      })) : null,
     }).then((ok) => ok && flashSaved());
   }, 600);
 
   function patchOpt(optionId: string, patch: Partial<(typeof opts)[number]>) {
     setOpts((v) => v.map((o) => (o.id === optionId ? { ...o, ...patch } : o)));
     saveOption(optionId);
+  }
+
+  function patchOptionScope(optionId: string, key: keyof ProposalScopeDetails, value: string) {
+    const option = opts.find((item) => item.id === optionId);
+    if (!option) return;
+    const scope = option.scopeDetails ?? blankScope();
+    patchOpt(optionId, {
+      scopeDetails: {
+        ...scope,
+        [key]: key === "objective" ? value : textToLines(value),
+      },
+    });
+  }
+
+  function patchPhaseScope(optionId: string, phaseIndex: number, key: keyof ProposalScopeDetails, value: string) {
+    const option = opts.find((item) => item.id === optionId);
+    if (!option?.phases) return;
+    patchOpt(optionId, {
+      phases: option.phases.map((phase, index) => index === phaseIndex
+        ? {
+            ...phase,
+            scopeDetails: {
+              ...(phase.scopeDetails ?? blankScope()),
+              [key]: key === "objective" ? value : textToLines(value),
+            },
+          }
+        : phase),
+    });
   }
 
   async function structural(fn: () => Promise<boolean>, key: string) {
@@ -463,6 +562,37 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           )}
         </section>
 
+        {proposal.coverage && (proposal.coverage.items.length > 0 || proposal.coverage.warnings.length > 0) && (
+          <section style={{ background: "#FFFBEB", border: "1px solid #F2D58A", borderRadius: 12, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <div className="kicker" style={{ color: "#92400E" }}>MVP coverage review</div>
+              <span className="mono" style={{ fontSize: 9.5, color: "#A16207" }}>internal AI checklist · verify before send</span>
+            </div>
+            {proposal.coverage.warnings.length > 0 && (
+              <div style={{ marginTop: 9, padding: "8px 10px", borderRadius: 8, background: "#FEF3C7", color: "#92400E", fontSize: 11.5, lineHeight: 1.45 }}>
+                {proposal.coverage.warnings.map((warning, index) => <div key={index}>⚠ {warning}</div>)}
+              </div>
+            )}
+            <div style={{ display: "grid", gap: 7, marginTop: 10 }}>
+              {proposal.coverage.items.map((item, index) => (
+                <div key={index} style={{ background: "rgba(255,255,255,.72)", borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 750 }}>{item.priority}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+                    {item.placements.map((placement) => {
+                      const tone = placement.disposition === "included" ? { bg: "#DCF5E3", fg: "#15803D" } : placement.disposition === "deferred" ? { bg: "#EEF0FE", fg: "#2536C4" } : { bg: "#FBE3E3", fg: "#B91C1C" };
+                      return (
+                        <span key={placement.optionLabel} title={placement.note} className="mono" style={{ fontSize: 9.5, borderRadius: 999, padding: "3px 7px", background: tone.bg, color: tone.fg }}>
+                          {placement.optionLabel} · {placement.disposition}{placement.phaseName ? ` · ${placement.phaseName}` : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Share link */}
         {shareUrl && proposal.status !== "declined" && (
           <div style={{ border: "1.5px dashed #C9D0FB", background: "#FAFBFF", borderRadius: 10, padding: "10px 13px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -596,57 +726,83 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                 )}
               </div>
 
+              {isDraft && (
+                <div style={{ display: "grid", gap: 8, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span className="kicker" style={{ fontSize: 8.5 }}>Client-facing option summary</span>
+                    <textarea
+                      value={o.summaryMd}
+                      onChange={(event) => patchOpt(o.id, { summaryMd: event.target.value })}
+                      placeholder="What this option accomplishes and its tradeoff"
+                      style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }}
+                    />
+                  </label>
+                  <ScopeDetailsEditor details={o.scopeDetails ?? blankScope()} onChange={(key, value) => patchOptionScope(o.id, key, value)} />
+                </div>
+              )}
+              {isLocked && (
+                <div style={{ display: "grid", gap: 9, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
+                  {o.summaryMd && <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{o.summaryMd}</p>}
+                  <ScopeDetailsRead details={o.scopeDetails} />
+                </div>
+              )}
+
               {/* Phases */}
               {o.phases !== null && (
                 <div style={{ borderTop: "1px solid var(--border-softer)", paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                   <div className="kicker" style={{ fontSize: 9.5 }}>Phases</div>
                   {o.phases.map((ph, i) => (
-                    <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {isDraft && (
-                        <>
-                          <input
-                            value={ph.name}
-                            onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
-                            style={{ ...inputStyle, flex: 2, fontSize: 12 }}
-                          />
-                          <input
-                            value={ph.amountDollars}
-                            onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, amountDollars: e.target.value.replace(/[^0-9.]/g, "") } : p)) })}
-                            placeholder="$"
-                            inputMode="numeric"
-                            style={{ ...inputStyle, width: 84, fontSize: 12 }}
-                          />
-                          <input
-                            value={String(ph.weeks)}
-                            onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, weeks: Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0) } : p)) })}
-                            title="weeks"
-                            inputMode="numeric"
-                            style={{ ...inputStyle, width: 46, fontSize: 12 }}
-                          />
-                          <button
-                            onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
-                            title="Remove phase"
-                            style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, cursor: "pointer", padding: 0 }}
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                      {isLocked && (
-                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-soft)" }}>
-                          {ph.name} · <Money cents={ph.amountCents} /> · {ph.weeks}w
-                          {o.id === proposal.selectedOptionId && (
-                            <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
-                              {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
-                            </span>
-                          )}
-                        </span>
-                      )}
+                    <div key={i} style={{ display: "grid", gap: 7, background: "var(--surface-soft)", borderRadius: 9, padding: 9 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {isDraft && (
+                          <>
+                            <input
+                              value={ph.name}
+                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
+                              style={{ ...inputStyle, flex: 2, fontSize: 12 }}
+                            />
+                            <input
+                              value={ph.amountDollars}
+                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, amountDollars: e.target.value.replace(/[^0-9.]/g, "") } : p)) })}
+                              placeholder="$"
+                              inputMode="numeric"
+                              style={{ ...inputStyle, width: 84, fontSize: 12 }}
+                            />
+                            <input
+                              value={String(ph.weeks)}
+                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, weeks: Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0) } : p)) })}
+                              title="weeks"
+                              inputMode="numeric"
+                              style={{ ...inputStyle, width: 46, fontSize: 12 }}
+                            />
+                            <button
+                              onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
+                              title="Remove phase"
+                              style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, cursor: "pointer", padding: 0 }}
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )}
+                        {isLocked && (
+                          <span className="mono" style={{ fontSize: 11, color: "var(--ink-soft)" }}>
+                            {ph.name} · <Money cents={ph.amountCents} /> · {ph.weeks}w
+                            {o.id === proposal.selectedOptionId && (
+                              <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
+                                {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {isDraft
+                        ? <ScopeDetailsEditor compact details={ph.scopeDetails ?? blankScope()} onChange={(key, value) => patchPhaseScope(o.id, i, key, value)} />
+                        : <ScopeDetailsRead details={ph.scopeDetails} />}
                     </div>
                   ))}
                   {isDraft && (
                     <button
-                      onClick={() => patchOpt(o.id, { phases: [...o.phases!, { name: `Phase ${o.phases!.length + 1}`, amountCents: 0, amountDollars: "", weeks: 2, status: "awaiting_amendment" as const }] })}
+                      onClick={() => patchOpt(o.id, { phases: [...o.phases!, { name: `Phase ${o.phases!.length + 1}`, amountCents: 0, amountDollars: "", weeks: 2, status: "awaiting_amendment" as const, scopeDetails: blankScope() }] })}
                       style={{ alignSelf: "flex-start", border: 0, background: "none", color: "#15803D", padding: 0, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
                     >
                       + Add phase
@@ -654,7 +810,6 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                   )}
                 </div>
               )}
-              {isLocked && o.summaryMd && <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{o.summaryMd}</p>}
             </div>
           ))}
           {isDraft && opts.length < 8 && (
@@ -690,9 +845,18 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                     for (const o of opts) {
                       if (!ok) break;
                       ok = await api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", {
+                        name: o.name,
+                        summaryMd: o.summaryMd,
+                        scopeDetails: o.scopeDetails,
                         timelineNote: o.timelineNote ?? "",
                         priceCents: o.priceDollars ? Math.round(parseFloat(o.priceDollars) * 100) || 0 : 0,
-                        phases: o.phases ? o.phases.map((p) => ({ name: p.name, amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0, weeks: p.weeks })) : null,
+                        phases: o.phases ? o.phases.map((p) => ({
+                          name: p.name,
+                          amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0,
+                          weeks: p.weeks,
+                          internalNote: p.internalNote,
+                          scopeDetails: p.scopeDetails,
+                        })) : null,
                       });
                     }
                     setBusy(null);

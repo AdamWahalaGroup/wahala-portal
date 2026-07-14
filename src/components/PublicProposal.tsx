@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { Money } from "@/components/Money";
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
-import type { ProposalPhase } from "@/domain/proposal-doc";
+import type { ProposalPhase, ProposalScopeDetails } from "@/domain/proposal-doc";
 
 type PublicOption = {
   id: string;
@@ -19,9 +19,37 @@ type PublicOption = {
   priceNote: string | null;
   timelineNote: string | null;
   summaryMd: string;
+  scopeDetails: ProposalScopeDetails | null;
   recommended: boolean;
   phases: ProposalPhase[] | null;
 };
+
+function PublicScope({ details }: { details: ProposalScopeDetails | null | undefined }) {
+  if (!details) return null;
+  const sections = [
+    { label: "Objective", lines: details.objective ? [details.objective] : [] },
+    { label: "Included scope", lines: details.scopeItems },
+    { label: "Deliverables", lines: details.deliverables },
+    { label: "Acceptance", lines: details.acceptanceCriteria },
+    { label: "Not included", lines: details.exclusions },
+  ].filter((section) => section.lines.length > 0);
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      {sections.map((section) => (
+        <div key={section.label}>
+          <div className="kicker" style={{ fontSize: 8.5, marginBottom: 3 }}>{section.label}</div>
+          {section.lines.length === 1 ? (
+            <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--ink-soft)" }}>{section.lines[0]}</div>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, lineHeight: 1.5, color: "var(--ink-soft)" }}>
+              {section.lines.map((line, index) => <li key={index}>{line}</li>)}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function PublicProposal({
   token,
@@ -216,6 +244,17 @@ export function PublicProposal({
               {o.summaryMd && (
                 <div style={{ marginTop: 8 }}>
                   <SimpleMarkdown md={o.summaryMd} size={12.5} />
+                </div>
+              )}
+              {on && (
+                <div style={{ display: "grid", gap: 10, marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 10 }}>
+                  <PublicScope details={o.scopeDetails} />
+                  {o.phases?.map((phase, index) => (
+                    <div key={index} style={{ background: "var(--surface-soft)", borderRadius: 9, padding: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 7 }}>{index + 1}. {phase.name}</div>
+                      <PublicScope details={phase.scopeDetails} />
+                    </div>
+                  ))}
                 </div>
               )}
             </button>

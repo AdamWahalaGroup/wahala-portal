@@ -59,6 +59,7 @@ export default async function ProposalPreviewPage({ params }: { params: Promise<
             priceNote: o.priceNote,
             timelineNote: o.timelineNote,
             summaryMd: o.summaryMd,
+            scopeDetails: o.scopeDetails,
             recommended: o.recommended,
             phases: o.phases,
           }))}

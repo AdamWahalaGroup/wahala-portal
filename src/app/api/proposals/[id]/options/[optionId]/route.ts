@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson } from "@/lib/api";
 import { updateProposalOption, setRecommendedOption, removeProposalOption } from "@/services/proposals";
-import type { ProposalPhase } from "@/domain/proposal-doc";
+import type { ProposalPhase, ProposalScopeDetails } from "@/domain/proposal-doc";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       toggleRecommended?: boolean;
       name?: string;
       summaryMd?: string;
+      scopeDetails?: ProposalScopeDetails | null;
       timelineNote?: string;
       priceCents?: number;
       priceNote?: string;
@@ -29,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await updateProposalOption(ctx, id, optionId, {
         name: body.name,
         summaryMd: body.summaryMd,
+        scopeDetails: body.scopeDetails,
         timelineNote: body.timelineNote,
         priceCents: body.priceCents,
         priceNote: body.priceNote,
