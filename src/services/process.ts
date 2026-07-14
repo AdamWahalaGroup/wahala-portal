@@ -27,6 +27,7 @@ import {
   JOURNEY,
   SOLUTION_CLARITY_FIELDS,
   PROPOSAL_READY_AT,
+  proposalReadinessFrom,
   FOLLOWUP_EXPECTED_DAYS,
   PACKAGE_FIELD_LABELS,
   type PackageField,
@@ -736,8 +737,7 @@ export async function readinessCheck(ctx: AuthContext, dealId: string): Promise<
   const score = readinessFrom(fields);
   const failed = failedChecks(fields);
   const buyingPath = buyingPathFrom(deal, fields.buyingPath);
-  const readyToDraft = score >= PROPOSAL_READY_AT;
-  const readyToSend = readyToDraft && buyingPath.status === "confirmed";
+  const { readyToDraft, readyToSend } = proposalReadinessFrom(score, buyingPath.status);
   return {
     score,
     tone: readinessTone(score),

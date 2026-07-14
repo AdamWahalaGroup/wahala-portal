@@ -125,6 +125,10 @@ authority, low data sensitivity, acceptance of an action, or a calendar date.
 
 ## Proposal and contracting
 
+- The Deal groups the Discovery Package and Buying path under **Proposal
+  readiness**. It shows two evidence milestones instead of one weighted score:
+  Draft ready at DISCOVERY 7/10, and Send ready only when Draft is ready and the
+  Buying path is Confirmed. Neither indicator is a win forecast or hard gate.
 - Rough out or AI-draft a proposal once DISCOVERY is at least 7/10.
 - Before sending, confirm the buying path. If either signal is weak, the portal
   warns and records an override but never creates a hard sales-stage gate.

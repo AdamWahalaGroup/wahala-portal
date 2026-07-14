@@ -165,6 +165,12 @@ export function readinessFrom(fields: PackageFields): number {
 
 export const PROPOSAL_READY_AT = 7;
 
+/** Separate evidence milestones: buying evidence can never compensate for thin discovery. */
+export function proposalReadinessFrom(discoveryScore: number, buyingPathStatus: BuyingPathStatus): { readyToDraft: boolean; readyToSend: boolean } {
+  const readyToDraft = discoveryScore >= PROPOSAL_READY_AT;
+  return { readyToDraft, readyToSend: readyToDraft && buyingPathStatus === "confirmed" };
+}
+
 export type ReadinessTone = "green" | "amber" | "red";
 export function readinessTone(score: number): ReadinessTone {
   return score >= 7 ? "green" : score >= 4 ? "amber" : "red";

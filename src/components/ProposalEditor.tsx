@@ -19,7 +19,7 @@ import { Money } from "@/components/Money";
 import { ProposalStatusPill } from "@/components/SalesChips";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { canAmendPhase } from "@/domain/proposal-math";
-import { PROPOSAL_READY_AT } from "@/domain/process";
+import { proposalReadinessFrom } from "@/domain/process";
 import type { BuyingPathStatus } from "@/domain/process";
 import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
 
@@ -216,9 +216,9 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
   // Sending is the only forward path out of Discovery; evidence coaching fires here.
   const sendWillAdvance = proposal.dealStage === "discovery" || proposal.dealStage === "new";
-  const belowSolutionClarity = (proposal.dealReadiness ?? 0) < PROPOSAL_READY_AT;
-  const buyingPathUnconfirmed = proposal.dealBuyingPathStatus !== "confirmed";
-  const sendNeedsNudge = sendWillAdvance && (belowSolutionClarity || buyingPathUnconfirmed);
+  const proposalEvidence = proposalReadinessFrom(proposal.dealReadiness ?? 0, proposal.dealBuyingPathStatus);
+  const belowSolutionClarity = !proposalEvidence.readyToDraft;
+  const sendNeedsNudge = sendWillAdvance && !proposalEvidence.readyToSend;
 
   function recordSendOverride() {
     return fetch(`/api/deals/${proposal.dealId}/readiness`, {

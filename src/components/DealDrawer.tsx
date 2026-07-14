@@ -18,7 +18,7 @@ import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 import { ScoreChip, STAGE_COLORS } from "@/components/SalesChips";
 import { PeopleCard } from "@/components/People";
 import { ContactBlock } from "@/components/ContactBlock";
-import { DealProcessPanel, ReadyPill, StagesVsGatesCallout } from "@/components/DealProcessPanel";
+import { DealProcessPanel, StagesVsGatesCallout } from "@/components/DealProcessPanel";
 import { DangerDeleteButton } from "@/components/DangerDeleteButton";
 import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components/StageCelebration";
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
@@ -499,7 +499,7 @@ export function DealDrawer({
         </div>
       )}
 
-      {/* Training / readiness card (compact, prototype) */}
+      {/* Compact training goal; detailed proposal readiness lives with the evidence cards below. */}
       {process.trainingMode && !terminal && (
         <div style={{ background: "#EEF0FE", border: "1px solid #DDE1FB", borderRadius: 12, padding: "12px 14px", marginTop: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
@@ -508,15 +508,6 @@ export function DealDrawer({
             </span>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: "#2536C4" }}>{process.goal}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-            <span className="kicker" style={{ color: "#5A6BD8" }}>Discovery Package</span>
-            <span style={{ marginLeft: "auto" }}>
-              <ReadyPill score={process.readiness} tone={readinessTone(process.readiness ?? 0)} />
-            </span>
-          </div>
-          <p style={{ margin: "7px 0 0", fontSize: 12, color: "#2536C4", lineHeight: 1.5 }}>
-            DISCOVERY x/10 shows whether the work is understood well enough to scope and price. Buying path separately shows whether the customer can credibly approve and fund it.
-          </p>
         </div>
       )}
 
