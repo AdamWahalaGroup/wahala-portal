@@ -438,11 +438,12 @@ export async function roughDraftProposal(
     acceptanceCriteria: successItems.length > 0 ? successItems : ["The agreed scope is delivered and passes client review."],
     exclusions: deferredItems,
   });
+  const fallbackPhaseScope = (name: string): ProposalScopeDetails => ({ ...fallbackScope(name), exclusions: [] });
   let execSummary = fallbackExecSummary({ discoveryNote: deal.discoveryNote, dealName: deal.name, pathCount: input.pathCount, note: input.note });
   let optionNames = shapes.map((s) => s.name);
   let optionSummaries = shapes.map((s) => `A ${s.phases ? "phased" : "single-delivery"} path for ${s.name.toLowerCase()}.`);
   let optionScopeDetails = shapes.map((s) => fallbackScope(s.name));
-  let phaseDrafts = shapes.map((s) => s.phases?.map((p) => ({ name: p.name, scopeDetails: fallbackScope(p.name) })) ?? []);
+  let phaseDrafts = shapes.map((s) => s.phases?.map((p) => ({ name: p.name, scopeDetails: fallbackPhaseScope(p.name) })) ?? []);
   let coverage: ProposalCoverageReview | null = null;
   let usage: DraftUsage | null = null;
   let aiFallback = false;
@@ -501,7 +502,7 @@ export async function roughDraftProposal(
           ? s.phases.map((p, j) => ({
               ...p,
               name: phaseDrafts[i]?.[j]?.name?.trim() || p.name,
-              scopeDetails: phaseDrafts[i]?.[j]?.scopeDetails ?? fallbackScope(p.name),
+              scopeDetails: phaseDrafts[i]?.[j]?.scopeDetails ?? fallbackPhaseScope(p.name),
             }))
           : null,
         recommended: false,

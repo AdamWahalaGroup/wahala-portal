@@ -242,7 +242,21 @@ export function normalizeProposalProseOutput(
 
   return {
     execSummary: output.execSummary,
-    options: output.options.map((option, index) => ({ ...option, label: shapes[index].label })),
+    options: output.options.map((option, index) => {
+      const exclusions = [...new Set([
+        ...option.scopeDetails.exclusions,
+        ...option.phases.flatMap((phase) => phase.scopeDetails.exclusions),
+      ].map((item) => item.trim()).filter(Boolean))];
+      return {
+        ...option,
+        label: shapes[index].label,
+        scopeDetails: { ...option.scopeDetails, exclusions },
+        phases: option.phases.map((phase) => ({
+          ...phase,
+          scopeDetails: { ...phase.scopeDetails, exclusions: [] },
+        })),
+      };
+    }),
     coverage: { items: coverageItems, warnings: [...new Set(warnings)] },
   };
 }
