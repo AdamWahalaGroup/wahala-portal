@@ -11,6 +11,7 @@ import { LOGIN_PATH } from "@/auth/config";
 import { Brand } from "@/components/Brand";
 import { SimpleMarkdown } from "@/components/SimpleMarkdown";
 import { PublicProposal } from "@/components/PublicProposal";
+import { ProposalViewSwitcher } from "@/components/ProposalViewSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,11 @@ export default async function ProposalPreviewPage({ params }: { params: Promise<
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--surface-soft)" }}>
-      <div className="mono" style={{ textAlign: "center", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", background: "#FFF7ED", color: "#B45309", padding: "6px 12px" }}>
-        PREVIEW — this is what the client sees · the real link is created on send
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#FFF7ED", padding: "6px 12px", position: "sticky", top: 0, zIndex: 20 }}>
+        <div className="mono" style={{ flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", color: "#B45309" }}>
+          CLIENT PREVIEW — this is what the client sees · the real link is created on send
+        </div>
+        <ProposalViewSwitcher mode="client" staffHref={`/dashboard/proposals/${p.id}`} />
       </div>
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 18px 70px" }}>
         <div style={{ background: "var(--ink)", margin: "0 -18px", padding: "26px 22px 22px" }}>

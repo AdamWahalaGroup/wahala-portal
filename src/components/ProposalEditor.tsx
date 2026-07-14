@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { Money } from "@/components/Money";
 import { ProposalStatusPill } from "@/components/SalesChips";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
+import { ProposalViewSwitcher } from "@/components/ProposalViewSwitcher";
 import { canAmendPhase } from "@/domain/proposal-math";
 import { proposalReadinessFrom } from "@/domain/process";
 import type { BuyingPathStatus } from "@/domain/process";
@@ -302,10 +303,8 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     void api(`/api/proposals/${proposal.id}`, "PATCH", { executiveSummaryMd: text }).then((ok) => ok && flashSaved());
   }, 600);
 
-  const saveOption = useDebounced((optionId: string) => {
-    const o = opts.find((x) => x.id === optionId);
-    if (!o) return;
-    void api(`/api/proposals/${proposal.id}/options/${optionId}`, "PATCH", {
+  function optionSaveBody(o: (typeof opts)[number]) {
+    return {
       name: o.name,
       summaryMd: o.summaryMd,
       scopeDetails: o.scopeDetails,
@@ -318,8 +317,37 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
         internalNote: p.internalNote,
         scopeDetails: p.scopeDetails,
       })) : null,
-    }).then((ok) => ok && flashSaved());
+    };
+  }
+
+  const saveOption = useDebounced((optionId: string) => {
+    const o = opts.find((x) => x.id === optionId);
+    if (!o) return;
+    void api(`/api/proposals/${proposal.id}/options/${optionId}`, "PATCH", optionSaveBody(o)).then((ok) => ok && flashSaved());
   }, 600);
+
+  async function persistDraft(key: "save" | "preview", refresh: boolean): Promise<boolean> {
+    setBusy(key);
+    let ok = await api(`/api/proposals/${proposal.id}`, "PATCH", { executiveSummaryMd: summary });
+    for (const o of opts) {
+      if (!ok) break;
+      ok = await api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", optionSaveBody(o));
+    }
+    setBusy(null);
+    if (ok) {
+      flashSaved();
+      if (refresh) router.refresh();
+    }
+    return ok;
+  }
+
+  async function viewAsClient() {
+    if (isDraft) {
+      const ok = await persistDraft("preview", false);
+      if (!ok) return;
+    }
+    router.push(`/dashboard/proposals/${proposal.id}/preview`);
+  }
 
   function patchOpt(optionId: string, patch: Partial<(typeof opts)[number]>) {
     setOpts((v) => v.map((o) => (o.id === optionId ? { ...o, ...patch } : o)));
@@ -585,7 +613,14 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
               />
             ))}
           </span>
-          {saved && <span className="mono" style={{ fontSize: 10, color: "#15803d", marginLeft: "auto" }}>saved ✓</span>}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+            {saved && <span className="mono" style={{ fontSize: 10, color: "#15803d" }}>saved ✓</span>}
+            <ProposalViewSwitcher
+              mode="staff"
+              onClient={() => void viewAsClient()}
+              busy={busy === "preview"}
+            />
+          </div>
         </div>
         <h1 style={{ margin: 0, fontSize: 23, fontWeight: 800, letterSpacing: "-.025em" }}>{proposal.dealName}</h1>
 
@@ -1012,39 +1047,12 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           </p>
         )}
 
-        {/* Action row (design): Save draft · Send to client → · Preview public page ↗ · Generate contract/SOW · Delete */}
+        {/* Action row: Save draft · Send to client → · Generate contract/SOW · Delete */}
         {canManage && (
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderTop: "1px solid var(--border)", paddingTop: 14 }}>
             {isDraft && (
               <button
-                onClick={() =>
-                  void (async () => {
-                    setBusy("save");
-                    let ok = await api(`/api/proposals/${proposal.id}`, "PATCH", { executiveSummaryMd: summary });
-                    for (const o of opts) {
-                      if (!ok) break;
-                      ok = await api(`/api/proposals/${proposal.id}/options/${o.id}`, "PATCH", {
-                        name: o.name,
-                        summaryMd: o.summaryMd,
-                        scopeDetails: o.scopeDetails,
-                        timelineNote: o.timelineNote ?? "",
-                        priceCents: o.priceDollars ? Math.round(parseFloat(o.priceDollars) * 100) || 0 : 0,
-                        phases: o.phases ? o.phases.map((p) => ({
-                          name: p.name,
-                          amountCents: p.amountDollars ? Math.round(parseFloat(p.amountDollars) * 100) || 0 : 0,
-                          weeks: p.weeks,
-                          internalNote: p.internalNote,
-                          scopeDetails: p.scopeDetails,
-                        })) : null,
-                      });
-                    }
-                    setBusy(null);
-                    if (ok) {
-                      flashSaved();
-                      router.refresh();
-                    }
-                  })()
-                }
+                onClick={() => void persistDraft("save", true)}
                 disabled={busy === "save"}
                 style={btn("plain", busy === "save")}
               >
@@ -1056,9 +1064,6 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                 Send to client →
               </button>
             )}
-            <Link href={`/dashboard/proposals/${proposal.id}/preview`} target="_blank" style={{ ...btn("plain"), textDecoration: "none", display: "inline-block" }}>
-              Preview public page ↗
-            </Link>
             {proposal.contract ? (
               <Link href={`/dashboard/proposals/${proposal.id}/contract`} style={{ ...btn("plain"), textDecoration: "none", display: "inline-block" }}>
                 ◆ View contract / SOW →
