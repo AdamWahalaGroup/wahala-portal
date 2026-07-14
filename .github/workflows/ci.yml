@@ -23,7 +23,6 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          # Node 24 ships npm 11 and satisfies Wrangler/Miniflare requirements.
           node-version: 24
           cache: npm
 
@@ -38,9 +37,6 @@ jobs:
 
       - name: Run lint
         run: npm run lint
-
-      - name: Verify Cloudflare production build
-        run: npx opennextjs-cloudflare build
 
   deploy:
     name: Deploy production portal
@@ -74,6 +70,9 @@ jobs:
 
       - name: Build production portal
         run: npx opennextjs-cloudflare build
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy production portal
         run: npx opennextjs-cloudflare deploy
