@@ -32,7 +32,7 @@ import {
   type PathCount,
 } from "@/domain/proposal-math";
 import { assertSalesManager } from "@/services/sales";
-import { buildProposalEvidenceContext, draftProposalProse } from "@/services/ai/proposal";
+import { buildProposalEvidenceContext, draftProposalProse, splitProposalEvidenceItems } from "@/services/ai/proposal";
 import { recordAiRun } from "@/services/ai/usage";
 import { buildAudit } from "@/services/audit";
 import { securityLog } from "@/lib/security-log";
@@ -428,12 +428,15 @@ export async function roughDraftProposal(
   const mvpEvidence = packageFields.mvp_priorities?.evidence?.trim() || null;
   const successEvidence = packageFields.success_metrics?.evidence?.trim() || null;
   const deferredEvidence = packageFields.deferred_scope?.evidence?.trim() || null;
+  const mvpItems = splitProposalEvidenceItems(mvpEvidence);
+  const successItems = splitProposalEvidenceItems(successEvidence);
+  const deferredItems = splitProposalEvidenceItems(deferredEvidence);
   const fallbackScope = (name: string): ProposalScopeDetails => ({
     objective: successEvidence || `Deliver ${name} against the discovery evidence captured so far.`,
-    scopeItems: mvpEvidence ? [mvpEvidence] : ["Confirm and deliver the agreed first scope."],
-    deliverables: mvpEvidence ? [mvpEvidence] : [name],
-    acceptanceCriteria: successEvidence ? [successEvidence] : ["The agreed scope is delivered and passes client review."],
-    exclusions: deferredEvidence ? [deferredEvidence] : [],
+    scopeItems: mvpItems.length > 0 ? mvpItems : ["Confirm and deliver the agreed first scope."],
+    deliverables: mvpItems.length > 0 ? mvpItems : [name],
+    acceptanceCriteria: successItems.length > 0 ? successItems : ["The agreed scope is delivered and passes client review."],
+    exclusions: deferredItems,
   });
   let execSummary = fallbackExecSummary({ discoveryNote: deal.discoveryNote, dealName: deal.name, pathCount: input.pathCount, note: input.note });
   let optionNames = shapes.map((s) => s.name);
@@ -443,6 +446,7 @@ export async function roughDraftProposal(
   let coverage: ProposalCoverageReview | null = null;
   let usage: DraftUsage | null = null;
   let aiFallback = false;
+  let aiFallbackReason: string | null = null;
 
   try {
     const prose = await draftProposalProse(ctx, {
@@ -464,6 +468,7 @@ export async function roughDraftProposal(
     usage = prose.usage;
   } catch (e) {
     aiFallback = true;
+    aiFallbackReason = e instanceof Error ? e.message.slice(0, 500) : "Unknown proposal AI failure";
     console.error("[proposals] AI prose failed — deterministic fallback", e);
   }
 
@@ -510,7 +515,16 @@ export async function roughDraftProposal(
         action: "proposal.drafted",
         entityType: "proposal",
         entityId: proposalId,
-        metadata: { dealId, version, pathCount: input.pathCount, complexityScore, aiFallback, model: usage?.model, costCents: usage?.costCents },
+        metadata: {
+          dealId,
+          version,
+          pathCount: input.pathCount,
+          complexityScore,
+          aiFallback,
+          aiFallbackReason,
+          model: usage?.model,
+          costCents: usage?.costCents,
+        },
       }),
     ),
   ]);

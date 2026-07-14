@@ -83,6 +83,8 @@ Return JSON with:
   from the discovery package", "based on our analysis" are banned). If the salesperson
   asked to weight something, fold it in naturally.
 - options: one entry PER GIVEN SHAPE, same labels, same order:
+  * label: copy only the fixed option identifier exactly (for example, "A" or "B").
+    Never put the generated option title in label; that belongs in name.
   * name: ≤7 words, fitting that shape's structure (single delivery vs phased) — improve
     on the default name when you can say something concrete about their situation.
   * summaryMd: 1–3 client-facing sentences explaining the option's outcome and tradeoff.
