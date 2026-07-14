@@ -24,15 +24,18 @@ type PublicOption = {
   phases: ProposalPhase[] | null;
 };
 
-function PublicScope({ details }: { details: ProposalScopeDetails | null | undefined }) {
+function PublicScope({ details, mode = "all" }: {
+  details: ProposalScopeDetails | null | undefined;
+  mode?: "all" | "phase" | "exclusions";
+}) {
   if (!details) return null;
   const sections = [
-    { label: "Objective", lines: details.objective ? [details.objective] : [] },
-    { label: "Included scope", lines: details.scopeItems },
-    { label: "Deliverables", lines: details.deliverables },
-    { label: "Acceptance", lines: details.acceptanceCriteria },
-    { label: "Not included", lines: details.exclusions },
-  ].filter((section) => section.lines.length > 0);
+    { key: "outcome", label: "Outcome", lines: details.objective ? [details.objective] : [] },
+    { key: "scope", label: "Included scope", lines: details.scopeItems },
+    { key: "deliverables", label: "Deliverables", lines: details.deliverables },
+    { key: "acceptance", label: "Acceptance", lines: details.acceptanceCriteria },
+    { key: "exclusions", label: "Not included", lines: details.exclusions },
+  ].filter((section) => section.lines.length > 0 && (mode === "all" || (mode === "phase" && section.key !== "exclusions") || (mode === "exclusions" && section.key === "exclusions")));
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {sections.map((section) => (
@@ -248,13 +251,19 @@ export function PublicProposal({
               )}
               {on && (
                 <div style={{ display: "grid", gap: 10, marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 10 }}>
-                  <PublicScope details={o.scopeDetails} />
-                  {o.phases?.map((phase, index) => (
-                    <div key={index} style={{ background: "var(--surface-soft)", borderRadius: 9, padding: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 7 }}>{index + 1}. {phase.name}</div>
-                      <PublicScope details={phase.scopeDetails} />
-                    </div>
-                  ))}
+                  {o.phases === null ? (
+                    <PublicScope details={o.scopeDetails} />
+                  ) : (
+                    <>
+                      {o.phases.map((phase, index) => (
+                        <div key={index} style={{ background: "var(--surface-soft)", borderRadius: 9, padding: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 7 }}>{index + 1}. {phase.name}</div>
+                          <PublicScope details={phase.scopeDetails} mode="phase" />
+                        </div>
+                      ))}
+                      <PublicScope details={o.scopeDetails} mode="exclusions" />
+                    </>
+                  )}
                 </div>
               )}
             </button>

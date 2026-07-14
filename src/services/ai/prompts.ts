@@ -92,8 +92,10 @@ Return JSON with:
     testable acceptanceCriteria, and explicit exclusions. Use short strings, not paragraphs.
   * phases: for a phased shape, exactly its phase count. Each phase has a SHORT,
     outcome-based name ("Reporter transcription pilot", not "Phase 1") and its own
-    scopeDetails. Allocate every included capability to a phase. Return [] for a
-    single-delivery shape; its complete detail belongs in the option scopeDetails.
+    scopeDetails. Allocate every included capability to a phase. Put exclusions for
+    the engagement only in the option scopeDetails; phase exclusions must be [].
+    Return [] for a single-delivery shape; its complete detail belongs in the option
+    scopeDetails.
 - coverage: an INTERNAL review object, never client prose:
   * Split every concrete capability named in MVP priorities or success metrics into an
     atomic priority. For EACH priority, return exactly one placement per option.

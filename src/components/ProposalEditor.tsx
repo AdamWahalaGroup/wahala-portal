@@ -128,10 +128,11 @@ function ScopeItemCards({ label, items, placeholder, onChange }: {
   );
 }
 
-function ScopeDetailsEditor({ details, onChange, compact = false }: {
+function ScopeDetailsEditor({ details, onChange, compact = false, includeExclusions = true }: {
   details: ProposalScopeDetails;
   onChange: (key: keyof ProposalScopeDetails, value: string | string[]) => void;
   compact?: boolean;
+  includeExclusions?: boolean;
 }) {
   const rows: { key: ScopeListKey; label: string; placeholder: string }[] = [
     { key: "scopeItems", label: "Included scope", placeholder: "Included capability" },
@@ -139,10 +140,11 @@ function ScopeDetailsEditor({ details, onChange, compact = false }: {
     { key: "acceptanceCriteria", label: "Acceptance", placeholder: "Testable acceptance condition" },
     { key: "exclusions", label: "Not included", placeholder: "Excluded or deferred capability" },
   ];
+  const visibleRows = rows.filter((row) => includeExclusions || row.key !== "exclusions");
   return (
     <div style={{ display: "grid", gap: 9 }}>
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span className="kicker" style={{ fontSize: 8.5 }}>Objective</span>
+        <span className="kicker" style={{ fontSize: 8.5 }}>Outcome</span>
         <textarea
           value={details.objective}
           onChange={(event) => onChange("objective", event.target.value)}
@@ -151,7 +153,7 @@ function ScopeDetailsEditor({ details, onChange, compact = false }: {
         />
       </label>
       <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 9 }}>
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <ScopeItemCards
             key={row.key}
             label={row.label}
@@ -165,15 +167,18 @@ function ScopeDetailsEditor({ details, onChange, compact = false }: {
   );
 }
 
-function ScopeDetailsRead({ details }: { details: ProposalScopeDetails | null | undefined }) {
+function ScopeDetailsRead({ details, mode = "all" }: {
+  details: ProposalScopeDetails | null | undefined;
+  mode?: "all" | "phase" | "exclusions";
+}) {
   if (!details) return null;
   const sections = [
-    { label: "Objective", lines: details.objective ? [details.objective] : [] },
-    { label: "Included scope", lines: details.scopeItems },
-    { label: "Deliverables", lines: details.deliverables },
-    { label: "Acceptance", lines: details.acceptanceCriteria },
-    { label: "Not included", lines: details.exclusions },
-  ].filter((section) => section.lines.length > 0);
+    { key: "outcome", label: "Outcome", lines: details.objective ? [details.objective] : [] },
+    { key: "scope", label: "Included scope", lines: details.scopeItems },
+    { key: "deliverables", label: "Deliverables", lines: details.deliverables },
+    { key: "acceptance", label: "Acceptance", lines: details.acceptanceCriteria },
+    { key: "exclusions", label: "Not included", lines: details.exclusions },
+  ].filter((section) => section.lines.length > 0 && (mode === "all" || (mode === "phase" && section.key !== "exclusions") || (mode === "exclusions" && section.key === "exclusions")));
   if (sections.length === 0) return null;
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -220,9 +225,22 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [amendConfirmIndex, setAmendConfirmIndex] = useState<number | null>(null);
   const [respond, setRespond] = useState({ outcome: "", optionId: "", name: "", note: "" });
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
+    () => new Set(proposal.options.flatMap((option) => option.phases?.length ? [`${option.id}:0`] : [])),
+  );
 
   const isDraft = proposal.status === "draft" && canManage;
   const isLocked = !isDraft;
+
+  function setPhaseExpanded(optionId: string, phaseIndex: number, expanded: boolean) {
+    const key = `${optionId}:${phaseIndex}`;
+    setExpandedPhases((current) => {
+      const next = new Set(current);
+      if (expanded) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
 
   // Local editable copies (draft only) — source of truth while typing; autosaved.
   const [summary, setSummary] = useState(proposal.executiveSummaryMd ?? "");
@@ -781,21 +799,40 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
               {isDraft && (
                 <div style={{ display: "grid", gap: 8, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
                   <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span className="kicker" style={{ fontSize: 8.5 }}>Client-facing option summary</span>
+                    <span className="kicker" style={{ fontSize: 8.5 }}>Option overview</span>
                     <textarea
                       value={o.summaryMd}
                       onChange={(event) => patchOpt(o.id, { summaryMd: event.target.value })}
-                      placeholder="What this option accomplishes and its tradeoff"
+                      placeholder="Why the client would choose this option and its tradeoff"
                       style={{ ...inputStyle, minHeight: 62, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }}
                     />
                   </label>
-                  <ScopeDetailsEditor details={o.scopeDetails ?? blankScope()} onChange={(key, value) => patchOptionScope(o.id, key, value)} />
+                  {o.phases === null ? (
+                    <ScopeDetailsEditor details={o.scopeDetails ?? blankScope()} onChange={(key, value) => patchOptionScope(o.id, key, value)} />
+                  ) : (
+                    <div style={{ display: "grid", gap: 4 }}>
+                      <ScopeItemCards
+                        label="Not included"
+                        items={(o.scopeDetails ?? blankScope()).exclusions}
+                        placeholder="Excluded from the entire option"
+                        onChange={(items) => patchOptionScope(o.id, "exclusions", items)}
+                      />
+                      <span style={{ fontSize: 10.5, color: "var(--muted)", lineHeight: 1.35 }}>
+                        Applies to the entire option. Work planned for a later phase is not excluded.
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
               {isLocked && (
                 <div style={{ display: "grid", gap: 9, borderTop: "1px solid var(--border-softer)", paddingTop: 9 }}>
-                  {o.summaryMd && <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{o.summaryMd}</p>}
-                  <ScopeDetailsRead details={o.scopeDetails} />
+                  {o.summaryMd && (
+                    <div>
+                      <div className="kicker" style={{ fontSize: 8.5, marginBottom: 3 }}>Option overview</div>
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{o.summaryMd}</p>
+                    </div>
+                  )}
+                  <ScopeDetailsRead details={o.scopeDetails} mode={o.phases === null ? "all" : "exclusions"} />
                 </div>
               )}
 
@@ -803,7 +840,12 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
               {o.phases !== null && (
                 <div style={{ borderTop: "1px solid var(--border-softer)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="kicker" style={{ fontSize: 9.5 }}>Phases</div>
-                  {o.phases.map((ph, i) => (
+                  {o.phases.map((ph, i) => {
+                    const expansionKey = `${o.id}:${i}`;
+                    const expanded = expandedPhases.has(expansionKey);
+                    const details = ph.scopeDetails ?? blankScope();
+                    const detailSummary = `${details.scopeItems.length} scope · ${details.deliverables.length} deliverables · ${details.acceptanceCriteria.length} acceptance`;
+                    return (
                     <div
                       key={i}
                       style={{
@@ -829,6 +871,16 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                                 onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
                                 style={{ ...inputStyle, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 800, padding: "8px 10px" }}
                               />
+                              <button
+                                type="button"
+                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
+                                title={expanded ? "Collapse phase details" : "Expand phase details"}
+                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
+                                aria-expanded={expanded}
+                                style={{ flex: "none", width: 28, height: 28, border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
+                              >
+                                {expanded ? "▴" : "▾"}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
@@ -876,7 +928,17 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                               <span className="mono" style={{ flex: "none", borderRadius: 999, background: "#E6E9FF", color: "#3443B8", padding: "5px 8px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em" }}>
                                 PHASE {i + 1}
                               </span>
-                              <h4 style={{ margin: 0, color: "var(--ink)", fontSize: 15, lineHeight: 1.25 }}>{ph.name}</h4>
+                              <h4 style={{ flex: 1, minWidth: 0, margin: 0, color: "var(--ink)", fontSize: 15, lineHeight: 1.25 }}>{ph.name}</h4>
+                              <button
+                                type="button"
+                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
+                                title={expanded ? "Collapse phase details" : "Expand phase details"}
+                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
+                                aria-expanded={expanded}
+                                style={{ flex: "none", width: 28, height: 28, border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
+                              >
+                                {expanded ? "▴" : "▾"}
+                              </button>
                             </div>
                             <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
                               <Money cents={ph.amountCents} /> · {ph.weeks} weeks
@@ -888,17 +950,29 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                             </div>
                           </>
                         )}
+                        {!expanded && (
+                          <div className="mono" style={{ fontSize: 9.5, color: "var(--muted)", paddingLeft: 1 }}>
+                            {detailSummary}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ padding: 12 }}>
-                        {isDraft
-                          ? <ScopeDetailsEditor compact details={ph.scopeDetails ?? blankScope()} onChange={(key, value) => patchPhaseScope(o.id, i, key, value)} />
-                          : <ScopeDetailsRead details={ph.scopeDetails} />}
-                      </div>
+                      {expanded && (
+                        <div style={{ padding: 12 }}>
+                          {isDraft
+                            ? <ScopeDetailsEditor compact includeExclusions={false} details={details} onChange={(key, value) => patchPhaseScope(o.id, i, key, value)} />
+                            : <ScopeDetailsRead details={ph.scopeDetails} mode="phase" />}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                   {isDraft && (
                     <button
-                      onClick={() => patchOpt(o.id, { phases: [...o.phases!, { name: `Phase ${o.phases!.length + 1}`, amountCents: 0, amountDollars: "", weeks: 2, status: "awaiting_amendment" as const, scopeDetails: blankScope() }] })}
+                      onClick={() => {
+                        const newPhaseIndex = o.phases!.length;
+                        patchOpt(o.id, { phases: [...o.phases!, { name: `Phase ${newPhaseIndex + 1}`, amountCents: 0, amountDollars: "", weeks: 2, status: "awaiting_amendment" as const, scopeDetails: blankScope() }] });
+                        setPhaseExpanded(o.id, newPhaseIndex, true);
+                      }}
                       style={{ alignSelf: "flex-start", border: 0, background: "none", color: "#15803D", padding: 0, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
                     >
                       + Add phase

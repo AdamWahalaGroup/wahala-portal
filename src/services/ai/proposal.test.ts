@@ -95,7 +95,7 @@ describe("proposal prose normalization", () => {
           name: "Incremental reporter portal",
           summaryMd: "A phased delivery.",
           scopeDetails,
-          phases: [{ name: "Reporter foundation", scopeDetails }],
+          phases: [{ name: "Reporter foundation", scopeDetails: { ...scopeDetails, exclusions: ["Legacy system replacement"] } }],
         },
       ],
       coverage: {
@@ -119,6 +119,8 @@ describe("proposal prose normalization", () => {
       { optionLabel: "A", disposition: "included", phaseName: null, note: "" },
       { optionLabel: "B", disposition: "included", phaseName: "Reporter foundation", note: "" },
     ]);
+    expect(normalized.options[1].scopeDetails.exclusions).toEqual(["Legacy system replacement"]);
+    expect(normalized.options[1].phases[0].scopeDetails.exclusions).toEqual([]);
   });
 
   it("turns an invalid phase placement into a visible review question", () => {
