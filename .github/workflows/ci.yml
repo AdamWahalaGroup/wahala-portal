@@ -1,25 +1,93 @@
-name: CI
+name: CI and Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   check:
+    name: Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          # Node 24 ships npm 11 (which accepts the committed lockfile) and satisfies the
-          # >=22 engine requirement of wrangler/miniflare. Node 20 (npm 10.8) rejected the
-          # lockfile with "npm ci can only install … in sync" and is now deprecated on runners.
+          # Node 24 ships npm 11 and satisfies Wrangler/Miniflare requirements.
           node-version: 24
           cache: npm
-      - run: npm ci
-      # Type safety
-      - run: npx tsc --noEmit
-      # Unit + guard tests: stage machine, RBAC policy, access-scope logic,
-      # and the DB-access chokepoint (fails if a route/UI imports getDb).
-      - run: npm test
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Verify Cloudflare production build
+        run: npx opennextjs-cloudflare build
+
+  deploy:
+    name: Deploy production portal
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs:
+      - check
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    concurrency:
+      group: production-portal
+      cancel-in-progress: false
+
+    environment:
+      name: production
+      url: https://portal.wahala-services.com
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production portal
+        run: npx opennextjs-cloudflare build
+
+      - name: Deploy production portal
+        run: npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Verify production portal
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            https://portal.wahala-services.com/login
