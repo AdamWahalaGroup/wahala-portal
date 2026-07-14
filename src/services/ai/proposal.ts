@@ -48,7 +48,7 @@ const scopeDetailsJsonSchema = {
   },
 } as const;
 
-const proseJsonSchema = {
+export const proposalProseJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: ["execSummary", "options", "coverage"],
@@ -144,6 +144,125 @@ export type ProposalEvidenceContext = {
   };
 };
 
+function normalizedIdentifier(value: string | null | undefined): string {
+  return value?.trim().toLocaleLowerCase() ?? "";
+}
+
+function appendCoverageNote(note: string, addition: string): string {
+  return note.trim() ? `${note.trim()} ${addition}` : addition;
+}
+
+/**
+ * Structured Outputs guarantees the JSON shape, not business semantics. Small
+ * models sometimes put the generated option name in `label` even when the
+ * prompt asks for the fixed identifier (A/B). Keep the useful draft and
+ * canonicalize those references instead of discarding the whole response.
+ */
+export function normalizeProposalProseOutput(
+  output: ProposalProseOutput,
+  shapes: ProposalShape[],
+  evidenceContext: ProposalEvidenceContext,
+): ProposalProseOutput {
+  if (!Array.isArray(output.options) || output.options.length !== shapes.length) {
+    throw new StageError("VALIDATION", "The model did not return one entry per option shape.");
+  }
+  if (!output.execSummary?.trim()) {
+    throw new StageError("VALIDATION", "The model returned an empty summary.");
+  }
+
+  const aliases = shapes.map((shape, index) => {
+    const option = output.options[index];
+    if (option.phases.length !== shape.phaseCount) {
+      throw new StageError("VALIDATION", `Option ${shape.label} needs exactly ${shape.phaseCount} drafted phase${shape.phaseCount === 1 ? "" : "s"}.`);
+    }
+    if (!option.name.trim() || !option.summaryMd.trim() || !option.scopeDetails.objective.trim()) {
+      throw new StageError("VALIDATION", `Option ${shape.label} returned incomplete scope.`);
+    }
+    return new Set([shape.label, shape.name, option.label, option.name].map(normalizedIdentifier).filter(Boolean));
+  });
+
+  const warnings = [...(output.coverage?.warnings ?? [])];
+  const coverageItems = (output.coverage?.items ?? []).flatMap((item) => {
+    const priority = item.priority.trim();
+    if (!priority) {
+      warnings.push("The AI returned an empty coverage item; it was removed during review normalization.");
+      return [];
+    }
+
+    const usedPlacements = new Set<number>();
+    const placements = shapes.map((shape, optionIndex) => {
+      let placementIndex = item.placements.findIndex(
+        (placement, index) => !usedPlacements.has(index) && aliases[optionIndex].has(normalizedIdentifier(placement.optionLabel)),
+      );
+      // The prompt also guarantees option order. Use the same-position entry as
+      // a safe recovery when the model invents a label that is not an alias.
+      if (placementIndex < 0 && item.placements[optionIndex] && !usedPlacements.has(optionIndex)) placementIndex = optionIndex;
+      const source = placementIndex >= 0 ? item.placements[placementIndex] : null;
+      if (placementIndex >= 0) usedPlacements.add(placementIndex);
+
+      if (!source) {
+        warnings.push(`Review “${priority}” for Option ${shape.label}; the AI did not classify it.`);
+        return {
+          optionLabel: shape.label,
+          disposition: "question" as const,
+          phaseName: null,
+          note: "Review required: the AI did not classify this option.",
+        };
+      }
+
+      if (source.disposition !== "included" || output.options[optionIndex].phases.length === 0) {
+        return { ...source, optionLabel: shape.label, phaseName: null };
+      }
+
+      const phase = output.options[optionIndex].phases.find(
+        (candidate) => normalizedIdentifier(candidate.name) === normalizedIdentifier(source.phaseName),
+      );
+      if (!phase) {
+        warnings.push(`Review “${priority}” for Option ${shape.label}; its included phase could not be matched.`);
+        return {
+          ...source,
+          optionLabel: shape.label,
+          disposition: "question" as const,
+          phaseName: null,
+          note: appendCoverageNote(source.note, "Review required: the included phase could not be matched."),
+        };
+      }
+      return { ...source, optionLabel: shape.label, phaseName: phase.name };
+    });
+
+    return [{ priority, placements }];
+  });
+
+  const expectsCoverage = evidenceContext.discoveryPackage.fields.some(
+    (field) => (field.key === "mvp_priorities" || field.key === "success_metrics") && field.status !== "missing" && !!field.evidence,
+  );
+  if (expectsCoverage && coverageItems.length === 0) {
+    warnings.push("The AI did not create a capability coverage review. Confirm each MVP item before sending.");
+  }
+
+  return {
+    execSummary: output.execSummary,
+    options: output.options.map((option, index) => ({ ...option, label: shapes[index].label })),
+    coverage: { items: coverageItems, warnings: [...new Set(warnings)] },
+  };
+}
+
+/** Turn a note or sentence list into editable proposal items for fallback drafts. */
+export function splitProposalEvidenceItems(value: string | null | undefined): string[] {
+  if (!value?.trim()) return [];
+  const seen = new Set<string>();
+  return value
+    .split(/\r?\n+|[.!?;]+\s+/)
+    .map((item) => item.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+    .filter((item) => {
+      if (!item) return false;
+      const key = item.toLocaleLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 /**
  * A complete, labeled snapshot for proposal grounding. Include missing fields so
  * the model can distinguish "not learned" from an accidentally omitted input.
@@ -180,7 +299,7 @@ export function buildProposalEvidenceContext(input: {
   };
 }
 
-/** One structured call; throws on out-of-shape output (caller falls back wholesale). */
+/** One structured call; only structurally unusable output triggers wholesale fallback. */
 export async function draftProposalProse(
   _ctx: AuthContext,
   input: {
@@ -224,47 +343,10 @@ export async function draftProposalProse(
     system: cfg.systemPrompt,
     parts,
     schemaName: "ProposalProse",
-    schema: proseJsonSchema,
+    schema: proposalProseJsonSchema,
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
   });
 
-  if (!Array.isArray(output.options) || output.options.length !== input.shapes.length) {
-    throw new StageError("VALIDATION", "The model did not return one entry per option shape.");
-  }
-  if (!output.execSummary?.trim()) {
-    throw new StageError("VALIDATION", "The model returned an empty summary.");
-  }
-  for (const [index, shape] of input.shapes.entries()) {
-    const option = output.options[index];
-    if (option?.label !== shape.label) throw new StageError("VALIDATION", `The model changed Option ${shape.label}'s label or order.`);
-    if (option.phases.length !== shape.phaseCount) throw new StageError("VALIDATION", `Option ${shape.label} needs exactly ${shape.phaseCount} drafted phase${shape.phaseCount === 1 ? "" : "s"}.`);
-    if (!option.name.trim() || !option.summaryMd.trim() || !option.scopeDetails.objective.trim()) {
-      throw new StageError("VALIDATION", `Option ${shape.label} returned incomplete scope.`);
-    }
-  }
-  const optionLabels = new Set(input.shapes.map((shape) => shape.label));
-  const expectsCoverage = input.evidenceContext.discoveryPackage.fields.some((field) =>
-    (field.key === "mvp_priorities" || field.key === "success_metrics") && field.status !== "missing" && !!field.evidence,
-  );
-  if (expectsCoverage && output.coverage.items.length === 0) {
-    throw new StageError("VALIDATION", "The model omitted MVP coverage despite supported priority evidence.");
-  }
-  for (const item of output.coverage.items) {
-    const placed = new Set(item.placements.map((placement) => placement.optionLabel));
-    if (!item.priority.trim() || item.placements.length !== optionLabels.size || optionLabels.size !== placed.size || [...optionLabels].some((label) => !placed.has(label))) {
-      throw new StageError("VALIDATION", "Every MVP coverage item must be classified for every option.");
-    }
-    for (const placement of item.placements) {
-      const optionIndex = input.shapes.findIndex((shape) => shape.label === placement.optionLabel);
-      const option = output.options[optionIndex];
-      if (placement.disposition === "included" && option.phases.length > 0 && !option.phases.some((phase) => phase.name === placement.phaseName)) {
-        throw new StageError("VALIDATION", `Included coverage for Option ${placement.optionLabel} must name one of its drafted phases.`);
-      }
-      if (option.phases.length === 0 && placement.phaseName !== null) {
-        throw new StageError("VALIDATION", `Single-delivery Option ${placement.optionLabel} cannot name a phase in coverage.`);
-      }
-    }
-  }
-  return { output, usage };
+  return { output: normalizeProposalProseOutput(output, input.shapes, input.evidenceContext), usage };
 }
