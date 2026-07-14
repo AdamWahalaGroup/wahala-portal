@@ -39,6 +39,7 @@ import {
   type BuyingPathFieldKey,
   buyingPathFrom,
   BUYING_PATH_FIELDS,
+  packageStatusForBudget,
 } from "@/domain/process";
 import {
   COMMERCIAL_REVIEW_FIELDS,
@@ -653,10 +654,9 @@ export async function setBuyingPathField(
 ): Promise<{ buyingPath: BuyingPath; field: PackageField }> {
   assertSalesManager(ctx, "set_buying_path_field");
   if (!(BUYING_PATH_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown buying-path field.");
-  if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
   const evidence = input.evidence?.trim().slice(0, 500) || null;
-  if (input.status === "ok" && !evidence) throw new StageError("VALIDATION", "Evidence is required before a buying-path item can be marked OK.");
   const fieldKey = key as BuyingPathFieldKey;
+  if (fieldKey !== "budget" && !(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
 
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
@@ -669,13 +669,12 @@ export async function setBuyingPathField(
     if (!isBudgetStatus(input.budgetStatus)) throw new StageError("VALIDATION", "Unknown budget status.");
     budgetStatus = input.budgetStatus;
   }
-  if (fieldKey === "budget" && input.status === "ok" && budgetStatus !== "funding_path" && budgetStatus !== "confirmed") {
-    throw new StageError("VALIDATION", "Funding path must be identified or budget confirmed before this item can be marked OK.");
-  }
+  const status = fieldKey === "budget" ? packageStatusForBudget(budgetStatus) : input.status as PackageFieldStatus;
+  if (status !== "missing" && !evidence) throw new StageError("VALIDATION", "Evidence is required for this buying-path selection.");
 
   const previous = await loadPackage(dealId);
   const from = previous.buyingPath?.[fieldKey]?.status ?? "missing";
-  const field: PackageField = { status: input.status as PackageFieldStatus, evidence, source: "manual" };
+  const field: PackageField = { status, evidence, source: "manual" };
   const fields: PackageFields = { ...previous, buyingPath: { ...previous.buyingPath, [fieldKey]: field } };
   const dealPatch: Partial<typeof schema.deals.$inferInsert> = fieldKey === "champion"
     ? { champion: evidence }
@@ -703,7 +702,7 @@ export async function setBuyingPathField(
     actorUserId: ctx.user.id,
     kind: "field_edited",
     readinessScore: readinessFrom(fields),
-    metadata: { area: "buying_path", field: key, from, to: input.status, source: "manual" },
+    metadata: { area: "buying_path", field: key, from, to: status, source: "manual", ...(fieldKey === "budget" ? { budgetStatus } : {}) },
   });
   return { buyingPath, field };
 }

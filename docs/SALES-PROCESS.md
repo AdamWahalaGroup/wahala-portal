@@ -89,15 +89,18 @@ Confirmed only when evidence exists for all five signals:
 - an identified funding path with concrete evidence.
 
 Unverified means none of these signals is established. Developing means some
-are established but at least one material gap remains. A budget status of
-“spending authority known” is useful evidence, but does not by itself identify
-the funding path. Unknown is an acceptable answer; unsupported certainty is not.
+are established but at least one material gap remains. Funding maturity uses
+one authoritative scale: Unknown maps to Missing, Possible funding source maps
+to Partial, and Funding path identified or Budget confirmed maps to OK. Unknown
+is an acceptable answer; unsupported certainty is not.
 
-Each Buying path item uses the same manual classification as the Discovery
-Package: OK, Partial, or Missing, with field-specific help and evidence. OK
-requires evidence. Partial and Missing keep the overall path in Developing;
-they do not add a second “Ask on the next call” list. The card instead explains
-what Unverified, Developing, and Confirmed mean.
+Champion, economic buyer, compelling event, and decision process use the same
+OK, Partial, or Missing classification as the Discovery Package. Funding path
+derives that classification from its maturity dropdown so two competing status
+controls cannot disagree. Every non-Unknown selection requires evidence.
+Partial and Missing keep the overall path in Developing; they do not add a
+second “Ask on the next call” list. The card instead explains what Unverified,
+Developing, and Confirmed mean.
 
 Do not lead a first conversation with budget. Understand the pain and desired
 value first, then make the funding and authority questions relevant. The UI
