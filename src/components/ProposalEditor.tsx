@@ -225,9 +225,7 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [amendConfirmIndex, setAmendConfirmIndex] = useState<number | null>(null);
   const [respond, setRespond] = useState({ outcome: "", optionId: "", name: "", note: "" });
-  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
-    () => new Set(proposal.options.flatMap((option) => option.phases?.length ? [`${option.id}:0`] : [])),
-  );
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(() => new Set());
 
   const isDraft = proposal.status === "draft" && canManage;
   const isLocked = !isDraft;
@@ -893,30 +891,30 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                             </div>
                             <div style={{ display: "flex", gap: 12, alignItems: "flex-end", paddingLeft: 1, flexWrap: "wrap" }}>
                               <label style={{ display: "grid", gap: 3 }}>
-                                <span className="kicker" style={{ fontSize: 8 }}>Phase fee</span>
+                                <span className="kicker" style={{ fontSize: 9, fontWeight: 800, color: "var(--ink-soft)" }}>Phase fee</span>
                                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700 }}>$</span>
+                                  <span style={{ color: "var(--ink)", fontSize: 13, fontWeight: 800 }}>$</span>
                                   <input
                                     aria-label={`Phase ${i + 1} fee`}
                                     value={ph.amountDollars}
                                     onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, amountDollars: e.target.value.replace(/[^0-9.]/g, "") } : p)) })}
                                     placeholder="0"
                                     inputMode="numeric"
-                                    style={{ ...inputStyle, width: 96, fontSize: 12, padding: "6px 8px" }}
+                                    style={{ ...inputStyle, width: 96, borderColor: "#C9CEDD", fontSize: 13, fontWeight: 800, padding: "7px 9px" }}
                                   />
                                 </div>
                               </label>
                               <label style={{ display: "grid", gap: 3 }}>
-                                <span className="kicker" style={{ fontSize: 8 }}>Duration</span>
+                                <span className="kicker" style={{ fontSize: 9, fontWeight: 800, color: "var(--ink-soft)" }}>Duration</span>
                                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                                   <input
                                     aria-label={`Phase ${i + 1} duration in weeks`}
                                     value={String(ph.weeks)}
                                     onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, weeks: Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0) } : p)) })}
                                     inputMode="numeric"
-                                    style={{ ...inputStyle, width: 50, fontSize: 12, padding: "6px 8px" }}
+                                    style={{ ...inputStyle, width: 54, borderColor: "#C9CEDD", fontSize: 13, fontWeight: 800, padding: "7px 9px" }}
                                   />
-                                  <span style={{ color: "var(--muted)", fontSize: 11 }}>weeks</span>
+                                  <span style={{ color: "var(--ink-soft)", fontSize: 11, fontWeight: 700 }}>weeks</span>
                                 </div>
                               </label>
                             </div>
