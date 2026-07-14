@@ -6,7 +6,7 @@
  * Prototype constants ×100: $500 grain → 50_000¢; $3,000/week → 300_000¢;
  * $50,000 complexity step → 5_000_000¢.
  */
-import type { Approver, ContractPhase, PhaseStatus, ProposalContract, ProposalPhase } from "./proposal-doc";
+import type { Approver, ContractPhase, PhaseStatus, ProposalContract, ProposalPhase, ProposalScopeDetails } from "./proposal-doc";
 
 export type PathCount = "1" | "2" | "3";
 
@@ -86,7 +86,15 @@ export function fallbackExecSummary(input: { discoveryNote: string | null; dealN
 
 // ---------------------------------------------------------------- options
 
-type OptionLike = { id: string; priceCents: number; recommended?: boolean; phases?: ProposalPhase[] | null; name: string };
+type OptionLike = {
+  id: string;
+  priceCents: number;
+  recommended?: boolean;
+  phases?: ProposalPhase[] | null;
+  name: string;
+  summaryMd?: string;
+  scopeDetails?: ProposalScopeDetails | null;
+};
 
 /** The contract's source option: what the client chose, else the recommendation, else A. */
 export function chooseContractSourceOption<T extends OptionLike>(options: T[], selectedOptionId: string | null): T | undefined {
@@ -94,10 +102,10 @@ export function chooseContractSourceOption<T extends OptionLike>(options: T[], s
 }
 
 /** Phases of an option; a lump-sum option becomes one pseudo-phase. */
-export function sourcePhasesFor(option: OptionLike): { name: string; amountCents: number; weeks: number | null; internalNote?: string }[] {
+export function sourcePhasesFor(option: OptionLike): { name: string; amountCents: number; weeks: number | null; internalNote?: string; scopeDetails?: ProposalScopeDetails }[] {
   return option.phases?.length
-    ? option.phases.map((p) => ({ name: p.name, amountCents: p.amountCents, weeks: p.weeks, internalNote: p.internalNote }))
-    : [{ name: option.name, amountCents: option.priceCents, weeks: null }];
+    ? option.phases.map((p) => ({ name: p.name, amountCents: p.amountCents, weeks: p.weeks, internalNote: p.internalNote, scopeDetails: p.scopeDetails }))
+    : [{ name: option.name, amountCents: option.priceCents, weeks: null, scopeDetails: option.scopeDetails ?? undefined }];
 }
 
 const LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
@@ -118,20 +126,21 @@ export function canAmendPhase(phases: ProposalPhase[], i: number): boolean {
 
 // ---------------------------------------------------------------- contract snapshot
 
-function contractPhaseFrom(src: { name: string; amountCents: number; weeks: number | null; internalNote?: string }, lump: boolean): ContractPhase {
+function contractPhaseFrom(src: { name: string; amountCents: number; weeks: number | null; internalNote?: string; scopeDetails?: ProposalScopeDetails }, lump: boolean): ContractPhase {
   const note = src.internalNote?.trim();
+  const details = src.scopeDetails;
   return {
     name: src.name,
     amountCents: src.amountCents,
     weeks: src.weeks,
-    objective: note || `Deliver ${src.name} as scoped in this engagement.`,
-    scopeText: lump
+    objective: details?.objective.trim() || note || `Deliver ${src.name} as scoped in this engagement.`,
+    scopeText: details?.scopeItems.filter(Boolean).join("\n") || (lump
       ? "Design and implement the agreed scope.\nTesting and quality assurance.\nDocumentation and handoff."
       : note
         ? `${note}\nTesting and quality assurance for ${src.name}.\nDocumentation for ${src.name}.`
-        : `Design and implement ${src.name}.\nTesting and quality assurance for ${src.name}.\nDocumentation for ${src.name}.`,
-    deliverablesText: `${src.name}, delivered and accepted.`,
-    acceptanceText: lump ? "Delivered scope meets agreed requirements and passes review." : `${src.name} meets agreed scope and passes review.`,
+        : `Design and implement ${src.name}.\nTesting and quality assurance for ${src.name}.\nDocumentation for ${src.name}.`),
+    deliverablesText: details?.deliverables.filter(Boolean).join("\n") || `${src.name}, delivered and accepted.`,
+    acceptanceText: details?.acceptanceCriteria.filter(Boolean).join("\n") || (lump ? "Delivered scope meets agreed requirements and passes review." : `${src.name} meets agreed scope and passes review.`),
   };
 }
 
@@ -141,8 +150,16 @@ export function buildContractPhases(option: OptionLike): ContractPhase[] {
 }
 
 /** Fingerprint of a phase structure — mismatch vs the live option = stale contract. */
-export function phaseSignature(phases: { name: string; amountCents: number; weeks: number | null }[]): string {
-  return JSON.stringify(phases.map((ph) => ({ n: ph.name, a: ph.amountCents, w: ph.weeks })));
+export function phaseSignature(phases: ContractPhase[]): string {
+  return JSON.stringify(phases.map((ph) => ({
+    n: ph.name,
+    a: ph.amountCents,
+    w: ph.weeks,
+    o: ph.objective,
+    s: ph.scopeText,
+    d: ph.deliverablesText,
+    c: ph.acceptanceText,
+  })));
 }
 
 const SCOPE_OF_ENGAGEMENT =
@@ -163,6 +180,10 @@ export function contractDefaults(input: {
 }): ProposalContract {
   const phases = buildContractPhases(input.option);
   const heavy = input.complexityScore > 3;
+  const explicitExclusions = [...new Set([
+    ...(input.option.scopeDetails?.exclusions ?? []),
+    ...(input.option.phases?.flatMap((phase) => phase.scopeDetails?.exclusions ?? []) ?? []),
+  ].map((item) => item.trim()).filter(Boolean))];
   const charSum = input.dealId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const first = input.approvers?.[0];
   return {
@@ -171,8 +192,8 @@ export function contractDefaults(input: {
     scopeOfEngagement: SCOPE_OF_ENGAGEMENT,
     phases,
     depositPct: 10,
-    outOfScopeEnabled: heavy,
-    outOfScopeText: OUT_OF_SCOPE,
+    outOfScopeEnabled: heavy || explicitExclusions.length > 0,
+    outOfScopeText: explicitExclusions.length > 0 ? `${explicitExclusions.join("\n")}\n${OUT_OF_SCOPE}` : OUT_OF_SCOPE,
     changeManagementEnabled: heavy,
     changeManagementText: CHANGE_MANAGEMENT,
     acceptanceReviewDays: 5,

@@ -144,6 +144,14 @@ authority, low data sensitivity, acceptance of an action, or a calendar date.
   Discovery evidence to ground client-facing language and treats Buying path as
   private internal context, surfacing only client-suitable facts that materially
   affect scope, timing, or assumptions.
+- An AI rough draft must give every explicit MVP capability a visible disposition
+  for every option: included in a named delivery/phase, deliberately deferred, or
+  left as a question. The internal MVP coverage review is coaching, not approval;
+  a Wahala staff member verifies it before send.
+- Proposal scope is structured as an objective, included items, deliverables,
+  acceptance criteria, and explicit exclusions at the option and phase level.
+  Human-reviewed proposal scope seeds the Contract/SOW directly; a phase name
+  alone is not a statement of work.
 - Public proposal approval means intent to proceed, not booked revenue.
 - Binding execution belongs in a counsel-approved e-signature flow.
 - Do not start delivery until the applicable agreement and payment gates pass.

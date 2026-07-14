@@ -605,6 +605,9 @@ export const proposals = sqliteTable(
     title: text("title").notNull(),
     executiveSummaryMd: text("executive_summary_md"),
     assumptionsMd: text("assumptions_md"),
+    // Internal coverage review: every explicit MVP capability is included,
+    // deferred, or left as a question for each option. Never shown to clients.
+    coverage: text("coverage", { mode: "json" }).$type<import("../domain/proposal-doc").ProposalCoverageReview | null>(),
     // AI complexity read (1–5). Above 3 = "needs engineering hardcore review" — a
     // SOFT flag (banner + confirm), never a hard gate inside the sales funnel.
     complexityScore: integer("complexity_score"),
@@ -636,6 +639,9 @@ export const proposalOptions = sqliteTable(
     label: text("label").notNull(), // "A"–"H" (up to 8 options)
     name: text("name").notNull(), // e.g. "Phased buildout"
     summaryMd: text("summary_md").notNull(),
+    // One-shot delivery detail (and option-level scope for phased paths). Phase-
+    // specific detail lives inside the existing phases JSON objects.
+    scopeDetails: text("scope_details", { mode: "json" }).$type<import("../domain/proposal-doc").ProposalScopeDetails | null>(),
     timelineNote: text("timeline_note"),
     // Admin-set. 0 = not priced yet; EVERY option must be priced before send.
     priceCents: integer("price_cents").notNull().default(0),

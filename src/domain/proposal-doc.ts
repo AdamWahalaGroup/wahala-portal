@@ -9,6 +9,30 @@
 
 export type PhaseStatus = "awaiting_amendment" | "active" | "done";
 
+/** Client-facing substance that survives proposal review into the Contract/SOW. */
+export type ProposalScopeDetails = {
+  objective: string;
+  scopeItems: string[];
+  deliverables: string[];
+  acceptanceCriteria: string[];
+  exclusions: string[];
+};
+
+export type ProposalCoverageDisposition = "included" | "deferred" | "question";
+
+export type ProposalCoveragePlacement = {
+  optionLabel: string;
+  disposition: ProposalCoverageDisposition;
+  phaseName: string | null;
+  note: string;
+};
+
+/** Internal review aid: every explicit MVP capability must have a visible disposition. */
+export type ProposalCoverageReview = {
+  items: { priority: string; placements: ProposalCoveragePlacement[] }[];
+  warnings: string[];
+};
+
 /** A phase inside a proposal option. null phases on the option = lump-sum. */
 export type ProposalPhase = {
   name: string;
@@ -17,6 +41,8 @@ export type ProposalPhase = {
   status: PhaseStatus;
   /** Optional staff note; seeds the contract phase's objective/scope text. */
   internalNote?: string;
+  /** Structured AI draft, editable by staff and copied into the Contract/SOW. */
+  scopeDetails?: ProposalScopeDetails;
 };
 
 /** Who on the client side can sign / approve amendments. */

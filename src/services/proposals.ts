@@ -16,7 +16,7 @@ import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { needsEngineeringReview } from "@/domain/sales";
 import { buyingPathFrom, readinessFrom, type BuyingPathStatus, type PackageFields } from "@/domain/process";
-import type { Approver, ProposalContract, ProposalPhase } from "@/domain/proposal-doc";
+import type { Approver, ProposalContract, ProposalCoverageReview, ProposalPhase, ProposalScopeDetails } from "@/domain/proposal-doc";
 import {
   buildOptionShapes,
   chooseContractSourceOption,
@@ -45,6 +45,7 @@ export type ProposalOption = {
   label: string;
   name: string;
   summaryMd: string;
+  scopeDetails: ProposalScopeDetails | null;
   timelineNote: string | null;
   priceCents: number;
   priceNote: string | null;
@@ -69,6 +70,7 @@ export type ProposalDetail = {
   title: string;
   executiveSummaryMd: string | null;
   assumptionsMd: string | null;
+  coverage: ProposalCoverageReview | null;
   complexityScore: number | null;
   complexityRationale: string | null;
   needsReview: boolean;
@@ -129,6 +131,7 @@ async function loadOptions(proposalId: string): Promise<ProposalOption[]> {
     label: o.label,
     name: o.name,
     summaryMd: o.summaryMd,
+    scopeDetails: (o.scopeDetails as ProposalScopeDetails | null) ?? null,
     timelineNote: o.timelineNote,
     priceCents: o.priceCents,
     priceNote: o.priceNote,
@@ -239,6 +242,7 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
       label: o.label,
       name: o.name,
       summaryMd: o.summaryMd,
+      scopeDetails: (o.scopeDetails as ProposalScopeDetails | null) ?? null,
       timelineNote: o.timelineNote,
       priceCents: o.priceCents,
       priceNote: o.priceNote,
@@ -313,6 +317,7 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     title: p.title,
     executiveSummaryMd: p.executiveSummaryMd,
     assumptionsMd: p.assumptionsMd,
+    coverage: (p.coverage as ProposalCoverageReview | null) ?? null,
     complexityScore: p.complexityScore,
     complexityRationale: p.complexityRationale,
     needsReview: needsEngineeringReview(p.complexityScore),
@@ -420,9 +425,22 @@ export async function roughDraftProposal(
 
   const shapes = buildOptionShapes(input.pathCount, deal.valueCents);
   const complexityScore = defaultComplexity(deal.valueCents);
+  const mvpEvidence = packageFields.mvp_priorities?.evidence?.trim() || null;
+  const successEvidence = packageFields.success_metrics?.evidence?.trim() || null;
+  const deferredEvidence = packageFields.deferred_scope?.evidence?.trim() || null;
+  const fallbackScope = (name: string): ProposalScopeDetails => ({
+    objective: successEvidence || `Deliver ${name} against the discovery evidence captured so far.`,
+    scopeItems: mvpEvidence ? [mvpEvidence] : ["Confirm and deliver the agreed first scope."],
+    deliverables: mvpEvidence ? [mvpEvidence] : [name],
+    acceptanceCriteria: successEvidence ? [successEvidence] : ["The agreed scope is delivered and passes client review."],
+    exclusions: deferredEvidence ? [deferredEvidence] : [],
+  });
   let execSummary = fallbackExecSummary({ discoveryNote: deal.discoveryNote, dealName: deal.name, pathCount: input.pathCount, note: input.note });
   let optionNames = shapes.map((s) => s.name);
-  let phaseNames = shapes.map((s) => s.phases?.map((p) => p.name) ?? null);
+  let optionSummaries = shapes.map((s) => `A ${s.phases ? "phased" : "single-delivery"} path for ${s.name.toLowerCase()}.`);
+  let optionScopeDetails = shapes.map((s) => fallbackScope(s.name));
+  let phaseDrafts = shapes.map((s) => s.phases?.map((p) => ({ name: p.name, scopeDetails: fallbackScope(p.name) })) ?? []);
+  let coverage: ProposalCoverageReview | null = null;
   let usage: DraftUsage | null = null;
   let aiFallback = false;
 
@@ -439,11 +457,10 @@ export async function roughDraftProposal(
     });
     execSummary = prose.output.execSummary;
     optionNames = shapes.map((s, i) => prose.output.options[i]?.name?.trim() || s.name);
-    phaseNames = shapes.map((s, i) => {
-      const names = prose.output.options[i]?.phaseNames;
-      const want = s.phases?.length ?? 0;
-      return want > 0 && names?.length === want ? names : (s.phases?.map((p) => p.name) ?? null);
-    });
+    optionSummaries = shapes.map((s, i) => prose.output.options[i]?.summaryMd?.trim() || optionSummaries[i]);
+    optionScopeDetails = shapes.map((_s, i) => prose.output.options[i]?.scopeDetails ?? optionScopeDetails[i]);
+    phaseDrafts = shapes.map((_s, i) => prose.output.options[i]?.phases ?? phaseDrafts[i]);
+    coverage = prose.output.coverage;
     usage = prose.usage;
   } catch (e) {
     aiFallback = true;
@@ -460,6 +477,7 @@ export async function roughDraftProposal(
       status: "draft",
       title: `${deal.name} — proposal`,
       executiveSummaryMd: execSummary,
+      coverage,
       complexityScore,
       complexityRationale: defaultComplexityRationale(complexityScore),
       approvers,
@@ -470,10 +488,17 @@ export async function roughDraftProposal(
         proposalId,
         label: s.label,
         name: optionNames[i],
-        summaryMd: "",
+        summaryMd: optionSummaries[i],
+        scopeDetails: optionScopeDetails[i],
         timelineNote: s.timelineNote,
         priceCents: s.priceCents,
-        phases: s.phases ? s.phases.map((p, j) => ({ ...p, name: phaseNames[i]?.[j] ?? p.name })) : null,
+        phases: s.phases
+          ? s.phases.map((p, j) => ({
+              ...p,
+              name: phaseDrafts[i]?.[j]?.name?.trim() || p.name,
+              scopeDetails: phaseDrafts[i]?.[j]?.scopeDetails ?? fallbackScope(p.name),
+            }))
+          : null,
         recommended: false,
         sortOrder: i,
       })),
@@ -528,6 +553,28 @@ export async function updateProposal(
   await getDb().update(schema.proposals).set(patch).where(eq(schema.proposals.id, proposalId));
 }
 
+function validateScopeDetails(input: unknown): ProposalScopeDetails | null {
+  if (input === null || input === undefined) return null;
+  if (typeof input !== "object") throw new StageError("VALIDATION", "Scope details must be an object.");
+  const raw = input as Record<string, unknown>;
+  const objective = typeof raw.objective === "string" ? raw.objective.trim().slice(0, 1_500) : "";
+  const lines = (value: unknown, label: string): string[] => {
+    if (!Array.isArray(value)) throw new StageError("VALIDATION", `${label} must be a list.`);
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim().slice(0, 500))
+      .filter(Boolean)
+      .slice(0, 30);
+  };
+  return {
+    objective,
+    scopeItems: lines(raw.scopeItems, "Scope items"),
+    deliverables: lines(raw.deliverables, "Deliverables"),
+    acceptanceCriteria: lines(raw.acceptanceCriteria, "Acceptance criteria"),
+    exclusions: lines(raw.exclusions, "Exclusions"),
+  };
+}
+
 function validatePhases(input: unknown): ProposalPhase[] | null {
   if (input === null) return null;
   if (!Array.isArray(input)) throw new StageError("VALIDATION", "Phases must be a list.");
@@ -546,6 +593,7 @@ function validatePhases(input: unknown): ProposalPhase[] | null {
       // Statuses are runtime state (set on approval + amendments), never author input.
       status: "awaiting_amendment" as const,
       internalNote: typeof r.internalNote === "string" && r.internalNote.trim() ? r.internalNote.trim() : undefined,
+      scopeDetails: validateScopeDetails(r.scopeDetails) ?? undefined,
     };
   });
 }
@@ -554,7 +602,7 @@ export async function updateProposalOption(
   ctx: AuthContext,
   proposalId: string,
   optionId: string,
-  input: { name?: string; summaryMd?: string; timelineNote?: string; priceCents?: number; priceNote?: string; phases?: ProposalPhase[] | null },
+  input: { name?: string; summaryMd?: string; scopeDetails?: ProposalScopeDetails | null; timelineNote?: string; priceCents?: number; priceNote?: string; phases?: ProposalPhase[] | null },
 ): Promise<void> {
   await loadDraft(ctx, proposalId, "update_proposal_option");
   const db = getDb();
@@ -565,6 +613,7 @@ export async function updateProposalOption(
     patch.name = n;
   }
   if (input.summaryMd !== undefined) patch.summaryMd = input.summaryMd;
+  if (input.scopeDetails !== undefined) patch.scopeDetails = validateScopeDetails(input.scopeDetails);
   if (input.timelineNote !== undefined) patch.timelineNote = input.timelineNote.trim() || null;
   if (input.priceCents !== undefined) patch.priceCents = Math.max(0, Math.round(input.priceCents));
   if (input.priceNote !== undefined) patch.priceNote = input.priceNote.trim() || null;

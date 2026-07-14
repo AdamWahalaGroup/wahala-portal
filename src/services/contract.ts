@@ -21,6 +21,7 @@ import { sendInviteEmail } from "@/auth/email";
 import { isDevAuth } from "@/auth/server-env";
 import type { DraftUsage } from "@/services/ai/provider";
 import { recordAiRun } from "@/services/ai/usage";
+import type { ProposalContract } from "@/domain/proposal-doc";
 
 export type ContractRoom = {
   available: boolean; // an approved proposal exists (or the deal already reached committed/won)
@@ -253,6 +254,7 @@ export async function executeContract(
     ? await db.select().from(schema.proposalOptions).where(eq(schema.proposalOptions.proposalId, approved.id))
     : [];
   const chosen = approved ? chooseContractSourceOption(options, approved.selectedOptionId) : undefined;
+  const approvedContract = (approved?.contract as ProposalContract | null | undefined) ?? null;
   // "Right names, right amounts": the phase skeleton comes from the signed proposal
   // (or, without one, the deal itself). The AI writes scope + deliverables into it.
   const phases = deriveProjectPhases(options, approved?.selectedOptionId ?? null, deal.valueCents);
@@ -262,6 +264,16 @@ export async function executeContract(
     approved ? `APPROVED PROPOSAL (v${approved.version}): ${approved.title}` : "",
     approved?.executiveSummaryMd ?? "",
     chosen ? `CHOSEN OPTION ${chosen.label}: ${chosen.name}\n${chosen.summaryMd}${chosen.timelineNote ? `\nTimeline: ${chosen.timelineNote}` : ""}` : "",
+    approvedContract
+      ? `ACCEPTED CONTRACT / STATEMENT OF WORK\n${approvedContract.phases.map((phase, index) => [
+          `PHASE ${index + 1}: ${phase.name}`,
+          `Objective: ${phase.objective}`,
+          `Scope:\n${phase.scopeText}`,
+          `Deliverables:\n${phase.deliverablesText}`,
+          `Acceptance:\n${phase.acceptanceText}`,
+        ].join("\n")).join("\n\n")}`
+      : "",
+    approvedContract?.outOfScopeEnabled ? `OUT OF SCOPE\n${approvedContract.outOfScopeText}` : "",
     approved?.assumptionsMd ? `PROPOSAL ASSUMPTIONS\n${approved.assumptionsMd}` : "",
     deal.discoveryMd ? `DISCOVERY PACKAGE\n${deal.discoveryMd}` : "",
     deal.notes ? `DEAL NOTES\n${deal.notes}` : "",

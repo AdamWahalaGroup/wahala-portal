@@ -18,19 +18,40 @@ import {
   type BuyingPath,
   type PackageFields,
 } from "@/domain/process";
+import type { ProposalCoverageReview, ProposalScopeDetails } from "@/domain/proposal-doc";
 import { StageError } from "@/domain/stage-machine";
 import { getDraftProvider, type DraftPart, type DraftUsage } from "./provider";
 import { resolveAgentConfig } from "./agent-config";
 
 export type ProposalProseOutput = {
   execSummary: string;
-  options: { label: string; name: string; phaseNames: string[] }[];
+  options: {
+    label: string;
+    name: string;
+    summaryMd: string;
+    scopeDetails: ProposalScopeDetails;
+    phases: { name: string; scopeDetails: ProposalScopeDetails }[];
+  }[];
+  coverage: ProposalCoverageReview;
 };
+
+const scopeDetailsJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["objective", "scopeItems", "deliverables", "acceptanceCriteria", "exclusions"],
+  properties: {
+    objective: { type: "string" },
+    scopeItems: { type: "array", items: { type: "string" } },
+    deliverables: { type: "array", items: { type: "string" } },
+    acceptanceCriteria: { type: "array", items: { type: "string" } },
+    exclusions: { type: "array", items: { type: "string" } },
+  },
+} as const;
 
 const proseJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["execSummary", "options"],
+  required: ["execSummary", "options", "coverage"],
   properties: {
     execSummary: { type: "string" },
     options: {
@@ -38,12 +59,58 @@ const proseJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["label", "name", "phaseNames"],
+        required: ["label", "name", "summaryMd", "scopeDetails", "phases"],
         properties: {
           label: { type: "string" },
           name: { type: "string" },
-          phaseNames: { type: "array", items: { type: "string" } },
+          summaryMd: { type: "string" },
+          scopeDetails: scopeDetailsJsonSchema,
+          phases: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["name", "scopeDetails"],
+              properties: {
+                name: { type: "string" },
+                scopeDetails: scopeDetailsJsonSchema,
+              },
+            },
+          },
         },
+      },
+    },
+    coverage: {
+      type: "object",
+      additionalProperties: false,
+      required: ["items", "warnings"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["priority", "placements"],
+            properties: {
+              priority: { type: "string" },
+              placements: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["optionLabel", "disposition", "phaseName", "note"],
+                  properties: {
+                    optionLabel: { type: "string" },
+                    disposition: { type: "string", enum: ["included", "deferred", "question"] },
+                    phaseName: { type: ["string", "null"] },
+                    note: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        },
+        warnings: { type: "array", items: { type: "string" } },
       },
     },
   },
@@ -147,7 +214,7 @@ export async function draftProposalProse(
     },
     {
       kind: "text",
-      text: `OPTION SHAPES (fixed by the salesperson + pricing math — do NOT change the structure, only write names)\n\n${shapeLines}\n\nReturn one options entry per shape, same labels, in order. phaseNames must have exactly the phase count for phased options and be [] for single-delivery options.`,
+      text: `OPTION SHAPES (fixed by the salesperson + pricing math — do NOT change the structure)\n\n${shapeLines}\n\nReturn one options entry per shape, same labels, in order. phases must have exactly the given phase count for phased options and be [] for single-delivery options.`,
     },
   ];
 
@@ -167,6 +234,37 @@ export async function draftProposalProse(
   }
   if (!output.execSummary?.trim()) {
     throw new StageError("VALIDATION", "The model returned an empty summary.");
+  }
+  for (const [index, shape] of input.shapes.entries()) {
+    const option = output.options[index];
+    if (option?.label !== shape.label) throw new StageError("VALIDATION", `The model changed Option ${shape.label}'s label or order.`);
+    if (option.phases.length !== shape.phaseCount) throw new StageError("VALIDATION", `Option ${shape.label} needs exactly ${shape.phaseCount} drafted phase${shape.phaseCount === 1 ? "" : "s"}.`);
+    if (!option.name.trim() || !option.summaryMd.trim() || !option.scopeDetails.objective.trim()) {
+      throw new StageError("VALIDATION", `Option ${shape.label} returned incomplete scope.`);
+    }
+  }
+  const optionLabels = new Set(input.shapes.map((shape) => shape.label));
+  const expectsCoverage = input.evidenceContext.discoveryPackage.fields.some((field) =>
+    (field.key === "mvp_priorities" || field.key === "success_metrics") && field.status !== "missing" && !!field.evidence,
+  );
+  if (expectsCoverage && output.coverage.items.length === 0) {
+    throw new StageError("VALIDATION", "The model omitted MVP coverage despite supported priority evidence.");
+  }
+  for (const item of output.coverage.items) {
+    const placed = new Set(item.placements.map((placement) => placement.optionLabel));
+    if (!item.priority.trim() || item.placements.length !== optionLabels.size || optionLabels.size !== placed.size || [...optionLabels].some((label) => !placed.has(label))) {
+      throw new StageError("VALIDATION", "Every MVP coverage item must be classified for every option.");
+    }
+    for (const placement of item.placements) {
+      const optionIndex = input.shapes.findIndex((shape) => shape.label === placement.optionLabel);
+      const option = output.options[optionIndex];
+      if (placement.disposition === "included" && option.phases.length > 0 && !option.phases.some((phase) => phase.name === placement.phaseName)) {
+        throw new StageError("VALIDATION", `Included coverage for Option ${placement.optionLabel} must name one of its drafted phases.`);
+      }
+      if (option.phases.length === 0 && placement.phaseName !== null) {
+        throw new StageError("VALIDATION", `Single-delivery Option ${placement.optionLabel} cannot name a phase in coverage.`);
+      }
+    }
   }
   return { output, usage };
 }
