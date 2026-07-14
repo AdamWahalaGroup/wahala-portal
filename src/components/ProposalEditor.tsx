@@ -801,55 +801,99 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
 
               {/* Phases */}
               {o.phases !== null && (
-                <div style={{ borderTop: "1px solid var(--border-softer)", paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ borderTop: "1px solid var(--border-softer)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="kicker" style={{ fontSize: 9.5 }}>Phases</div>
                   {o.phases.map((ph, i) => (
-                    <div key={i} style={{ display: "grid", gap: 7, background: "var(--surface-soft)", borderRadius: 9, padding: 9 }}>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <div
+                      key={i}
+                      style={{
+                        display: "grid",
+                        background: "var(--white)",
+                        border: "1px solid #DDE1EE",
+                        borderLeft: "3px solid #5362D9",
+                        borderRadius: 11,
+                        overflow: "hidden",
+                        boxShadow: "0 2px 8px rgba(31, 38, 75, 0.05)",
+                      }}
+                    >
+                      <div style={{ display: "grid", gap: 8, background: "#F7F8FC", borderBottom: "1px solid #E3E6EF", padding: "11px 12px" }}>
                         {isDraft && (
                           <>
-                            <input
-                              value={ph.name}
-                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
-                              style={{ ...inputStyle, flex: 2, fontSize: 12 }}
-                            />
-                            <input
-                              value={ph.amountDollars}
-                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, amountDollars: e.target.value.replace(/[^0-9.]/g, "") } : p)) })}
-                              placeholder="$"
-                              inputMode="numeric"
-                              style={{ ...inputStyle, width: 84, fontSize: 12 }}
-                            />
-                            <input
-                              value={String(ph.weeks)}
-                              onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, weeks: Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0) } : p)) })}
-                              title="weeks"
-                              inputMode="numeric"
-                              style={{ ...inputStyle, width: 46, fontSize: 12 }}
-                            />
-                            <button
-                              onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
-                              title="Remove phase"
-                              style={{ border: 0, background: "none", color: "#C4C8CF", fontSize: 13, cursor: "pointer", padding: 0 }}
-                            >
-                              ✕
-                            </button>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
+                              <span className="mono" style={{ flex: "none", borderRadius: 999, background: "#E6E9FF", color: "#3443B8", padding: "5px 8px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em" }}>
+                                PHASE {i + 1}
+                              </span>
+                              <input
+                                aria-label={`Phase ${i + 1} title`}
+                                value={ph.name}
+                                onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, name: e.target.value } : p)) })}
+                                style={{ ...inputStyle, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 800, padding: "8px 10px" }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => patchOpt(o.id, { phases: o.phases!.filter((_, j) => j !== i) })}
+                                title="Remove phase"
+                                aria-label={`Remove phase ${i + 1}`}
+                                style={{ flex: "none", width: 26, height: 26, border: 0, borderRadius: 7, background: "transparent", color: "#A8ADB8", fontSize: 14, cursor: "pointer", padding: 0 }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", paddingLeft: 1, flexWrap: "wrap" }}>
+                              <label style={{ display: "grid", gap: 3 }}>
+                                <span className="kicker" style={{ fontSize: 8 }}>Phase fee</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700 }}>$</span>
+                                  <input
+                                    aria-label={`Phase ${i + 1} fee`}
+                                    value={ph.amountDollars}
+                                    onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, amountDollars: e.target.value.replace(/[^0-9.]/g, "") } : p)) })}
+                                    placeholder="0"
+                                    inputMode="numeric"
+                                    style={{ ...inputStyle, width: 96, fontSize: 12, padding: "6px 8px" }}
+                                  />
+                                </div>
+                              </label>
+                              <label style={{ display: "grid", gap: 3 }}>
+                                <span className="kicker" style={{ fontSize: 8 }}>Duration</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <input
+                                    aria-label={`Phase ${i + 1} duration in weeks`}
+                                    value={String(ph.weeks)}
+                                    onChange={(e) => patchOpt(o.id, { phases: o.phases!.map((p, j) => (j === i ? { ...p, weeks: Math.max(0, parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0) } : p)) })}
+                                    inputMode="numeric"
+                                    style={{ ...inputStyle, width: 50, fontSize: 12, padding: "6px 8px" }}
+                                  />
+                                  <span style={{ color: "var(--muted)", fontSize: 11 }}>weeks</span>
+                                </div>
+                              </label>
+                            </div>
                           </>
                         )}
                         {isLocked && (
-                          <span className="mono" style={{ fontSize: 11, color: "var(--ink-soft)" }}>
-                            {ph.name} · <Money cents={ph.amountCents} /> · {ph.weeks}w
-                            {o.id === proposal.selectedOptionId && (
-                              <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
-                                {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
+                          <>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
+                              <span className="mono" style={{ flex: "none", borderRadius: 999, background: "#E6E9FF", color: "#3443B8", padding: "5px 8px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em" }}>
+                                PHASE {i + 1}
                               </span>
-                            )}
-                          </span>
+                              <h4 style={{ margin: 0, color: "var(--ink)", fontSize: 15, lineHeight: 1.25 }}>{ph.name}</h4>
+                            </div>
+                            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
+                              <Money cents={ph.amountCents} /> · {ph.weeks} weeks
+                              {o.id === proposal.selectedOptionId && (
+                                <span style={{ color: ph.status === "active" ? "#2536C4" : ph.status === "done" ? "#15803D" : "var(--muted-line)" }}>
+                                  {" "}· {ph.status === "done" ? "delivered" : ph.status === "active" ? "active" : "awaits amendment"}
+                                </span>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
-                      {isDraft
-                        ? <ScopeDetailsEditor compact details={ph.scopeDetails ?? blankScope()} onChange={(key, value) => patchPhaseScope(o.id, i, key, value)} />
-                        : <ScopeDetailsRead details={ph.scopeDetails} />}
+                      <div style={{ padding: 12 }}>
+                        {isDraft
+                          ? <ScopeDetailsEditor compact details={ph.scopeDetails ?? blankScope()} onChange={(key, value) => patchPhaseScope(o.id, i, key, value)} />
+                          : <ScopeDetailsRead details={ph.scopeDetails} />}
+                      </div>
                     </div>
                   ))}
                   {isDraft && (
