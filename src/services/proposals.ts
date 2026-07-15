@@ -31,7 +31,7 @@ import {
   buildContractPhases,
   type PathCount,
 } from "@/domain/proposal-math";
-import { assertSalesManager } from "@/services/sales";
+import { assertCanManageDeal } from "@/services/sales";
 import { buildProposalEvidenceContext, draftProposalProse, splitProposalEvidenceItems } from "@/services/ai/proposal";
 import { recordAiRun } from "@/services/ai/usage";
 import { buildAudit } from "@/services/audit";
@@ -337,12 +337,21 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
 // ---------------------------------------------------------------- create
 
 async function loadDealForCreate(ctx: AuthContext, dealId: string, action: string) {
-  assertSalesManager(ctx, action);
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  assertStaffScoped(ctx, deal.organizationId, action);
+  assertCanManageDeal(ctx, deal, action);
   return deal;
+}
+
+async function assertCanManageProposal(
+  ctx: AuthContext,
+  proposal: { dealId: string },
+  action: string,
+): Promise<void> {
+  const deal = await getDb().query.deals.findFirst({ where: eq(schema.deals.id, proposal.dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Proposal not found.");
+  assertCanManageDeal(ctx, deal, action);
 }
 
 /** Who on the client side can sign — snapshot from the deal's primary contact. */
@@ -536,9 +545,8 @@ export async function roughDraftProposal(
 // ---------------------------------------------------------------- edit (draft only)
 
 async function loadDraft(ctx: AuthContext, proposalId: string, action: string) {
-  assertSalesManager(ctx, action);
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, action);
+  await assertCanManageProposal(ctx, p, action);
   if (p.status !== "draft") throw new StageError("INVALID_STATE", "Only a draft proposal can be edited.");
   return p;
 }
@@ -695,9 +703,8 @@ export async function removeProposalOption(ctx: AuthContext, proposalId: string,
  * post-mortems. Sent-delete is the "sent by mistake" escape hatch.
  */
 export async function deleteProposal(ctx: AuthContext, proposalId: string): Promise<void> {
-  assertSalesManager(ctx, "delete_proposal");
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, "delete_proposal");
+  await assertCanManageProposal(ctx, p, "delete_proposal");
   if (p.status !== "draft" && p.status !== "sent") {
     throw new StageError("INVALID_STATE", "Only a draft or sent proposal can be deleted — this one is part of the deal's record.");
   }
@@ -726,9 +733,8 @@ export async function deleteProposal(ctx: AuthContext, proposalId: string): Prom
  * to 'proposal_out'. Complexity >3 is a SOFT flag — the UI confirms, never blocks.
  */
 export async function sendProposal(ctx: AuthContext, proposalId: string): Promise<{ shareToken: string; movedToProposalOut: boolean }> {
-  assertSalesManager(ctx, "send_proposal");
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, "send_proposal");
+  await assertCanManageProposal(ctx, p, "send_proposal");
   if (p.status !== "draft") throw new StageError("INVALID_STATE", `Cannot send a ${p.status} proposal.`);
 
   const options = await loadOptions(proposalId);
@@ -887,9 +893,8 @@ export async function recordProposalResponse(
   proposalId: string,
   input: { outcome: "approved" | "declined"; optionId?: string; respondedByName?: string; responseNote?: string },
 ): Promise<void> {
-  assertSalesManager(ctx, "record_proposal_response");
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, "record_proposal_response");
+  await assertCanManageProposal(ctx, p, "record_proposal_response");
   await applyResponse(p, {
     outcome: input.outcome,
     optionId: input.optionId,
@@ -907,9 +912,8 @@ export async function recordProposalResponse(
  * confirmed IN-APP, no new signature. Strict preconditions; audited.
  */
 export async function amendPhase(ctx: AuthContext, proposalId: string, phaseIndex: number): Promise<void> {
-  assertSalesManager(ctx, "amend_phase");
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, "amend_phase");
+  await assertCanManageProposal(ctx, p, "amend_phase");
   if (p.status !== "approved") throw new StageError("INVALID_STATE", "Phases activate only after the master signature is on file.");
   if (!p.selectedOptionId) throw new StageError("INVALID_STATE", "No signed option on this proposal.");
   const options = await loadOptions(proposalId);
@@ -940,9 +944,8 @@ export async function amendPhase(ctx: AuthContext, proposalId: string, phaseInde
 // ---------------------------------------------------------------- contract / SOW
 
 async function loadForContract(ctx: AuthContext, proposalId: string, action: string) {
-  assertSalesManager(ctx, action);
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, action);
+  await assertCanManageProposal(ctx, p, action);
   return p;
 }
 

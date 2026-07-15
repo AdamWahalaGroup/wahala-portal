@@ -21,6 +21,12 @@ protects customer trust and scarce founder attention by preserving evidence,
 commitments, commercial decisions, payment state, delivery acceptance, and
 postmortems in one account thread.
 
+Wahala employees are invited deliberately. **Sales / account owner** is the
+non-admin commercial role for employees who manage assigned customer
+relationships; Training mode is a temporary coaching setting, not a security
+role. Full Wahala admin access is reserved for people who need global commercial,
+configuration, and team-management authority.
+
 ## Durable principles
 
 1. Bootstrap with customer revenue; reusable engineering should create margin.

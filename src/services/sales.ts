@@ -15,6 +15,7 @@
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
+import { canManageCommercialDeal } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { isDealStage, daysInStage, FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 import { isStuckWith, type SlaSettings } from "@/domain/sla";
@@ -52,6 +53,22 @@ export function assertSalesManager(ctx: AuthContext, action: string): void {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_admin_or_owner" });
     throw new StageError("FORBIDDEN", "Only a Wahala admin or account owner can do that.");
   }
+}
+
+/**
+ * Resource-level commercial boundary. Admins may manage every Deal. A Sales /
+ * account owner may manage Deals on an account they own, or an account-less
+ * opportunity explicitly assigned to them.
+ */
+export function assertCanManageDeal(
+  ctx: AuthContext,
+  deal: { id: string; organizationId: string | null; ownerUserId: string | null },
+  action: string,
+): void {
+  assertSalesManager(ctx, action);
+  if (canManageCommercialDeal({ userId: ctx.user.id, role: ctx.user.role }, ctx.accessScope, deal)) return;
+  securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, resource: `deal:${deal.id}`, reason: "out_of_scope" });
+  throw new StageError("NOT_FOUND", "Deal not found.");
 }
 
 // ---------------------------------------------------------------- contacts (people first)
@@ -522,11 +539,11 @@ export async function setDealStage(
   reason?: string,
   opts: { override?: boolean } = {},
 ): Promise<void> {
-  assertSalesManager(ctx, "set_deal_stage");
   if (!isDealStage(stage)) throw new StageError("VALIDATION", "Unknown sales stage.");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "set_deal_stage");
   if (deal.stage === stage) return;
   const discoveryPackage = await db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) });
   const solutionClarity = readinessFrom((discoveryPackage?.fields ?? {}) as PackageFields);
@@ -666,10 +683,10 @@ export async function updateDeal(
   dealId: string,
   input: DealUpdateInput,
 ): Promise<void> {
-  assertSalesManager(ctx, "update_deal");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "update_deal");
   const patch: Partial<typeof schema.deals.$inferInsert> = {};
   if (input.name !== undefined) {
     const name = input.name.trim();
@@ -762,10 +779,10 @@ export async function setDeposit(
   dealId: string,
   input: { amountCents?: number; markSent?: boolean; markPaid?: boolean },
 ): Promise<void> {
-  assertSalesManager(ctx, "set_deposit");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "set_deposit");
   const patch: Partial<typeof schema.deals.$inferInsert> = {};
   if (input.amountCents !== undefined) patch.depositCents = Math.max(0, Math.round(input.amountCents));
   const now = new Date();

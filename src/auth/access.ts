@@ -73,3 +73,15 @@ export function canAccessProject(
   if (scope.kind === "orgs") return scope.orgIds.includes(project.organizationId);
   return scope.projectIds.includes(project.id);
 }
+
+/** Resource-level write boundary for the Wahala commercial roles. */
+export function canManageCommercialDeal(
+  actor: { userId: string; role: string },
+  scope: AccessScope,
+  deal: { organizationId: string | null; ownerUserId: string | null },
+): boolean {
+  if (actor.role === "wahala_admin") return scope.kind === "all";
+  if (actor.role !== "account_owner") return false;
+  if (deal.organizationId) return canAccessOrg(scope, deal.organizationId);
+  return deal.ownerUserId === actor.userId;
+}

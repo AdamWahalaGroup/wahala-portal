@@ -27,12 +27,18 @@ Users authenticate through a one-time email link or configured Google SSO.
 Magic-link and session tokens are random, stored as hashes, and delivered to the
 browser in an `httpOnly`, `Secure`, `SameSite=Lax` cookie.
 
+Wahala staff accounts are invite-only through **Team → Add member**. Google SSO
+must return the exact invited primary email; a Workspace or plus-address alias is
+not a second Google identity and uses the one-time email-link path instead. An
+unknown address on a Wahala domain is denied rather than automatically receiving
+admin access.
+
 `src/auth/access.ts` computes one access scope per request:
 
 | Role | Scope |
 |---|---|
 | Wahala admin | All organizations |
-| Account owner | Organizations they own |
+| Sales / account owner | Organizations they own |
 | Lead engineer / engineer | Projects they lead or are assigned to |
 | Client roles | Their own organization |
 

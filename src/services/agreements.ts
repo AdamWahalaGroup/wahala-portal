@@ -9,6 +9,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
+import { canAccessOrg } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { defaultDepositCents } from "@/domain/proposal-math";
 import { assertSalesManager, assertStaff } from "@/services/sales";
@@ -43,6 +44,7 @@ const toRow = (a: typeof schema.agreements.$inferSelect): AgreementRow => ({
 /** All agreements on an account (the Account page's right-rail list). */
 export async function listForAccount(ctx: AuthContext, organizationId: string): Promise<AgreementRow[]> {
   assertStaff(ctx, "list_agreements");
+  if (!canAccessOrg(ctx.accessScope, organizationId)) throw new StageError("NOT_FOUND", "Account not found.");
   const db = getDb();
   const rows = await db.select().from(schema.agreements).where(eq(schema.agreements.organizationId, organizationId));
   // Account view: one row per kind for account-level docs (latest wins), all deal docs.
@@ -55,6 +57,7 @@ export async function listForAccount(ctx: AuthContext, organizationId: string): 
  */
 export async function listForDeal(ctx: AuthContext, organizationId: string, dealId: string): Promise<{ rows: AgreementRow[]; msaOnFile: boolean }> {
   assertStaff(ctx, "list_agreements");
+  if (!canAccessOrg(ctx.accessScope, organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   const db = getDb();
   const all = await db.select().from(schema.agreements).where(eq(schema.agreements.organizationId, organizationId));
   const msaOnFile = all.some((a) => a.kind === "msa" && a.status === "signed");
@@ -87,6 +90,7 @@ export async function setAgreementStatus(
   const db = getDb();
   const row = await db.query.agreements.findFirst({ where: eq(schema.agreements.id, agreementId) });
   if (!row) throw new StageError("NOT_FOUND", "Agreement not found.");
+  if (!canAccessOrg(ctx.accessScope, row.organizationId)) throw new StageError("NOT_FOUND", "Agreement not found.");
   const signedAt = input.status === "signed" ? row.signedAt ?? new Date() : null;
   await db.batch([
     db

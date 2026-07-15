@@ -14,7 +14,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { assertSalesManager, assertStaff } from "@/services/sales";
+import { assertCanManageDeal, assertSalesManager, assertStaff } from "@/services/sales";
 import { daysInStage, STAGE_META, type DealStage } from "@/domain/sales";
 import {
   applyManualField,
@@ -364,8 +364,7 @@ export async function ingestCall(
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  const scope = ctx.accessScope;
-  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "ingest_call");
   return ingestCallCore(deal, input, ctx.user.id);
 }
 
@@ -420,6 +419,7 @@ export async function applyCallReview(
 ): Promise<{ readiness: number | null; fieldsImproved: number }> {
   assertSalesManager(ctx, "apply_discovery_review");
   const { db, deal, call } = await reviewContext(ctx, dealId, callId);
+  assertCanManageDeal(ctx, deal, "apply_discovery_review");
   if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
   const storedAnalysis = call.discoveryAnalysis as DiscoveryAnalysis | null;
   if (!storedAnalysis) throw new StageError("INVALID_STATE", "This call has no reviewable analysis.");
@@ -579,6 +579,7 @@ export async function applyCallReview(
 export async function dismissCallReview(ctx: AuthContext, dealId: string, callId: string): Promise<void> {
   assertSalesManager(ctx, "dismiss_discovery_review");
   const { db, deal, call } = await reviewContext(ctx, dealId, callId);
+  assertCanManageDeal(ctx, deal, "dismiss_discovery_review");
   if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
   await db.batch([
     db.update(schema.dealCalls)
@@ -617,8 +618,7 @@ export async function setPackageField(
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  const scope = ctx.accessScope;
-  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "set_package_field");
 
   const previous = await loadPackage(dealId);
   const fieldKey = key as PackageFieldKey;
@@ -661,8 +661,7 @@ export async function setBuyingPathField(
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  const scope = ctx.accessScope;
-  if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "set_buying_path_field");
 
   let budgetStatus = deal.budgetStatus;
   if (fieldKey === "budget" && input.budgetStatus !== undefined) {

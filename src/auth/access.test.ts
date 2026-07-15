@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canAccessOrg, canAccessProject, type AccessScope } from "@/auth/access";
+import { canAccessOrg, canAccessProject, canManageCommercialDeal, type AccessScope } from "@/auth/access";
 
 const all: AccessScope = { kind: "all" };
 const orgsA: AccessScope = { kind: "orgs", orgIds: ["A"] };
@@ -44,5 +44,27 @@ describe("canAccessProject", () => {
   });
   it("empty scope reaches no project", () => {
     expect(canAccessProject(noOrgs, inA)).toBe(false);
+  });
+});
+
+describe("canManageCommercialDeal", () => {
+  it("allows an admin with all-account scope", () => {
+    expect(canManageCommercialDeal({ userId: "admin", role: "wahala_admin" }, all, { organizationId: "B", ownerUserId: "other" })).toBe(true);
+  });
+
+  it("allows a Sales / account owner only on an owned account", () => {
+    const actor = { userId: "owner", role: "account_owner" };
+    expect(canManageCommercialDeal(actor, orgsA, { organizationId: "A", ownerUserId: "other" })).toBe(true);
+    expect(canManageCommercialDeal(actor, orgsA, { organizationId: "B", ownerUserId: "owner" })).toBe(false);
+  });
+
+  it("uses explicit deal ownership for an account-less opportunity", () => {
+    const actor = { userId: "owner", role: "account_owner" };
+    expect(canManageCommercialDeal(actor, noOrgs, { organizationId: null, ownerUserId: "owner" })).toBe(true);
+    expect(canManageCommercialDeal(actor, noOrgs, { organizationId: null, ownerUserId: "other" })).toBe(false);
+  });
+
+  it("does not grant commercial writes to delivery roles", () => {
+    expect(canManageCommercialDeal({ userId: "lead", role: "lead_engineer" }, orgsA, { organizationId: "A", ownerUserId: "lead" })).toBe(false);
   });
 });
