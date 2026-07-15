@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canAccessOrg, canAccessProject, canManageCommercialDeal, type AccessScope } from "@/auth/access";
+import { canAccessOrg, canAccessProject, canManageCommercialDeal, canSalesRepSeedOpportunityOnAccount, type AccessScope } from "@/auth/access";
 
 const all: AccessScope = { kind: "all" };
 const orgsA: AccessScope = { kind: "orgs", orgIds: ["A"] };
@@ -72,5 +72,45 @@ describe("canManageCommercialDeal", () => {
 
   it("does not grant commercial writes to delivery roles", () => {
     expect(canManageCommercialDeal({ userId: "lead", role: "lead_engineer" }, orgsA, { organizationId: "A", ownerUserId: "lead" })).toBe(false);
+  });
+});
+
+describe("canSalesRepSeedOpportunityOnAccount", () => {
+  const firstDealScope: AccessScope = { kind: "projects", projectIds: [], orgIds: [] };
+
+  it("lets an assigned rep create their first Deal on the contact's account", () => {
+    expect(
+      canSalesRepSeedOpportunityOnAccount({
+        scope: firstDealScope,
+        userId: "rep",
+        contactAssignedToUserId: "rep",
+        contactOrganizationId: "atlantic",
+        linkedOrganizationIds: ["atlantic"],
+        organizationId: "atlantic",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not let a rep use an unrelated account or another rep's contact", () => {
+    expect(
+      canSalesRepSeedOpportunityOnAccount({
+        scope: firstDealScope,
+        userId: "rep",
+        contactAssignedToUserId: "rep",
+        contactOrganizationId: "atlantic",
+        linkedOrganizationIds: ["atlantic"],
+        organizationId: "other-account",
+      }),
+    ).toBe(false);
+    expect(
+      canSalesRepSeedOpportunityOnAccount({
+        scope: firstDealScope,
+        userId: "rep",
+        contactAssignedToUserId: "another-rep",
+        contactOrganizationId: "atlantic",
+        linkedOrganizationIds: ["atlantic"],
+        organizationId: "atlantic",
+      }),
+    ).toBe(false);
   });
 });
