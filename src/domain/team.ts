@@ -1,5 +1,6 @@
 /** Wahala-side roles an admin may assign when inviting a team member. */
 export const INVITABLE_STAFF_ROLES = [
+  "sales_rep",
   "account_owner",
   "lead_engineer",
   "engineer",
@@ -12,9 +13,13 @@ export const STAFF_ROLE_META: Record<
   InvitableStaffRole,
   { label: string; description: string }
 > = {
+  sales_rep: {
+    label: "Sales rep",
+    description: "Manages opportunities and proposals assigned to them; an account owner or admin controls payment and project handoff.",
+  },
   account_owner: {
-    label: "Sales / account owner",
-    description: "Manages opportunities and commercial work for accounts assigned to them.",
+    label: "Account owner",
+    description: "Owns the customer relationship and commercial work across an assigned account.",
   },
   lead_engineer: {
     label: "Lead engineer",

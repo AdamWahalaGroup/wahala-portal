@@ -14,7 +14,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { assertCanManageDeal, assertSalesManager, assertStaff } from "@/services/sales";
+import { assertCanManageDeal, assertDealSeller, assertStaff } from "@/services/sales";
 import { daysInStage, STAGE_META, type DealStage } from "@/domain/sales";
 import {
   applyManualField,
@@ -360,7 +360,7 @@ export async function ingestCall(
   dealId: string,
   input: { title: string; transcriptMd: string; recordedAt?: string; durationMin?: number },
 ): Promise<{ callId: string; analysis: DiscoveryAnalysis; recommended: DiscoveryReviewRecommendation; usage: DraftUsage }> {
-  assertSalesManager(ctx, "ingest_call");
+  assertDealSeller(ctx, "ingest_call");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
@@ -382,6 +382,9 @@ async function reviewContext(ctx: AuthContext, dealId: string, callId: string) {
     db.query.dealCalls.findFirst({ where: eq(schema.dealCalls.id, callId) }),
   ]);
   if (!deal || !call || call.dealId !== dealId) throw new StageError("NOT_FOUND", "Discovery review not found.");
+  if (ctx.user.role === "sales_rep" && deal.ownerUserId !== ctx.user.id) {
+    throw new StageError("NOT_FOUND", "Discovery review not found.");
+  }
   const scope = ctx.accessScope;
   if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) {
     throw new StageError("NOT_FOUND", "Discovery review not found.");
@@ -417,7 +420,7 @@ export async function applyCallReview(
   callId: string,
   requested: DiscoveryReviewSelection,
 ): Promise<{ readiness: number | null; fieldsImproved: number }> {
-  assertSalesManager(ctx, "apply_discovery_review");
+  assertDealSeller(ctx, "apply_discovery_review");
   const { db, deal, call } = await reviewContext(ctx, dealId, callId);
   assertCanManageDeal(ctx, deal, "apply_discovery_review");
   if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
@@ -577,7 +580,7 @@ export async function applyCallReview(
 }
 
 export async function dismissCallReview(ctx: AuthContext, dealId: string, callId: string): Promise<void> {
-  assertSalesManager(ctx, "dismiss_discovery_review");
+  assertDealSeller(ctx, "dismiss_discovery_review");
   const { db, deal, call } = await reviewContext(ctx, dealId, callId);
   assertCanManageDeal(ctx, deal, "dismiss_discovery_review");
   if (call.reviewStatus !== "pending") throw new StageError("INVALID_STATE", "This discovery review is already resolved.");
@@ -610,7 +613,7 @@ export async function setPackageField(
   key: string,
   input: { status: string; evidence?: string },
 ): Promise<{ readiness: number; field: PackageField }> {
-  assertSalesManager(ctx, "set_package_field");
+  assertDealSeller(ctx, "set_package_field");
   if (!(SOLUTION_CLARITY_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown Discovery Package field.");
   if (!(schema.PACKAGE_FIELD_STATUSES as readonly string[]).includes(input.status)) throw new StageError("VALIDATION", "Status must be ok, partial, or missing.");
   const evidence = input.evidence?.trim().slice(0, 500) || null;
@@ -652,7 +655,7 @@ export async function setBuyingPathField(
   key: string,
   input: { status: string; evidence?: string; budgetStatus?: string },
 ): Promise<{ buyingPath: BuyingPath; field: PackageField }> {
-  assertSalesManager(ctx, "set_buying_path_field");
+  assertDealSeller(ctx, "set_buying_path_field");
   if (!(BUYING_PATH_FIELDS as readonly string[]).includes(key)) throw new StageError("VALIDATION", "Unknown buying-path field.");
   const evidence = input.evidence?.trim().slice(0, 500) || null;
   const fieldKey = key as BuyingPathFieldKey;
@@ -731,6 +734,7 @@ export async function readinessCheck(ctx: AuthContext, dealId: string): Promise<
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (ctx.user.role === "sales_rep" && deal.ownerUserId !== ctx.user.id) throw new StageError("NOT_FOUND", "Deal not found.");
   const fields = await loadPackage(dealId);
   const score = readinessFrom(fields);
   const failed = failedChecks(fields);
@@ -763,6 +767,7 @@ export async function recordNudgeOutcome(
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (ctx.user.role === "sales_rep" && deal.ownerUserId !== ctx.user.id) throw new StageError("NOT_FOUND", "Deal not found.");
   const fields = await loadPackage(dealId);
   await recordProcessEvent({
     organizationId: deal.organizationId,

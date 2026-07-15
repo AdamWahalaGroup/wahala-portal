@@ -12,7 +12,7 @@ import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
-import { assertSalesManager, assertStaff } from "@/services/sales";
+import { assertCanManageDeal, assertDealSeller, assertStaff } from "@/services/sales";
 import { buildAudit } from "@/services/audit";
 import { ingestCallCore } from "@/services/process";
 import {
@@ -56,11 +56,20 @@ export async function syncUserCalendar(ctx: AuthContext): Promise<{ synced: numb
 
   const db = getDb();
   const staffDomains = new Set([...staffSsoDomains(), "wahala.group"]);
-  const [suppressions, contacts, orgs] = await Promise.all([
+  const [suppressions, allContacts, orgs] = await Promise.all([
     db.select().from(schema.meetingSuppressions),
-    db.select({ id: schema.contacts.id, email: schema.contacts.email, organizationId: schema.contacts.organizationId }).from(schema.contacts),
+    db.select({ id: schema.contacts.id, email: schema.contacts.email, organizationId: schema.contacts.organizationId, assignedToUserId: schema.contacts.assignedToUserId }).from(schema.contacts),
     db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations),
   ]);
+  let contacts = allContacts;
+  if (ctx.user.role === "sales_rep") {
+    const ownedDeals = await db
+      .select({ primaryContactId: schema.deals.primaryContactId })
+      .from(schema.deals)
+      .where(eq(schema.deals.ownerUserId, ctx.user.id));
+    const relatedIds = new Set(ownedDeals.map((deal) => deal.primaryContactId).filter((id): id is string => !!id));
+    contacts = contacts.filter((contact) => contact.assignedToUserId === ctx.user.id || relatedIds.has(contact.id));
+  }
   const suppressedEvents = new Set(suppressions.map((s) => s.googleEventId).filter(Boolean) as string[]);
   const suppressedSeries = new Set(suppressions.map((s) => s.recurringEventId).filter(Boolean) as string[]);
   const contactByEmail = new Map(contacts.filter((c) => c.email && c.organizationId).map((c) => [c.email!.toLowerCase(), c]));
@@ -108,10 +117,12 @@ export async function syncUserCalendar(ctx: AuthContext): Promise<{ synced: numb
     if (exact?.organizationId) {
       organizationId = exact.organizationId;
       const openDeals = await db
-        .select({ id: schema.deals.id, stage: schema.deals.stage, primaryContactId: schema.deals.primaryContactId })
+        .select({ id: schema.deals.id, stage: schema.deals.stage, primaryContactId: schema.deals.primaryContactId, ownerUserId: schema.deals.ownerUserId })
         .from(schema.deals)
         .where(eq(schema.deals.organizationId, exact.organizationId));
-      const open = openDeals.filter((d) => d.stage !== "won" && d.stage !== "lost");
+      const open = openDeals.filter(
+        (d) => d.stage !== "won" && d.stage !== "lost" && (ctx.user.role !== "sales_rep" || d.ownerUserId === ctx.user.id),
+      );
       const mine = open.filter((d) => d.primaryContactId === exact.id);
       if (mine.length === 1) dealId = mine[0].id;
       else if (open.length === 1) dealId = open[0].id;
@@ -196,10 +207,29 @@ function toView(m: typeof schema.meetings.$inferSelect, names?: Map<string, stri
   };
 }
 
+async function assertCanManageMeeting(
+  ctx: AuthContext,
+  meeting: Pick<typeof schema.meetings.$inferSelect, "id" | "dealId" | "syncedByUserId">,
+  action: string,
+): Promise<void> {
+  if (ctx.user.role !== "sales_rep") return;
+  if (!meeting.dealId) {
+    if (meeting.syncedByUserId === ctx.user.id) return;
+    throw new StageError("NOT_FOUND", "Meeting not found.");
+  }
+  const deal = await getDb().query.deals.findFirst({ where: eq(schema.deals.id, meeting.dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Meeting not found.");
+  assertCanManageDeal(ctx, deal, action);
+}
+
 /** Meetings on one deal, newest-first; the next upcoming one is the deal's next step. */
 export async function meetingsForDeal(ctx: AuthContext, dealId: string): Promise<MeetingView[]> {
   assertStaff(ctx, "meetings_for_deal");
   const db = getDb();
+  if (ctx.user.role === "sales_rep") {
+    const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
+    if (!deal || deal.ownerUserId !== ctx.user.id) throw new StageError("NOT_FOUND", "Deal not found.");
+  }
   const rows = await db.select().from(schema.meetings).where(eq(schema.meetings.dealId, dealId));
   const names = await userNames(rows.map((r) => r.createdByUserId));
   return rows.sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime()).map((r) => toView(r, names));
@@ -215,7 +245,15 @@ export async function todayMeetings(ctx: AuthContext): Promise<(MeetingView & { 
     .select()
     .from(schema.meetings)
     .where(and(gte(schema.meetings.startsAt, new Date(Date.now() - 90 * 60_000)), eq(schema.meetings.status, "upcoming")));
-  const today = rows.filter((r) => r.startsAt <= dayEnd && (r.organizationId || r.dealId));
+  let today = rows.filter((r) => r.startsAt <= dayEnd && (r.organizationId || r.dealId));
+  if (ctx.user.role === "sales_rep") {
+    const candidateDealIds = [...new Set(today.map((row) => row.dealId).filter(Boolean) as string[])];
+    const owned = candidateDealIds.length
+      ? await db.select({ id: schema.deals.id }).from(schema.deals).where(and(inArray(schema.deals.id, candidateDealIds), eq(schema.deals.ownerUserId, ctx.user.id)))
+      : [];
+    const ownedIds = new Set(owned.map((deal) => deal.id));
+    today = today.filter((row) => (row.dealId ? ownedIds.has(row.dealId) : row.syncedByUserId === ctx.user.id));
+  }
   const dealIds = [...new Set(today.map((r) => r.dealId).filter(Boolean) as string[])];
   const deals = dealIds.length
     ? await db.select({ id: schema.deals.id, name: schema.deals.name }).from(schema.deals).where(inArray(schema.deals.id, dealIds))
@@ -240,10 +278,11 @@ export type InboxRow = {
 export async function meetingInbox(ctx: AuthContext): Promise<InboxRow[]> {
   assertStaff(ctx, "meeting_inbox");
   const db = getDb();
-  const rows = await db
+  let rows = await db
     .select()
     .from(schema.meetings)
     .where(and(isNull(schema.meetings.dealId), isNull(schema.meetings.organizationId)));
+  if (ctx.user.role === "sales_rep") rows = rows.filter((row) => row.syncedByUserId === ctx.user.id);
   const orgIds = [...new Set(rows.map((r) => r.suggestedOrganizationId).filter(Boolean) as string[])];
   const orgs = orgIds.length
     ? await getDb().select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
@@ -303,10 +342,11 @@ export async function scheduleCall(
     videoUrl?: string;
   },
 ): Promise<{ meetingId: string; videoUrl: string | null; calendarEventId: string }> {
-  assertSalesManager(ctx, "schedule_call");
+  assertDealSeller(ctx, "schedule_call");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  assertCanManageDeal(ctx, deal, "schedule_call");
   const scope = ctx.accessScope;
   if (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId)) throw new StageError("NOT_FOUND", "Deal not found.");
   const startsAt = new Date(input.startsAt);
@@ -396,10 +436,11 @@ export async function scheduleCall(
 
 /** Frame 42 Reschedule: patches the existing Google event, never recreates. */
 export async function rescheduleMeeting(ctx: AuthContext, meetingId: string, startsAtIso: string, durationMin?: number): Promise<void> {
-  assertSalesManager(ctx, "reschedule_call");
+  assertDealSeller(ctx, "reschedule_call");
   const db = getDb();
   const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.id, meetingId) });
   if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
+  await assertCanManageMeeting(ctx, meeting, "reschedule_call");
   const startsAt = new Date(startsAtIso);
   if (Number.isNaN(startsAt.getTime())) throw new StageError("VALIDATION", "Pick a valid start time.");
   const mins = durationMin ?? (meeting.endsAt ? Math.round((meeting.endsAt.getTime() - meeting.startsAt.getTime()) / 60_000) : 45);
@@ -422,10 +463,14 @@ export async function rescheduleMeeting(ctx: AuthContext, meetingId: string, sta
 /** Paste-a-link on the no-video row (frames 42/43): provider 'manual'. */
 export async function setMeetingVideoUrl(ctx: AuthContext, meetingId: string, videoUrl: string): Promise<void> {
   assertStaff(ctx, "set_meeting_video");
+  const db = getDb();
+  const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.id, meetingId) });
+  if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
+  await assertCanManageMeeting(ctx, meeting, "set_meeting_video");
   const url = videoUrl.trim();
   if (!/^https:\/\//.test(url)) throw new StageError("VALIDATION", "Paste a full https:// meeting link.");
   const zoomId = zoomIdFromUrl(url);
-  await getDb()
+  await db
     .update(schema.meetings)
     .set({ videoUrl: url, videoProvider: zoomId ? "zoom" : "manual", zoomMeetingId: zoomId })
     .where(eq(schema.meetings.id, meetingId));
@@ -439,17 +484,21 @@ export async function linkMeeting(
   meetingId: string,
   target: { dealId?: string; organizationId?: string },
 ): Promise<void> {
-  assertSalesManager(ctx, "link_meeting");
+  assertDealSeller(ctx, "link_meeting");
   const db = getDb();
   const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.id, meetingId) });
   if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
+  await assertCanManageMeeting(ctx, meeting, "link_meeting");
 
   let organizationId = target.organizationId ?? null;
   const dealId = target.dealId ?? null;
   if (dealId) {
     const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
     if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+    assertCanManageDeal(ctx, deal, "link_meeting");
     organizationId = deal.organizationId;
+  } else if (ctx.user.role === "sales_rep") {
+    throw new StageError("FORBIDDEN", "A sales rep must link a meeting to one of their assigned Deals.");
   }
   if (!organizationId) throw new StageError("VALIDATION", "Pick a deal or an account to link to.");
 
@@ -479,6 +528,7 @@ export async function suppressMeeting(ctx: AuthContext, meetingId: string): Prom
   const db = getDb();
   const meeting = await db.query.meetings.findFirst({ where: eq(schema.meetings.id, meetingId) });
   if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
+  await assertCanManageMeeting(ctx, meeting, "suppress_meeting");
   await db.batch([
     db.insert(schema.meetingSuppressions).values({
       googleEventId: meeting.googleEventId,
@@ -520,6 +570,7 @@ export async function icsForMeeting(ctx: AuthContext, meetingId: string): Promis
   if (!meeting) throw new StageError("NOT_FOUND", "Meeting not found.");
   const allowed = ctx.isStaff || (ctx.user.organizationId && ctx.user.organizationId === meeting.organizationId);
   if (!allowed) throw new StageError("NOT_FOUND", "Meeting not found.");
+  await assertCanManageMeeting(ctx, meeting, "download_meeting_ics");
   return {
     fileName: `${meeting.title.replace(/[^\w]+/g, "-").slice(0, 40)}.ics`,
     ics: makeIcs({

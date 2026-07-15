@@ -86,6 +86,8 @@ export function AppShell({
             (item) =>
               (!item.staffOnly || user.isStaff) &&
               (!item.adminOnly || isAdmin) &&
+              // Sales reps own the commercial path, not delivery Projects.
+              !(item.key === "projects" && user.role === "sales_rep") &&
               // Files is client-only for now — no dead "soon" label for staff.
               !(item.key === "files" && user.isStaff),
           ).map((item) => {

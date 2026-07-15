@@ -20,6 +20,7 @@ export type AgreementStatus = (typeof schema.AGREEMENT_STATUSES)[number];
 
 export type AgreementRow = {
   id: string;
+  dealId: string | null;
   kind: AgreementKind;
   label: string;
   status: AgreementStatus;
@@ -33,6 +34,7 @@ const ACCOUNT_LEVEL_KINDS: readonly AgreementKind[] = ["msa", "nda"];
 
 const toRow = (a: typeof schema.agreements.$inferSelect): AgreementRow => ({
   id: a.id,
+  dealId: a.dealId,
   kind: a.kind,
   label: a.label,
   status: a.status,

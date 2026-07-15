@@ -21,11 +21,13 @@ protects customer trust and scarce founder attention by preserving evidence,
 commitments, commercial decisions, payment state, delivery acceptance, and
 postmortems in one account thread.
 
-Wahala employees are invited deliberately. **Sales / account owner** is the
-non-admin commercial role for employees who manage assigned customer
-relationships; Training mode is a temporary coaching setting, not a security
-role. Full Wahala admin access is reserved for people who need global commercial,
-configuration, and team-management authority.
+Wahala employees are invited deliberately. A **Sales rep** can work only the
+opportunities and Deals assigned to them: discovery, buying-path evidence,
+meetings, proposals, and client follow-up. They cannot confirm received payment
+or create the delivery Project. An **Account owner** manages the full customer
+relationship across that account. Training mode is a temporary coaching setting,
+not a security role. Full Wahala admin access is reserved for people who need
+global commercial, configuration, and team-management authority.
 
 ## Durable principles
 

@@ -30,7 +30,7 @@ export function TeamMembersPanel({ members }: { members: TeamMemberView[] }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<InvitableStaffRole>("account_owner");
+  const [role, setRole] = useState<InvitableStaffRole>("sales_rep");
   const [trainingMode, setTrainingMode] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function TeamMembersPanel({ members }: { members: TeamMemberView[] }) {
       }
       setName("");
       setEmail("");
-      setRole("account_owner");
+      setRole("sales_rep");
       setTrainingMode(true);
       setOpen(false);
       router.refresh();

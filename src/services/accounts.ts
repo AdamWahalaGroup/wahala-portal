@@ -127,7 +127,7 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
   const hub = await getAccountHub(ctx, orgId); // does the staff + scope checks
   const db = getDb();
 
-  const [dealRows, contactLinks, orgContacts, agreements, auditRows, projectKinds] = await Promise.all([
+  const [allDealRows, contactLinks, orgContacts, allAgreements, allAuditRows, projectKinds] = await Promise.all([
     db.select().from(schema.deals).where(eq(schema.deals.organizationId, orgId)).orderBy(desc(schema.deals.createdAt)),
     db.select().from(schema.contactCompanies).where(eq(schema.contactCompanies.organizationId, orgId)),
     db.select().from(schema.contacts).where(eq(schema.contacts.organizationId, orgId)),
@@ -143,6 +143,20 @@ export async function getAccountView(ctx: AuthContext, orgId: string): Promise<A
       .from(schema.projects)
       .where(eq(schema.projects.organizationId, orgId)),
   ]);
+  const dealRows = ctx.user.role === "sales_rep"
+    ? allDealRows.filter((deal) => deal.ownerUserId === ctx.user.id)
+    : allDealRows;
+  const visibleDealIds = new Set(dealRows.map((deal) => deal.id));
+  const agreements = ctx.user.role === "sales_rep"
+    ? allAgreements.filter((agreement) => !agreement.dealId || visibleDealIds.has(agreement.dealId))
+    : allAgreements;
+  const auditRows = ctx.user.role === "sales_rep"
+    ? allAuditRows.filter((audit) => {
+        const metadata = (audit.metadata ?? {}) as Record<string, unknown>;
+        const relatedDealId = audit.entityType === "deal" ? audit.entityId : typeof metadata.dealId === "string" ? metadata.dealId : null;
+        return !!relatedDealId && visibleDealIds.has(relatedDealId);
+      })
+    : allAuditRows;
 
   // Contacts: union of direct org link and the M2M table (dedupe by id).
   const linkContactIds = contactLinks.map((l) => l.contactId).filter((id) => !orgContacts.some((c) => c.id === id));

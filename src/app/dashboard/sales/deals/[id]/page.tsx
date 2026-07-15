@@ -57,7 +57,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
   const canManage = ctx.isAdmin || (
     ctx.user.role === "account_owner" &&
     (detail.org ? ctx.accessScope.kind !== "all" && ctx.accessScope.orgIds.includes(detail.org.id) : detail.owner?.id === ctx.user.id)
-  );
+  ) || (ctx.user.role === "sales_rep" && detail.owner?.id === ctx.user.id);
   // Lost = read-only: no creation paths, no edits — the drawer leads with the post-mortem.
   const lost = deal.stage === "lost";
 

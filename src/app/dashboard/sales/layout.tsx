@@ -23,7 +23,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   if (!ctx.isStaff) redirect("/dashboard");
 
   const [overview, trainingMode, proposalCount] = await Promise.all([salesOverview(ctx), trainingModeFor(ctx), countSentProposals(ctx)]);
-  const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
+  const canManage = ctx.isAdmin || ctx.user.role === "account_owner" || ctx.user.role === "sales_rep";
 
   return (
     <AppShell

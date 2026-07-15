@@ -5,6 +5,7 @@
  * there is exactly ONE place that decides reach:
  *
  *   wahala_admin   → all orgs
+ *   sales_rep      → deals they own; org scope supports related account context
  *   account_owner  → orgs they own (organizations.account_owner_user_id)
  *   lead/engineer  → only projects they lead or are a roster member of
  *   client roles   → their own org
@@ -32,6 +33,21 @@ export async function computeAccessScope(user: UserRow): Promise<AccessScope> {
 
   // Wahala staff
   if (user.role === "wahala_admin") return { kind: "all" };
+
+  if (user.role === "sales_rep") {
+    const ownedDeals = await db
+      .select({ id: schema.deals.id, organizationId: schema.deals.organizationId })
+      .from(schema.deals)
+      .where(eq(schema.deals.ownerUserId, user.id));
+    return {
+      // Reuse project-scoped semantics with no delivery projects. Sales services
+      // additionally filter by Deal owner so another Deal on the same account is
+      // never exposed merely because its account context is reachable.
+      kind: "projects",
+      projectIds: [],
+      orgIds: [...new Set(ownedDeals.map((deal) => deal.organizationId).filter((id): id is string => !!id))],
+    };
+  }
 
   if (user.role === "account_owner") {
     const owned = await db
@@ -81,6 +97,7 @@ export function canManageCommercialDeal(
   deal: { organizationId: string | null; ownerUserId: string | null },
 ): boolean {
   if (actor.role === "wahala_admin") return scope.kind === "all";
+  if (actor.role === "sales_rep") return deal.ownerUserId === actor.userId;
   if (actor.role !== "account_owner") return false;
   if (deal.organizationId) return canAccessOrg(scope, deal.organizationId);
   return deal.ownerUserId === actor.userId;

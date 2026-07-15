@@ -11,7 +11,7 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { chooseContractSourceOption, deriveProjectPhases, type DerivedPhase } from "@/domain/proposal-math";
-import { assertCanManageDeal, assertSalesManager, setDealStage } from "@/services/sales";
+import { assertCanManageDeal, assertDealSeller, setDealStage } from "@/services/sales";
 import { listForDeal, type AgreementRow } from "@/services/agreements";
 import { draftProject } from "@/services/ai/draft-project";
 import { createDraftedProject } from "@/services/projects";
@@ -50,7 +50,11 @@ async function loadDealScoped(ctx: AuthContext, dealId: string) {
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   const scope = ctx.accessScope;
-  if (!ctx.isStaff || (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId))) {
+  if (
+    !ctx.isStaff ||
+    (ctx.user.role === "sales_rep" && deal.ownerUserId !== ctx.user.id) ||
+    (scope.kind !== "all" && deal.organizationId !== null && !scope.orgIds.includes(deal.organizationId))
+  ) {
     throw new StageError("NOT_FOUND", "Deal not found.");
   }
   return deal;
@@ -120,7 +124,7 @@ export async function inviteContactToOrg(
   dealId: string,
   origin: string,
 ): Promise<{ userId: string; inviteLink?: string }> {
-  assertSalesManager(ctx, "invite_contact");
+  assertDealSeller(ctx, "invite_contact");
   const deal = await loadDealScoped(ctx, dealId);
   assertCanManageDeal(ctx, deal, "invite_contact");
   if (!deal.organizationId) {
@@ -190,9 +194,12 @@ export async function executeContract(
   dealId: string,
   opts: { force?: boolean } = {},
 ): Promise<{ projectId: string; stagesCreated: number; usage: DraftUsage }> {
-  assertSalesManager(ctx, "execute_contract");
+  assertDealSeller(ctx, "execute_contract");
   let deal = await loadDealScoped(ctx, dealId);
   assertCanManageDeal(ctx, deal, "execute_contract");
+  if (ctx.user.role === "sales_rep") {
+    throw new StageError("FORBIDDEN", "An account owner or Wahala admin must create the delivery Project.");
+  }
   if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
   const approved = await approvedProposalFor(dealId);
   // A deal that reached Committed must always be able to finish the loop — an
