@@ -7,8 +7,8 @@
  * userId, then mint the existing KV session.
  *
  * Policy (see resolveSsoOutcome): invite-only is preserved — SSO logs into an
- * existing, non-disabled account matched by the provider's VERIFIED email. Unknown
- * emails are denied (no auto-provisioning).
+ * existing, non-disabled account matched by the provider's VERIFIED email.
+ * Unknown emails are denied; staff are created through Team → Add member.
  */
 import { Google, generateState, generateCodeVerifier, decodeIdToken } from "arctic";
 import { googleClientId, googleClientSecret } from "@/auth/server-env";
@@ -57,37 +57,27 @@ export async function completeAuthorization(
   };
 }
 
-/** The domain part of an email, lower-cased (""), if malformed. */
-export function emailDomain(email: string): string {
-  const at = email.lastIndexOf("@");
-  return at >= 0 ? email.slice(at + 1).toLowerCase() : "";
-}
-
 // ---- pure policy (unit-tested) ----
 
 export type SsoUser = { id: string; status: "invited" | "active" | "disabled" } | null;
 
 export type SsoOutcome =
   | { ok: true; kind: "login"; userId: string; activate: boolean }
-  | { ok: true; kind: "provision_staff" } // wahalagroup.com etc. → auto-create a Wahala admin
   | { ok: false; reason: "unverified_email" | "no_account" | "disabled" };
 
 /**
  * Decide what a verified SSO identity may do, matched by email:
  *  - existing account → log in (activate an invited one);
- *  - no account on a STAFF domain → auto-provision a Wahala admin;
- *  - no account otherwise → denied (clients are invite-only).
+ *  - no account → denied (staff and clients are invite-only).
  */
 export function resolveSsoOutcome(
   user: SsoUser,
   emailVerified: boolean,
-  opts: { isStaffDomain: boolean },
 ): SsoOutcome {
   if (!emailVerified) return { ok: false, reason: "unverified_email" };
   if (user) {
     if (user.status === "disabled") return { ok: false, reason: "disabled" };
     return { ok: true, kind: "login", userId: user.id, activate: user.status === "invited" };
   }
-  if (opts.isStaffDomain) return { ok: true, kind: "provision_staff" };
   return { ok: false, reason: "no_account" };
 }

@@ -11,7 +11,7 @@ import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
 import { chooseContractSourceOption, deriveProjectPhases, type DerivedPhase } from "@/domain/proposal-math";
-import { assertSalesManager, setDealStage } from "@/services/sales";
+import { assertCanManageDeal, assertSalesManager, setDealStage } from "@/services/sales";
 import { listForDeal, type AgreementRow } from "@/services/agreements";
 import { draftProject } from "@/services/ai/draft-project";
 import { createDraftedProject } from "@/services/projects";
@@ -122,6 +122,7 @@ export async function inviteContactToOrg(
 ): Promise<{ userId: string; inviteLink?: string }> {
   assertSalesManager(ctx, "invite_contact");
   const deal = await loadDealScoped(ctx, dealId);
+  assertCanManageDeal(ctx, deal, "invite_contact");
   if (!deal.organizationId) {
     throw new StageError("VALIDATION", "This deal has no account yet — it's created at Create project →, and the invite follows it.");
   }
@@ -191,6 +192,7 @@ export async function executeContract(
 ): Promise<{ projectId: string; stagesCreated: number; usage: DraftUsage }> {
   assertSalesManager(ctx, "execute_contract");
   let deal = await loadDealScoped(ctx, dealId);
+  assertCanManageDeal(ctx, deal, "execute_contract");
   if (deal.projectId) throw new StageError("INVALID_STATE", "This deal already created its project.");
   const approved = await approvedProposalFor(dealId);
   // A deal that reached Committed must always be able to finish the loop — an

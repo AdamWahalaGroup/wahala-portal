@@ -36,3 +36,16 @@ export async function sendInviteEmail(to: string, url: string, orgName: string):
 <p style="color:#666;font-size:13px">This link expires in 15 minutes. If you weren't expecting this, you can ignore it.</p>`,
   });
 }
+
+/** Staff invitation — accepts the app account through the existing magic-link flow. */
+export async function sendStaffInviteEmail(to: string, url: string, roleLabel: string): Promise<void> {
+  const { env } = getCloudflareContext();
+  await sendEmail(env as unknown as EmailEnv, {
+    to,
+    subject: "You're invited to the Wahala team portal",
+    text: `You've been invited to Wahala Portal as ${roleLabel}.\n\nAccept your invitation and sign in:\n${url}\n\nThis link expires in 15 minutes. After it expires, request a new one-time link from the login page using this exact email address. If this is an email alias, use the email link rather than Google SSO.`,
+    html: `<p>You've been invited to <strong>Wahala Portal</strong> as <strong>${roleLabel}</strong>.</p>
+<p><a href="${url}">Accept your invitation &amp; sign in</a></p>
+<p style="color:#666;font-size:13px">This link expires in 15 minutes. After it expires, request a new one-time link from the login page using this exact email address. If this is an email alias, use the email link rather than Google SSO.</p>`,
+  });
+}

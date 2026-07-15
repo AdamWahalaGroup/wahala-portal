@@ -6,9 +6,11 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/auth/context";
 import { teamScorecard, scorecardSignals } from "@/services/process";
+import { listTeamMembers } from "@/services/team-members";
 import { LOGIN_PATH } from "@/auth/config";
 import { AppShell } from "@/components/AppShell";
 import { TeamScorecard } from "@/components/TeamScorecard";
+import { TeamMembersPanel } from "@/components/TeamMembersPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,7 @@ export default async function TeamPage() {
   if (!ctx) redirect(LOGIN_PATH);
   if (!ctx.isAdmin) redirect("/dashboard");
 
-  const rows = await teamScorecard(ctx);
+  const [rows, members] = await Promise.all([teamScorecard(ctx), listTeamMembers(ctx)]);
   const signals = scorecardSignals(rows);
 
   return (
@@ -27,7 +29,10 @@ export default async function TeamPage() {
       orgName="Wahala Group"
       accountOwner={null}
     >
-      <TeamScorecard rows={rows} signals={signals} currentUserId={ctx.user.id} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 34 }}>
+        <TeamMembersPanel members={members} />
+        <TeamScorecard rows={rows} signals={signals} currentUserId={ctx.user.id} />
+      </div>
     </AppShell>
   );
 }

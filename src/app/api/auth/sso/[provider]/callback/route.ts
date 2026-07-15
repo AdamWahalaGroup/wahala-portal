@@ -2,16 +2,15 @@
  * GET /api/auth/sso/:provider/callback — finish a social-SSO login.
  *
  * Mirrors the magic-link verify route: validate the OAuth state + code, read the
- * provider's verified email, match an existing account (invite-only), then mint the
- * same KV session. No auto-provisioning — unknown emails are denied.
+ * provider's verified email, match an existing invited/active account, then mint
+ * the same KV session. Unknown emails are denied.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { completeAuthorization, resolveSsoOutcome, isSsoProvider, emailDomain } from "@/auth/sso";
+import { completeAuthorization, resolveSsoOutcome, isSsoProvider } from "@/auth/sso";
 import { createSession, sessionCookieOptions } from "@/auth/session";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, POST_LOGIN_PATH, LOGIN_PATH } from "@/auth/config";
-import { staffSsoDomains } from "@/auth/server-env";
 import { securityLog } from "@/lib/security-log";
 
 export const dynamic = "force-dynamic";
@@ -54,16 +53,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const redirectUri = new URL(`/api/auth/sso/${provider}/callback`, reqUrl.origin).toString();
 
   try {
-    const { email, emailVerified, name } = await completeAuthorization(provider, redirectUri, code, codeVerifier);
+    const { email, emailVerified } = await completeAuthorization(provider, redirectUri, code, codeVerifier);
     if (!email) return fail("sso_failed");
 
     const db = getDb();
     const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
-    const isStaffDomain = staffSsoDomains().includes(emailDomain(email));
     const outcome = resolveSsoOutcome(
       existing ? { id: existing.id, status: existing.status } : null,
       emailVerified,
-      { isStaffDomain },
     );
 
     if (!outcome.ok) {
@@ -76,30 +73,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
       return fail(DENY_ERROR[outcome.reason] ?? "sso_failed");
     }
 
-    let userId: string;
-    if (outcome.kind === "provision_staff") {
-      // First sign-in from a staff domain → auto-create a Wahala admin.
-      userId = crypto.randomUUID();
-      await db.insert(schema.users).values({
-        id: userId,
-        organizationId: null,
-        userType: "wahala",
-        role: "wahala_admin",
-        name: name ?? email,
-        email,
-        status: "active",
-      });
-      securityLog({
-        actorUserId: userId,
-        action: `sso.${provider}.provision_staff`,
-        resource: `email:${email}`,
-        reason: "staff_domain_auto_admin",
-      });
-    } else {
-      userId = outcome.userId;
-      if (outcome.activate) {
-        await db.update(schema.users).set({ status: "active" }).where(eq(schema.users.id, userId));
-      }
+    const userId = outcome.userId;
+    if (outcome.activate) {
+      await db.update(schema.users).set({ status: "active" }).where(eq(schema.users.id, userId));
     }
 
     const sessionId = await createSession(userId);

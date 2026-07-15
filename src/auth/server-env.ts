@@ -89,9 +89,8 @@ export function zoomHostEmail(): string {
 }
 
 /**
- * Email domains whose Google SSO logins are auto-provisioned as Wahala staff
- * admins (the internal team). Everyone else is invite-only. Comma-separated;
- * defaults to wahalagroup.com.
+ * Internal email domains used to distinguish staff from external attendees when
+ * matching synced meetings. Authentication itself is invite-only.
  */
 export function staffSsoDomains(): string[] {
   const raw = vars().STAFF_SSO_DOMAINS ?? "wahalagroup.com";

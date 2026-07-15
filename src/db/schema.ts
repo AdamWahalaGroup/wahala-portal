@@ -167,8 +167,8 @@ export const users = sqliteTable(
       .notNull()
       .default("invited"),
     // Training mode (frame 38): guidance layer on + actions logged to the scorecard.
-    // Self-toggleable; owners can set it for others. Default ON for new admins
-    // (enforced at creation in the service layer, not here).
+    // Self-toggleable; admins can set it for others. Staff invitations choose the
+    // initial value deliberately; the database default remains off.
     trainingMode: integer("training_mode", { mode: "boolean" }).notNull().default(false),
     createdAt: createdAt(),
   },
