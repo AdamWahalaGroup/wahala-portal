@@ -847,8 +847,26 @@ export function DealProcessPanel({
                   {c.reviewStatus === "not_analyzed" ? " · saved · not analyzed" : c.reviewStatus === "pending" ? " · review pending" : c.reviewStatus === "dismissed" ? " · analysis dismissed" : ` · ${c.fieldsExtracted} fields accepted`}
                 </span>
                 {canManage && c.reviewStatus === "not_analyzed" && (
-                  <button onClick={() => void analyzeCall(c)} disabled={analyzingCallId !== null} className="mono" style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 10, fontWeight: 800, cursor: "pointer", flex: "none" }}>
-                    {analyzingCallId === c.id ? "analyzing (~20s)…" : "◆ analyze recorded call"}
+                  <button
+                    onClick={() => void analyzeCall(c)}
+                    disabled={analyzingCallId !== null}
+                    className="mono"
+                    style={{
+                      border: 0,
+                      background: "var(--ink)",
+                      color: "var(--white)",
+                      borderRadius: 999,
+                      padding: "5px 9px",
+                      fontSize: 9.5,
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      cursor: analyzingCallId !== null ? "wait" : "pointer",
+                      opacity: analyzingCallId !== null ? 0.7 : 1,
+                      flex: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {analyzingCallId === c.id ? "Analyzing (~20s)…" : "◆ Analyze with AI"}
                   </button>
                 )}
                 {c.reviewStatus === "pending" && (
