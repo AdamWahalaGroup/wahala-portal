@@ -70,11 +70,12 @@ export async function listClients(ctx: AuthContext): Promise<ClientListItem[]> {
 export async function listWahalaStaff(ctx: AuthContext): Promise<{ id: string; name: string }[]> {
   if (!ctx.isStaff) return [];
   const db = getDb();
-  return db
+  const rows = await db
     .select({ id: schema.users.id, name: schema.users.name })
     .from(schema.users)
     .where(and(eq(schema.users.userType, "wahala"), ne(schema.users.status, "disabled")))
     .orderBy(schema.users.name);
+  return ctx.user.role === "sales_rep" ? rows.filter((member) => member.id === ctx.user.id) : rows;
 }
 
 /**

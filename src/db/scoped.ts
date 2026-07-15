@@ -7,7 +7,8 @@
  *  1. Tenant isolation — match only rows in orgs the caller may reach
  *     (admins: all; account owners: owned orgs; clients: their org).
  *  2. Project scope — project-scoped staff (lead/engineer) match only their
- *     assigned projects, not every project in the org.
+ *     assigned projects, not every project in the org. Sales reps deliberately
+ *     receive an empty project scope because their authority ends at handoff.
  *  3. Visibility — clients never match internal-flagged rows (recordings, AI
  *     digests, internal tasks/messages). Staff see everything in scope.
  *

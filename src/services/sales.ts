@@ -9,13 +9,13 @@
  * audited so the funnel history is reconstructable. Winning a deal flips the org
  * to 'active': the prospect became a customer.
  *
- * RBAC: any staff can view and start opportunities; deal edits and stage moves
- * need admin or account_owner (same tier as quoting).
+ * RBAC: any staff can start opportunities. Sales reps manage Deals assigned to
+ * them; account owners manage their account's Deals; admins manage everything.
  */
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
-import { canManageCommercialDeal } from "@/auth/access";
+import { canAccessOrg, canManageCommercialDeal } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { isDealStage, daysInStage, FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 import { isStuckWith, type SlaSettings } from "@/domain/sla";
@@ -50,22 +50,31 @@ export function assertStaff(ctx: AuthContext, action: string): void {
 export function assertSalesManager(ctx: AuthContext, action: string): void {
   assertStaff(ctx, action);
   if (!(ctx.isAdmin || ctx.user.role === "account_owner")) {
-    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_admin_or_owner" });
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_commercial_role" });
     throw new StageError("FORBIDDEN", "Only a Wahala admin or account owner can do that.");
   }
 }
 
+/** Commercial contributors who may work a Deal, subject to its resource boundary. */
+export function assertDealSeller(ctx: AuthContext, action: string): void {
+  assertStaff(ctx, action);
+  if (!(ctx.isAdmin || ctx.user.role === "account_owner" || ctx.user.role === "sales_rep")) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_deal_seller" });
+    throw new StageError("FORBIDDEN", "Only a Wahala admin, account owner, or sales rep can do that.");
+  }
+}
+
 /**
- * Resource-level commercial boundary. Admins may manage every Deal. A Sales /
- * account owner may manage Deals on an account they own, or an account-less
- * opportunity explicitly assigned to them.
+ * Resource-level commercial boundary. Admins may manage every Deal. Account
+ * owners may manage Deals on an account they own, or an account-less opportunity
+ * explicitly assigned to them. Sales reps may manage only Deals assigned to them.
  */
 export function assertCanManageDeal(
   ctx: AuthContext,
   deal: { id: string; organizationId: string | null; ownerUserId: string | null },
   action: string,
 ): void {
-  assertSalesManager(ctx, action);
+  assertDealSeller(ctx, action);
   if (canManageCommercialDeal({ userId: ctx.user.id, role: ctx.user.role }, ctx.accessScope, deal)) return;
   securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, resource: `deal:${deal.id}`, reason: "out_of_scope" });
   throw new StageError("NOT_FOUND", "Deal not found.");
@@ -91,10 +100,15 @@ export type ContactLite = {
 export async function listContactsLite(ctx: AuthContext): Promise<ContactLite[]> {
   assertStaff(ctx, "list_contacts");
   const db = getDb();
-  const [rows, dealRows] = await Promise.all([
+  let [rows, dealRows] = await Promise.all([
     db.select().from(schema.contacts).orderBy(schema.contacts.name),
-    db.select({ primaryContactId: schema.deals.primaryContactId }).from(schema.deals),
+    db.select({ primaryContactId: schema.deals.primaryContactId, ownerUserId: schema.deals.ownerUserId }).from(schema.deals),
   ]);
+  if (ctx.user.role === "sales_rep") {
+    dealRows = dealRows.filter((deal) => deal.ownerUserId === ctx.user.id);
+    const relatedContactIds = new Set(dealRows.map((deal) => deal.primaryContactId).filter((id): id is string => !!id));
+    rows = rows.filter((contact) => contact.assignedToUserId === ctx.user.id || relatedContactIds.has(contact.id));
+  }
   const orgIds = [...new Set(rows.map((c) => c.organizationId).filter((v): v is string => !!v))];
   const orgs =
     orgIds.length > 0
@@ -124,6 +138,13 @@ export async function listContactsLite(ctx: AuthContext): Promise<ContactLite[]>
 export async function assignContact(ctx: AuthContext, contactId: string, userId: string | null): Promise<void> {
   assertStaff(ctx, "assign_contact");
   const db = getDb();
+  if (ctx.user.role === "sales_rep") {
+    if (userId !== ctx.user.id) throw new StageError("FORBIDDEN", "A sales rep can claim an unassigned contact only for themselves.");
+    const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+    if (!contact || (contact.assignedToUserId && contact.assignedToUserId !== ctx.user.id)) {
+      throw new StageError("NOT_FOUND", "Contact not found.");
+    }
+  }
   if (userId) {
     const [target] = await db
       .select({ id: schema.users.id })
@@ -142,6 +163,9 @@ export async function assignContact(ctx: AuthContext, contactId: string, userId:
 /** Resolve/validate the deal owner — defaults to the acting user. */
 async function resolveOwner(ctx: AuthContext, ownerUserId?: string): Promise<string> {
   if (!ownerUserId?.trim() || ownerUserId.trim() === ctx.user.id) return ctx.user.id;
+  if (ctx.user.role === "sales_rep") {
+    throw new StageError("FORBIDDEN", "A sales rep can create opportunities only for themselves.");
+  }
   const db = getDb();
   const owner = await db.query.users.findFirst({ where: eq(schema.users.id, ownerUserId.trim()) });
   if (!owner || owner.userType !== "wahala" || owner.status === "disabled") {
@@ -160,6 +184,9 @@ async function resolveAccount(
   if (organizationId) {
     const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
     if (!org) throw new StageError("VALIDATION", "That account does not exist.");
+    if (ctx.user.role === "sales_rep" && !canAccessOrg(ctx.accessScope, organizationId)) {
+      throw new StageError("NOT_FOUND", "Account not found.");
+    }
     return { organizationId, accountName: org.name, statements: [] };
   }
   if (input.newAccountName?.trim()) {
@@ -172,8 +199,8 @@ async function resolveAccount(
           id,
           name: input.newAccountName.trim(),
           status: "prospect",
-          accountOwnerUserId: ctx.user.id,
-          ownerAssignedAt: new Date(),
+          accountOwnerUserId: ctx.user.role === "sales_rep" ? null : ctx.user.id,
+          ownerAssignedAt: ctx.user.role === "sales_rep" ? null : new Date(),
         }),
       ],
     };
@@ -214,6 +241,12 @@ export async function createOpportunity(
   if (contactId) {
     const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
     if (!contact) throw new StageError("VALIDATION", "That contact does not exist.");
+    if (ctx.user.role === "sales_rep" && contact.assignedToUserId !== ctx.user.id) {
+      const relatedDeal = await db.query.deals.findFirst({
+        where: and(eq(schema.deals.primaryContactId, contactId), eq(schema.deals.ownerUserId, ctx.user.id)),
+      });
+      if (!relatedDeal) throw new StageError("NOT_FOUND", "Contact not found.");
+    }
     contactName = contact.name;
     // A contact without an account adopts the one chosen here (never overwrites).
     if (organizationId && !contact.organizationId) {
@@ -400,7 +433,8 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   // Non-admin staff see deals only for orgs in their access scope, matching listClients.
   // Account-less deals belong to no account, so account-scoping doesn't apply — all staff see them.
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((d) => !d.organizationId || scope.orgIds.includes(d.organizationId));
+  if (ctx.user.role === "sales_rep") rows = rows.filter((deal) => deal.ownerUserId === ctx.user.id);
+  else if (scope.kind !== "all") rows = rows.filter((d) => !d.organizationId || scope.orgIds.includes(d.organizationId));
   if (rows.length === 0) return [];
 
   const orgIds = [...new Set(rows.map((d) => d.organizationId).filter((v): v is string => !!v))];
@@ -783,6 +817,9 @@ export async function setDeposit(
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
   assertCanManageDeal(ctx, deal, "set_deposit");
+  if (ctx.user.role === "sales_rep" && input.markPaid) {
+    throw new StageError("FORBIDDEN", "An account owner or Wahala admin must confirm received payment.");
+  }
   const patch: Partial<typeof schema.deals.$inferInsert> = {};
   if (input.amountCents !== undefined) patch.depositCents = Math.max(0, Math.round(input.amountCents));
   const now = new Date();
@@ -919,6 +956,9 @@ export async function getDealDetail(ctx: AuthContext, dealId: string): Promise<D
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
+  if (ctx.user.role === "sales_rep" && deal.ownerUserId !== ctx.user.id) {
+    throw new StageError("NOT_FOUND", "Deal not found.");
+  }
   const scope = ctx.accessScope;
   if (scope.kind !== "all" && deal.organizationId && !scope.orgIds.includes(deal.organizationId)) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action: "get_deal_detail", resource: `deal:${dealId}`, reason: "out_of_scope" });

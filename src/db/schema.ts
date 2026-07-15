@@ -39,6 +39,7 @@ const updatedAt = () =>
 export const USER_TYPES = ["wahala", "client"] as const;
 export const USER_ROLES = [
   "wahala_admin",
+  "sales_rep",
   "account_owner",
   "lead_engineer",
   "engineer",

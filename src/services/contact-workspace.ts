@@ -37,8 +37,15 @@ function assertStaff(ctx: AuthContext, action: string): void {
 
 async function loadContact(ctx: AuthContext, contactId: string, action: string) {
   assertStaff(ctx, action);
-  const contact = await getDb().query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+  const db = getDb();
+  const contact = await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
   if (!contact) throw new StageError("NOT_FOUND", "Contact not found.");
+  if (ctx.user.role === "sales_rep" && contact.assignedToUserId !== ctx.user.id) {
+    const relatedDeal = await db.query.deals.findFirst({
+      where: (deal, { and, eq }) => and(eq(deal.primaryContactId, contactId), eq(deal.ownerUserId, ctx.user.id)),
+    });
+    if (!relatedDeal) throw new StageError("NOT_FOUND", "Contact not found.");
+  }
   return contact;
 }
 
@@ -159,13 +166,16 @@ export type ContactDetail = {
 export async function getContactDetail(ctx: AuthContext, contactId: string): Promise<ContactDetail> {
   const contact = await loadContact(ctx, contactId, "get_contact_detail");
   const db = getDb();
-  const [files, assignee, org, deals, portalUser] = await Promise.all([
+  const [files, assignee, org, allDeals, portalUser] = await Promise.all([
     listContactFiles(ctx, contactId),
     contact.assignedToUserId ? db.query.users.findFirst({ where: eq(schema.users.id, contact.assignedToUserId) }) : null,
     contact.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, contact.organizationId) }) : null,
     db.select().from(schema.deals).where(eq(schema.deals.primaryContactId, contactId)).orderBy(desc(schema.deals.createdAt)),
     contact.email ? db.query.users.findFirst({ where: eq(schema.users.email, contact.email.trim().toLowerCase()) }) : null,
   ]);
+  const deals = ctx.user.role === "sales_rep"
+    ? allDeals.filter((deal) => deal.ownerUserId === ctx.user.id)
+    : allDeals;
   return {
     id: contact.id,
     name: contact.name,

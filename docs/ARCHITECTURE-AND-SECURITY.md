@@ -38,7 +38,8 @@ admin access.
 | Role | Scope |
 |---|---|
 | Wahala admin | All organizations |
-| Sales / account owner | Organizations they own |
+| Sales rep | Deals assigned to them and related account context; no delivery projects |
+| Account owner | Organizations they own |
 | Lead engineer / engineer | Projects they lead or are assigned to |
 | Client roles | Their own organization |
 

@@ -6,8 +6,9 @@
  * document — a one-time snapshot with its own draft→sent→executed lifecycle.
  *
  * Humans + deterministic math own every number (src/domain/proposal-math.ts);
- * the AI only writes prose. RBAC mirrors sales.ts: admin/account_owner manage;
- * all staff read (scoped). Public token paths: read, sign, decline. One shot.
+ * the AI only writes prose. RBAC mirrors sales.ts: admins and account owners
+ * manage their commercial scope; sales reps manage only assigned Deals. Other
+ * staff retain scoped reads. Public token paths: read, sign, decline. One shot.
  */
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -56,6 +57,7 @@ export type ProposalOption = {
 export type ProposalDetail = {
   id: string;
   dealId: string;
+  dealOwnerUserId: string | null;
   dealName: string;
   dealValueCents: number;
   /** Send-time solution-clarity and buying-path coaching. */
@@ -99,14 +101,22 @@ export type ProposalSummary = {
   selectedLabel: string | null;
 };
 
-function assertStaffScoped(ctx: AuthContext, organizationId: string | null, action: string): void {
+function assertStaffScoped(
+  ctx: AuthContext,
+  resource: { organizationId: string | null; ownerUserId: string | null },
+  action: string,
+): void {
   if (!ctx.isStaff) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "not_staff" });
     throw new StageError("FORBIDDEN", "Wahala staff only.");
   }
+  if (ctx.user.role === "sales_rep" && resource.ownerUserId !== ctx.user.id) {
+    securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "deal_not_assigned" });
+    throw new StageError("NOT_FOUND", "Not found.");
+  }
   const scope = ctx.accessScope;
   // Account-less deals belong to no account — visible to all staff.
-  if (scope.kind !== "all" && organizationId !== null && !scope.orgIds.includes(organizationId)) {
+  if (scope.kind !== "all" && resource.organizationId !== null && !scope.orgIds.includes(resource.organizationId)) {
     securityLog({ actorUserId: ctx.user.id, role: ctx.user.role, action, reason: "out_of_scope" });
     throw new StageError("NOT_FOUND", "Not found.");
   }
@@ -153,7 +163,7 @@ export async function listProposalsForDeal(ctx: AuthContext, dealId: string): Pr
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  assertStaffScoped(ctx, deal.organizationId, "list_proposals");
+  assertStaffScoped(ctx, deal, "list_proposals");
 
   const rows = await db
     .select()
@@ -211,7 +221,11 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
   const db = getDb();
   let rows = await db.select().from(schema.proposals).orderBy(desc(schema.proposals.updatedAt));
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
+  if (ctx.user.role === "sales_rep") {
+    const owned = await db.select({ id: schema.deals.id }).from(schema.deals).where(eq(schema.deals.ownerUserId, ctx.user.id));
+    const ownedIds = new Set(owned.map((deal) => deal.id));
+    rows = rows.filter((proposal) => ownedIds.has(proposal.dealId));
+  } else if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
   rows = rows.filter((p) => p.status !== "superseded");
   // One live proposal per deal — keep the highest version.
   const byDeal = new Map<string, (typeof rows)[number]>();
@@ -278,20 +292,25 @@ export async function countSentProposals(ctx: AuthContext): Promise<number> {
   if (!ctx.isStaff) return 0;
   const db = getDb();
   let rows = await db
-    .select({ id: schema.proposals.id, organizationId: schema.proposals.organizationId })
+    .select({ id: schema.proposals.id, dealId: schema.proposals.dealId, organizationId: schema.proposals.organizationId })
     .from(schema.proposals)
     .where(eq(schema.proposals.status, "sent"));
   const scope = ctx.accessScope;
-  if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
+  if (ctx.user.role === "sales_rep") {
+    const owned = await db.select({ id: schema.deals.id }).from(schema.deals).where(eq(schema.deals.ownerUserId, ctx.user.id));
+    const ownedIds = new Set(owned.map((deal) => deal.id));
+    rows = rows.filter((proposal) => ownedIds.has(proposal.dealId));
+  } else if (scope.kind !== "all") rows = rows.filter((p) => !p.organizationId || scope.orgIds.includes(p.organizationId));
   return rows.length;
 }
 
 export async function getProposal(ctx: AuthContext, proposalId: string): Promise<ProposalDetail> {
   const db = getDb();
   const p = await loadProposal(proposalId);
-  assertStaffScoped(ctx, p.organizationId, "get_proposal");
-  const [deal, org, options, discoveryPackage] = await Promise.all([
-    db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) }),
+  const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, p.dealId) });
+  if (!deal) throw new StageError("NOT_FOUND", "Proposal not found.");
+  assertStaffScoped(ctx, deal, "get_proposal");
+  const [org, options, discoveryPackage] = await Promise.all([
     p.organizationId ? db.query.organizations.findFirst({ where: eq(schema.organizations.id, p.organizationId) }) : null,
     loadOptions(proposalId),
     db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, p.dealId) }),
@@ -304,6 +323,7 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
   return {
     id: p.id,
     dealId: p.dealId,
+    dealOwnerUserId: deal.ownerUserId,
     dealName: deal?.name ?? "Deal",
     dealValueCents: deal?.valueCents ?? 0,
     dealStage: deal?.stage ?? null,

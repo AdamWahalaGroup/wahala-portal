@@ -28,7 +28,9 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
     countSentProposals(ctx),
     trainingModeFor(ctx),
   ]);
-  const canManage = ctx.isAdmin || ctx.user.role === "account_owner";
+  const canManage = ctx.isAdmin || ctx.user.role === "account_owner" || (
+    ctx.user.role === "sales_rep" && p.dealOwnerUserId === ctx.user.id
+  );
 
   return (
     <AppShell

@@ -64,6 +64,12 @@ describe("canManageCommercialDeal", () => {
     expect(canManageCommercialDeal(actor, noOrgs, { organizationId: null, ownerUserId: "other" })).toBe(false);
   });
 
+  it("allows a sales rep only on a Deal explicitly assigned to them", () => {
+    const actor = { userId: "rep", role: "sales_rep" };
+    expect(canManageCommercialDeal(actor, engP1, { organizationId: "A", ownerUserId: "rep" })).toBe(true);
+    expect(canManageCommercialDeal(actor, engP1, { organizationId: "A", ownerUserId: "other" })).toBe(false);
+  });
+
   it("does not grant commercial writes to delivery roles", () => {
     expect(canManageCommercialDeal({ userId: "lead", role: "lead_engineer" }, orgsA, { organizationId: "A", ownerUserId: "lead" })).toBe(false);
   });

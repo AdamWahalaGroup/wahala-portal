@@ -198,7 +198,7 @@ export async function StaffHome({ ctx }: { ctx: AuthContext }) {
           dealName: m.dealName,
         }))}
       />
-      {(ctx.isAdmin || ctx.user.role === "account_owner") && (
+      {(ctx.isAdmin || ctx.user.role === "account_owner" || ctx.user.role === "sales_rep") && (
         <MeetingInbox
           items={inbox.map((m) => ({
             id: m.id,
