@@ -19,6 +19,7 @@ import {
   type DiscoveryAnalysis,
   type DiscoveryReviewRecommendation,
   type DiscoveryReviewSelection,
+  type DiscoveryReviewStatus,
   type QualificationReviewField,
 } from "@/domain/discovery-review";
 import {
@@ -40,7 +41,7 @@ type Call = {
   recordedAt: string;
   durationMin: number | null;
   fieldsExtracted: number;
-  reviewStatus: "pending" | "applied" | "dismissed";
+  reviewStatus: DiscoveryReviewStatus;
 };
 type NextAction = { n: number; text: string; active: boolean };
 type ReviewView = {
@@ -425,6 +426,7 @@ export function DealProcessPanel({
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [analyzingCallId, setAnalyzingCallId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", duration: "", transcript: "" });
@@ -440,7 +442,7 @@ export function DealProcessPanel({
     if (openLog > 0) setAdding(true);
   }, [openLog]);
 
-  async function ingest() {
+  async function saveCall() {
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -457,24 +459,52 @@ export function DealProcessPanel({
       const d = (await res.json().catch(() => ({}))) as {
         message?: string;
         callId?: string;
-        analysis?: DiscoveryAnalysis;
-        recommended?: DiscoveryReviewRecommendation;
-        usage?: { model: string; costCents: number };
       };
       if (!res.ok) setError(d.message ?? `Failed (${res.status}).`);
-      else if (d.callId && d.analysis && d.recommended) {
-        setReview({ callId: d.callId, title: form.title, analysis: d.analysis, recommended: d.recommended });
-        setStatus(d.usage ? `Analysis ready with ${d.usage.model} · ≈ $${(d.usage.costCents / 100).toFixed(2)} · review required` : "Analysis ready · review required");
+      else if (d.callId) {
+        setStatus("Recorded call saved. Analyze it when you want AI to propose evidence updates.");
         setAdding(false);
         setForm({ title: "", duration: "", transcript: "" });
         router.refresh();
       } else {
-        setError("The analysis response was incomplete — the stored call can be reviewed after refresh.");
+        setError("The save response was incomplete. Refresh to check whether the call was stored.");
       }
     } catch {
       setError("Network error — please try again.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function analyzeCall(call: Call) {
+    setAnalyzingCallId(call.id);
+    setError(null);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/deals/${dealId}/calls/${call.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "analyze" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        callId?: string;
+        analysis?: DiscoveryAnalysis;
+        recommended?: DiscoveryReviewRecommendation;
+        usage?: { model: string; costCents: number };
+      };
+      if (!res.ok) setError(data.message ?? `Failed (${res.status}).`);
+      else if (data.callId && data.analysis && data.recommended) {
+        setReview({ callId: data.callId, title: call.title, analysis: data.analysis, recommended: data.recommended });
+        setStatus(data.usage ? `Analysis ready with ${data.usage.model} · ≈ $${(data.usage.costCents / 100).toFixed(2)} · review required` : "Analysis ready · review required");
+        router.refresh();
+      } else {
+        setError("The analysis response was incomplete. Refresh to check the call status.");
+      }
+    } catch {
+      setError("Network error — the recorded call is still saved. Try analyzing it again.");
+    } finally {
+      setAnalyzingCallId(null);
     }
   }
 
@@ -787,34 +817,40 @@ export function DealProcessPanel({
             </div>
             <textarea
               style={{ border: "1px solid #d7d9df", borderRadius: 8, padding: "7px 9px", fontSize: 12, minHeight: 90, fontFamily: "inherit", lineHeight: 1.45 }}
-              placeholder="Paste a transcript or meeting notes. AI will propose evidence updates for your review."
+              placeholder="Paste a transcript or meeting notes. Save it first; AI analysis is a separate action."
               value={form.transcript}
               onChange={(e) => setForm((f) => ({ ...f, transcript: e.target.value }))}
             />
             <button
-              onClick={ingest}
+              onClick={saveCall}
               disabled={busy || !form.title.trim() || !form.transcript.trim()}
               style={{ alignSelf: "flex-start", background: "var(--ink)", color: "var(--white)", border: 0, borderRadius: 8, padding: "8px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
             >
-              {busy ? "Analyzing evidence (~20s)…" : "◆ Analyze discovery evidence"}
+              {busy ? "Saving…" : "Save recorded call"}
             </button>
+            <p className="mono" style={{ margin: 0, fontSize: 9.5, color: "var(--muted-line)" }}>Saving does not run AI or change Discovery Package evidence.</p>
           </div>
         )}
         {status && <p style={{ color: "#15803d", fontSize: 12, fontWeight: 600, margin: "0 0 8px" }}>{status}</p>}
         {error && <p style={{ color: "#b00020", fontSize: 12, margin: "0 0 8px" }}>{error}</p>}
         {calls.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 12.5, color: "var(--muted-line)" }}>No calls yet — paste the first transcript, review the evidence, then apply it.</p>
+          <p style={{ margin: 0, fontSize: 12.5, color: "var(--muted-line)" }}>No calls yet — save the first transcript, then analyze it when you are ready to review evidence.</p>
         ) : (
           calls.map((c) => (
             <div key={c.id} style={{ borderBottom: "1px solid var(--border-softer)", padding: "7px 0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: c.reviewStatus === "pending" ? "#D97706" : c.reviewStatus === "dismissed" ? "#9AA0AA" : "#16A34A", flex: "none" }} />
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: c.reviewStatus === "not_analyzed" ? "#64748B" : c.reviewStatus === "pending" ? "#D97706" : c.reviewStatus === "dismissed" ? "#9AA0AA" : "#16A34A", flex: "none" }} />
                 <span style={{ fontSize: 12.5, fontWeight: 700, flex: 1, minWidth: 0 }}>{c.title}</span>
                 <span className="mono" style={{ fontSize: 9.5, color: "var(--muted-line)", flex: "none" }}>
                   {new Date(c.recordedAt).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                   {c.durationMin ? ` · ${Math.floor(c.durationMin / 60) > 0 ? `${Math.floor(c.durationMin / 60)}h` : ""}${c.durationMin % 60}m` : ""}
-                  {c.reviewStatus === "pending" ? " · review pending" : c.reviewStatus === "dismissed" ? " · analysis dismissed" : ` · ${c.fieldsExtracted} fields accepted`}
+                  {c.reviewStatus === "not_analyzed" ? " · saved · not analyzed" : c.reviewStatus === "pending" ? " · review pending" : c.reviewStatus === "dismissed" ? " · analysis dismissed" : ` · ${c.fieldsExtracted} fields accepted`}
                 </span>
+                {canManage && c.reviewStatus === "not_analyzed" && (
+                  <button onClick={() => void analyzeCall(c)} disabled={analyzingCallId !== null} className="mono" style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 10, fontWeight: 800, cursor: "pointer", flex: "none" }}>
+                    {analyzingCallId === c.id ? "analyzing (~20s)…" : "◆ analyze recorded call"}
+                  </button>
+                )}
                 {c.reviewStatus === "pending" && (
                   <button onClick={() => loadReview(c.id)} className="mono" style={{ border: 0, background: "none", color: "#B45309", fontSize: 10, fontWeight: 800, cursor: "pointer", flex: "none" }}>
                     review →

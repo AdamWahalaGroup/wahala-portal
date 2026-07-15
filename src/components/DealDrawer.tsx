@@ -24,6 +24,7 @@ import { StageMomentLayer, stageMomentFor, type StageMoment } from "@/components
 import { MeetingCard, type MeetingCardData } from "@/components/MeetingCard";
 import { ScheduleCallModal } from "@/components/ScheduleCallModal";
 import { readinessTone, type BuyingPath, type PackageFields } from "@/domain/process";
+import type { DiscoveryReviewStatus } from "@/domain/discovery-review";
 import { FUNNEL_STAGES, STAGE_META, type DealStage } from "@/domain/sales";
 import { NEXT_ACTION_COURTS, NEXT_ACTION_COURT_LABELS, nextActionTiming, type NextActionCourt } from "@/domain/deal-operating-model";
 
@@ -53,7 +54,7 @@ export type DrawerProcess = {
     recordedAt: string;
     durationMin: number | null;
     fieldsExtracted: number;
-    reviewStatus: "pending" | "applied" | "dismissed";
+    reviewStatus: DiscoveryReviewStatus;
   }[];
   meetings: MeetingCardData[];
   zoomReady: boolean;

@@ -21,7 +21,7 @@ import {
   type SolutionClarityFieldKey,
 } from "./process";
 
-export const DISCOVERY_REVIEW_STATUSES = ["pending", "applied", "dismissed"] as const;
+export const DISCOVERY_REVIEW_STATUSES = ["not_analyzed", "pending", "applied", "dismissed"] as const;
 export type DiscoveryReviewStatus = (typeof DISCOVERY_REVIEW_STATUSES)[number];
 
 export const QUALIFICATION_REVIEW_FIELDS = [

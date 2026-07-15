@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PACKAGE_FIELDS, type PackageFields } from "./process";
 import {
+  DISCOVERY_REVIEW_STATUSES,
   mergeReviewedPackage,
   normalizeDiscoveryAnalysis,
   recommendedDiscoverySelection,
@@ -47,6 +48,11 @@ function analysis(): DiscoveryAnalysis {
 }
 
 describe("discovery review", () => {
+  it("distinguishes a saved call from one with pending AI evidence", () => {
+    expect(DISCOVERY_REVIEW_STATUSES).toContain("not_analyzed");
+    expect(DISCOVERY_REVIEW_STATUSES).toContain("pending");
+  });
+
   it("recommends evidence improvements but never preselects commercial decisions", () => {
     const recommended = recommendedDiscoverySelection(
       { champion: null, economicBuyer: null, compellingEvent: null, decisionProcess: null, budgetStatus: "unknown", budgetEvidence: null },

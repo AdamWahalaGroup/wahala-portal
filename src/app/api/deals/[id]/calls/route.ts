@@ -1,13 +1,12 @@
 /**
- * POST /api/deals/[id]/calls — ingest a recorded call (frame 38):
+ * POST /api/deals/[id]/calls — save a recorded call (frame 38):
  *   { title, transcriptMd, recordedAt?, durationMin? }
- * Stores the transcript and one unified AI analysis. The response is reviewable;
- * no Deal, qualification, commercial, or readiness field changes until PATCH apply.
- * Admin / account owner (it costs money). ~15–30s.
+ * Stores the transcript without invoking AI. Analysis is an explicit action on
+ * the saved call, and no Deal evidence changes until its review is applied.
  */
 import { NextResponse } from "next/server";
 import { requireAuth, handleApiError, readJson, ApiError } from "@/lib/api";
-import { ingestCall } from "@/services/process";
+import { saveRecordedCall } from "@/services/process";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!body.title?.trim() || !body.transcriptMd?.trim()) {
       throw new ApiError(400, "validation", "title and transcriptMd are required.");
     }
-    const result = await ingestCall(ctx, id, {
+    const result = await saveRecordedCall(ctx, id, {
       title: body.title,
       transcriptMd: body.transcriptMd,
       recordedAt: body.recordedAt,
