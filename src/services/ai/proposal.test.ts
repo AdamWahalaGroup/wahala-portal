@@ -4,6 +4,7 @@ import type { ProposalScopeDetails } from "../../domain/proposal-doc";
 import {
   buildProposalEvidenceContext,
   normalizeProposalProseOutput,
+  proposalProseJsonSchemaFor,
   splitProposalEvidenceItems,
   type ProposalEvidenceContext,
   type ProposalProseOutput,
@@ -85,6 +86,29 @@ describe("proposal evidence context", () => {
 });
 
 describe("proposal prose normalization", () => {
+  it("binds the structured schema to exactly one placement per option", () => {
+    expect(proposalProseJsonSchemaFor(["A", "B"])).toMatchObject({
+      properties: {
+        options: { minItems: 2, maxItems: 2 },
+        coverage: {
+          properties: {
+            items: {
+              items: {
+                properties: {
+                  placements: {
+                    minItems: 2,
+                    maxItems: 2,
+                    items: { properties: { optionLabel: { enum: ["A", "B"] } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("keeps a useful draft when the model uses option names as labels", () => {
     const output: ProposalProseOutput = {
       execSummary: "A grounded proposal.",
@@ -158,6 +182,150 @@ describe("proposal prose normalization", () => {
       phaseName: null,
     });
     expect(normalized.coverage.warnings).toContain("Review “Reporter portal” for Option B; its included phase could not be matched.");
+  });
+
+  it("reconciles a missing placement from generated phase scope", () => {
+    const phaseScope: ProposalScopeDetails = {
+      objective: "Launch the reporter portal.",
+      scopeItems: ["Develop the web portal", "Implement RBAC for reporters"],
+      deliverables: ["Reporter portal with role-based access control"],
+      acceptanceCriteria: ["Reporters can sign in"],
+      exclusions: [],
+    };
+    const output: ProposalProseOutput = {
+      execSummary: "A grounded proposal.",
+      options: [
+        { label: "A", name: "Complete reporter portal", summaryMd: "One delivery.", scopeDetails: phaseScope, phases: [] },
+        {
+          label: "B",
+          name: "Incremental reporter portal",
+          summaryMd: "A phased delivery.",
+          scopeDetails: { ...scopeDetails, scopeItems: [], deliverables: [], acceptanceCriteria: [] },
+          phases: [{ name: "Portal foundation", scopeDetails: phaseScope }],
+        },
+      ],
+      coverage: {
+        items: [{
+          priority: "Portal with RBAC for reporters",
+          placements: [{ optionLabel: "A", disposition: "included", phaseName: null, note: "" }],
+        }],
+        warnings: [],
+      },
+    };
+
+    const normalized = normalizeProposalProseOutput(output, shapes, evidenceContext);
+
+    expect(normalized.coverage.items[0].placements[1]).toEqual({
+      optionLabel: "B",
+      disposition: "included",
+      phaseName: "Portal foundation",
+      note: "Reconciled from the generated phase scope; verify before sending.",
+    });
+    expect(normalized.coverage.warnings).not.toContain("Review “Portal with RBAC for reporters” for Option B; the AI did not classify it.");
+  });
+
+  it("keeps a missing placement as a question when generated scope has no support", () => {
+    const output: ProposalProseOutput = {
+      execSummary: "A grounded proposal.",
+      options: [
+        { label: "A", name: "Complete reporter portal", summaryMd: "One delivery.", scopeDetails, phases: [] },
+        {
+          label: "B",
+          name: "Incremental reporter portal",
+          summaryMd: "A phased delivery.",
+          scopeDetails,
+          phases: [{ name: "Reporter foundation", scopeDetails }],
+        },
+      ],
+      coverage: {
+        items: [{
+          priority: "Accounting system integration",
+          placements: [{ optionLabel: "A", disposition: "question", phaseName: null, note: "Not established" }],
+        }],
+        warnings: [],
+      },
+    };
+
+    const normalized = normalizeProposalProseOutput(output, shapes, evidenceContext);
+
+    expect(normalized.coverage.items[0].placements[1]).toMatchObject({ optionLabel: "B", disposition: "question", phaseName: null });
+    expect(normalized.coverage.warnings).toContain("Review “Accounting system integration” for Option B; the AI did not classify it.");
+  });
+
+  it("removes general success outcomes from capability coverage", () => {
+    const output: ProposalProseOutput = {
+      execSummary: "A grounded proposal.",
+      options: [
+        { label: "A", name: "Complete reporter portal", summaryMd: "One delivery.", scopeDetails, phases: [] },
+        {
+          label: "B",
+          name: "Incremental reporter portal",
+          summaryMd: "A phased delivery.",
+          scopeDetails,
+          phases: [{ name: "Reporter foundation", scopeDetails }],
+        },
+      ],
+      coverage: {
+        items: [{
+          priority: "Consolidating any part of the system would be an improvement",
+          placements: [
+            { optionLabel: "A", disposition: "included", phaseName: null, note: "" },
+            { optionLabel: "B", disposition: "included", phaseName: "Reporter foundation", note: "" },
+          ],
+        }],
+        warnings: [],
+      },
+    };
+
+    const normalized = normalizeProposalProseOutput(output, shapes, evidenceContext);
+
+    expect(normalized.coverage.items).toEqual([]);
+  });
+
+  it("turns contradictory audio direction terminology into an explicit question", () => {
+    const contradictoryEvidence: ProposalEvidenceContext = {
+      ...evidenceContext,
+      discoveryPackage: {
+        ...evidenceContext.discoveryPackage,
+        fields: [{
+          key: "mvp_priorities",
+          label: "MVP priorities",
+          status: "ok",
+          evidence: "Text-to-speech from an uploaded audio file",
+          source: "manual",
+        }],
+      },
+    };
+    const output: ProposalProseOutput = {
+      execSummary: "A grounded proposal.",
+      options: [
+        { label: "A", name: "Complete reporter portal", summaryMd: "One delivery.", scopeDetails, phases: [] },
+        {
+          label: "B",
+          name: "Incremental reporter portal",
+          summaryMd: "A phased delivery.",
+          scopeDetails,
+          phases: [{ name: "Reporter foundation", scopeDetails }],
+        },
+      ],
+      coverage: {
+        items: [{
+          priority: "Text-to-speech from audio upload",
+          placements: [
+            { optionLabel: "A", disposition: "included", phaseName: null, note: "" },
+            { optionLabel: "B", disposition: "included", phaseName: "Reporter foundation", note: "" },
+          ],
+        }],
+        warnings: [],
+      },
+    };
+
+    const normalized = normalizeProposalProseOutput(output, shapes, contradictoryEvidence);
+
+    expect(normalized.coverage.items[0].placements.map((placement) => placement.disposition)).toEqual(["question", "question"]);
+    expect(normalized.coverage.warnings).toContain(
+      "Terminology question: the discovery evidence says text-to-speech with an audio-file input. Audio converted into written words is speech-to-text. Confirm the intended direction before sending.",
+    );
   });
 });
 

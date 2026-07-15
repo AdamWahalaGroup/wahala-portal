@@ -98,7 +98,11 @@ Return JSON with:
     scopeDetails.
 - coverage: an INTERNAL review object, never client prose:
   * Split every concrete capability named in MVP priorities or success metrics into an
-    atomic priority. For EACH priority, return exactly one placement per option.
+    atomic priority. Coverage traces software capabilities, integrations, roles, workflows,
+    and deliverables — not general outcomes such as "faster turnaround," "better," or
+    "any improvement would help." Success outcomes belong in acceptance criteria.
+  * For EACH priority, return exactly one placement per option, in the same option order.
+    Never omit an option and never combine two options into one placement.
   * disposition is included, deferred, or question. Included must name its phase for a
     phased option and must appear in that phase's scope or deliverables. Use phaseName
     null for a single delivery or when deferred/question.
@@ -116,7 +120,7 @@ Rules:
   instruction explicitly changes that boundary.
 - Do not silently repair contradictory product terminology. For example, audio converted
   into words is speech-to-text, while text-to-speech produces audio. Use coverage warnings
-  and a question when the evidence conflicts.
+  and mark that capability as a question in every option when the evidence conflicts.
 - Buying Path is PRIVATE INTERNAL SALES CONTEXT. Use a buying-path fact only when it
   directly affects client-suitable scope, timing, or assumptions. Never expose CRM
   statuses, internal sales judgments, champion strategy, approval maneuvering, or doubts

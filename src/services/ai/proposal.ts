@@ -116,6 +116,58 @@ export const proposalProseJsonSchema = {
   },
 } as const;
 
+/**
+ * The base schema guarantees types, while this request-specific version also
+ * guarantees coverage cardinality. Structured Outputs cannot derive the number
+ * of placements from the options array, so bind it to the fixed option shapes
+ * before each call.
+ */
+export function proposalProseJsonSchemaFor(optionLabels: string[]) {
+  const coverage = proposalProseJsonSchema.properties.coverage;
+  const coverageItems = coverage.properties.items;
+  const coverageItem = coverageItems.items;
+  const placements = coverageItem.properties.placements;
+  const placement = placements.items;
+  return {
+    ...proposalProseJsonSchema,
+    properties: {
+      ...proposalProseJsonSchema.properties,
+      options: {
+        ...proposalProseJsonSchema.properties.options,
+        minItems: optionLabels.length,
+        maxItems: optionLabels.length,
+      },
+      coverage: {
+        ...coverage,
+        properties: {
+          ...coverage.properties,
+          items: {
+            ...coverageItems,
+            items: {
+              ...coverageItem,
+              properties: {
+                ...coverageItem.properties,
+                placements: {
+                  ...placements,
+                  minItems: optionLabels.length,
+                  maxItems: optionLabels.length,
+                  items: {
+                    ...placement,
+                    properties: {
+                      ...placement.properties,
+                      optionLabel: { type: "string", enum: optionLabels },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 export type ProposalShape = {
   label: string;
   name: string; // the deterministic default name — the model may improve it
@@ -152,6 +204,115 @@ function appendCoverageNote(note: string, addition: string): string {
   return note.trim() ? `${note.trim()} ${addition}` : addition;
 }
 
+const COVERAGE_STOP_WORDS = new Set([
+  "a", "an", "and", "any", "as", "at", "be", "by", "for", "from", "in", "into", "is", "it", "of", "on", "or", "our", "the", "their", "this", "to", "with",
+  "ability", "capabilities", "capability", "feature", "features", "functionality", "provide", "provides", "system",
+]);
+
+function coverageTokens(value: string): Set<string> {
+  return new Set(value
+    .toLocaleLowerCase()
+    .replace(/\brole[- ]based access control\b/g, " rbac ")
+    .replace(/\btext[- ]to[- ]speech\b/g, " text speech ")
+    .replace(/\bspeech[- ]to[- ]text\b/g, " speech text ")
+    .match(/[a-z0-9]+/g)
+    ?.map((token) => {
+      if (token.length > 5 && token.endsWith("ing")) return token.slice(0, -3);
+      if (token.length > 4 && token.endsWith("ed")) return token.slice(0, -2);
+      if (token.length > 4 && token.endsWith("s")) return token.slice(0, -1);
+      return token;
+    })
+    .filter((token) => token.length > 1 && !COVERAGE_STOP_WORDS.has(token)) ?? []);
+}
+
+function scopeText(details: ProposalScopeDetails, exclusionsOnly = false): string {
+  if (exclusionsOnly) return details.exclusions.join(" ");
+  return [details.objective, ...details.scopeItems, ...details.deliverables, ...details.acceptanceCriteria].join(" ");
+}
+
+function coverageMatchScore(priority: string, text: string): number {
+  const priorityTokens = coverageTokens(priority);
+  if (priorityTokens.size === 0) return 0;
+  const candidateTokens = coverageTokens(text);
+  const anchor = priorityTokens.values().next().value as string | undefined;
+  if (anchor && !candidateTokens.has(anchor)) return 0;
+  const overlap = [...priorityTokens].filter((token) => candidateTokens.has(token)).length;
+  const minimumOverlap = priorityTokens.size === 1 ? 1 : 2;
+  if (overlap < minimumOverlap) return 0;
+  const ratio = overlap / priorityTokens.size;
+  return ratio >= 0.5 ? ratio : 0;
+}
+
+function isGeneralOutcome(priority: string): boolean {
+  const value = priority.trim().toLocaleLowerCase();
+  return /\bwould be (?:an? )?(?:improvement|success|benefit)\b/.test(value)
+    || /^(?:reduce|increase|improve|decrease|shorten|accelerate|save|achieve)\b/.test(value)
+    || /\b(?:faster|quicker|better|more efficient|less time)\b/.test(value);
+}
+
+function evidenceValues(evidenceContext: ProposalEvidenceContext): string[] {
+  return evidenceContext.discoveryPackage.fields
+    .filter((field) => field.status !== "missing" && !!field.evidence)
+    .map((field) => field.evidence as string);
+}
+
+function hasAudioDirectionConflict(evidenceContext: ProposalEvidenceContext): boolean {
+  return evidenceValues(evidenceContext).some((evidence) => {
+    const value = evidence.toLocaleLowerCase();
+    const saysTextToSpeech = /\btext[- ]to[- ]speech\b/.test(value);
+    const saysAudioInput = /\baudio\b.{0,80}\b(?:file|upload|recording)\b/.test(value)
+      || /\b(?:file|upload|recording)\b.{0,80}\baudio\b/.test(value);
+    return saysTextToSpeech && saysAudioInput;
+  });
+}
+
+const AUDIO_DIRECTION_WARNING = "Terminology question: the discovery evidence says text-to-speech with an audio-file input. Audio converted into written words is speech-to-text. Confirm the intended direction before sending.";
+
+function priorityHasAudioConversion(priority: string): boolean {
+  const value = priority.toLocaleLowerCase();
+  return /\b(?:text[- ]to[- ]speech|speech[- ]to[- ]text)\b/.test(value)
+    || (/\btranscri(?:be|ption)\b/.test(value) && /\b(?:audio|speech|recording|upload)\b/.test(value));
+}
+
+function reconcileMissingPlacement(
+  priority: string,
+  option: ProposalProseOutput["options"][number],
+  optionLabel: string,
+) {
+  const excluded = coverageMatchScore(priority, scopeText(option.scopeDetails, true)) > 0;
+  if (option.phases.length === 0) {
+    const included = coverageMatchScore(priority, scopeText(option.scopeDetails)) > 0;
+    if (included && excluded) return {
+      optionLabel,
+      disposition: "question" as const,
+      phaseName: null,
+      note: "Review required: this capability appears in both included and excluded scope.",
+    };
+    if (excluded) return { optionLabel, disposition: "deferred" as const, phaseName: null, note: "Reconciled from the generated exclusions; verify before sending." };
+    if (included) return { optionLabel, disposition: "included" as const, phaseName: null, note: "Reconciled from the generated scope; verify before sending." };
+    return null;
+  }
+
+  const rankedPhases = option.phases
+    .map((phase) => ({ phase, score: coverageMatchScore(priority, scopeText(phase.scopeDetails)) }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score);
+  if (rankedPhases.length > 0 && excluded) return {
+    optionLabel,
+    disposition: "question" as const,
+    phaseName: null,
+    note: "Review required: this capability appears in both a phase and the option exclusions.",
+  };
+  if (excluded) return { optionLabel, disposition: "deferred" as const, phaseName: null, note: "Reconciled from the generated exclusions; verify before sending." };
+  if (rankedPhases[0]) return {
+    optionLabel,
+    disposition: "included" as const,
+    phaseName: rankedPhases[0].phase.name,
+    note: "Reconciled from the generated phase scope; verify before sending.",
+  };
+  return null;
+}
+
 /**
  * Structured Outputs guarantees the JSON shape, not business semantics. Small
  * models sometimes put the generated option name in `label` even when the
@@ -182,11 +343,31 @@ export function normalizeProposalProseOutput(
   });
 
   const warnings = [...(output.coverage?.warnings ?? [])];
+  const seenPriorities = new Set<string>();
+  const audioDirectionConflict = hasAudioDirectionConflict(evidenceContext);
+  let audioConflictCovered = false;
   const coverageItems = (output.coverage?.items ?? []).flatMap((item) => {
     const priority = item.priority.trim();
     if (!priority) {
       warnings.push("The AI returned an empty coverage item; it was removed during review normalization.");
       return [];
+    }
+    const priorityKey = normalizedIdentifier(priority);
+    if (seenPriorities.has(priorityKey) || isGeneralOutcome(priority)) return [];
+    seenPriorities.add(priorityKey);
+
+    if (audioDirectionConflict && priorityHasAudioConversion(priority)) {
+      audioConflictCovered = true;
+      warnings.push(AUDIO_DIRECTION_WARNING);
+      return [{
+        priority,
+        placements: shapes.map((shape) => ({
+          optionLabel: shape.label,
+          disposition: "question" as const,
+          phaseName: null,
+          note: AUDIO_DIRECTION_WARNING,
+        })),
+      }];
     }
 
     const usedPlacements = new Set<number>();
@@ -201,6 +382,8 @@ export function normalizeProposalProseOutput(
       if (placementIndex >= 0) usedPlacements.add(placementIndex);
 
       if (!source) {
+        const reconciled = reconcileMissingPlacement(priority, output.options[optionIndex], shape.label);
+        if (reconciled) return reconciled;
         warnings.push(`Review “${priority}” for Option ${shape.label}; the AI did not classify it.`);
         return {
           optionLabel: shape.label,
@@ -232,6 +415,19 @@ export function normalizeProposalProseOutput(
 
     return [{ priority, placements }];
   });
+
+  if (audioDirectionConflict && !audioConflictCovered) {
+    warnings.push(AUDIO_DIRECTION_WARNING);
+    coverageItems.push({
+      priority: "Confirm audio conversion direction",
+      placements: shapes.map((shape) => ({
+        optionLabel: shape.label,
+        disposition: "question",
+        phaseName: null,
+        note: AUDIO_DIRECTION_WARNING,
+      })),
+    });
+  }
 
   const expectsCoverage = evidenceContext.discoveryPackage.fields.some(
     (field) => (field.key === "mvp_priorities" || field.key === "success_metrics") && field.status !== "missing" && !!field.evidence,
@@ -357,7 +553,7 @@ export async function draftProposalProse(
     system: cfg.systemPrompt,
     parts,
     schemaName: "ProposalProse",
-    schema: proposalProseJsonSchema,
+    schema: proposalProseJsonSchemaFor(input.shapes.map((shape) => shape.label)),
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
   });
