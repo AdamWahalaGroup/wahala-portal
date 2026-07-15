@@ -10,7 +10,7 @@
  * after reviewed evidence or a manual edit is accepted; history keeps per-event
  * snapshots, never mutated.
  */
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
 import { StageError } from "@/domain/stage-machine";
@@ -44,6 +44,7 @@ import {
 import {
   COMMERCIAL_REVIEW_FIELDS,
   DISCOVERY_REVIEW_ENUMS,
+  effectiveDiscoveryReviewStatus,
   QUALIFICATION_REVIEW_FIELDS,
   mergeReviewedPackage,
   normalizeDiscoveryAnalysis,
@@ -171,7 +172,7 @@ export async function getDealProcess(ctx: AuthContext, dealId: string): Promise<
       recordedAt: c.recordedAt,
       durationMin: c.durationMin,
       fieldsExtracted: c.fieldsExtracted,
-      reviewStatus: c.reviewStatus,
+      reviewStatus: effectiveDiscoveryReviewStatus(c.reviewStatus, c.discoveryAnalysis),
     })),
   };
 }
@@ -428,14 +429,20 @@ export async function analyzeRecordedCall(
   ]);
   if (!deal || !call || call.dealId !== dealId) throw new StageError("NOT_FOUND", "Recorded call not found.");
   assertCanManageDeal(ctx, deal, "analyze_recorded_call");
-  if (call.reviewStatus !== "not_analyzed" || call.discoveryAnalysis) {
+  if (call.discoveryAnalysis) {
     throw new StageError("INVALID_STATE", "This recorded call has already been analyzed.");
   }
 
   const { analysis, recommended, usage } = await generateCallAnalysis(deal, call.title, call.transcriptMd);
   const updated = await db.update(schema.dealCalls)
-    .set({ discoveryAnalysis: analysis, reviewStatus: "pending" })
-    .where(and(eq(schema.dealCalls.id, callId), eq(schema.dealCalls.reviewStatus, "not_analyzed")))
+    .set({
+      discoveryAnalysis: analysis,
+      reviewStatus: "pending",
+      reviewedByUserId: null,
+      reviewedAt: null,
+      fieldsExtracted: 0,
+    })
+    .where(and(eq(schema.dealCalls.id, callId), isNull(schema.dealCalls.discoveryAnalysis)))
     .returning({ id: schema.dealCalls.id });
   if (updated.length === 0) throw new StageError("INVALID_STATE", "This recorded call has already been analyzed.");
   await db.insert(schema.auditLog).values(

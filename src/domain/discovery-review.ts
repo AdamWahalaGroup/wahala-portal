@@ -24,6 +24,14 @@ import {
 export const DISCOVERY_REVIEW_STATUSES = ["not_analyzed", "pending", "applied", "dismissed"] as const;
 export type DiscoveryReviewStatus = (typeof DISCOVERY_REVIEW_STATUSES)[number];
 
+/** Legacy seeded/manual rows defaulted to applied even when no AI payload existed. */
+export function effectiveDiscoveryReviewStatus(
+  storedStatus: DiscoveryReviewStatus,
+  discoveryAnalysis: unknown,
+): DiscoveryReviewStatus {
+  return discoveryAnalysis ? storedStatus : "not_analyzed";
+}
+
 export const QUALIFICATION_REVIEW_FIELDS = [
   "champion",
   "economicBuyer",

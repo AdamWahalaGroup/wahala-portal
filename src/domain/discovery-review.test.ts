@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PACKAGE_FIELDS, type PackageFields } from "./process";
 import {
   DISCOVERY_REVIEW_STATUSES,
+  effectiveDiscoveryReviewStatus,
   mergeReviewedPackage,
   normalizeDiscoveryAnalysis,
   recommendedDiscoverySelection,
@@ -51,6 +52,11 @@ describe("discovery review", () => {
   it("distinguishes a saved call from one with pending AI evidence", () => {
     expect(DISCOVERY_REVIEW_STATUSES).toContain("not_analyzed");
     expect(DISCOVERY_REVIEW_STATUSES).toContain("pending");
+  });
+
+  it("treats a legacy applied call without an AI payload as not analyzed", () => {
+    expect(effectiveDiscoveryReviewStatus("applied", null)).toBe("not_analyzed");
+    expect(effectiveDiscoveryReviewStatus("applied", { discoveryMd: "Accepted" })).toBe("applied");
   });
 
   it("recommends evidence improvements but never preselects commercial decisions", () => {
