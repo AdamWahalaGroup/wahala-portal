@@ -52,6 +52,7 @@ import {
   type DiscoveryAnalysis,
   type DiscoveryReviewRecommendation,
   type DiscoveryReviewSelection,
+  type DiscoveryReviewStatus,
 } from "@/domain/discovery-review";
 import {
   isBudgetStatus,
@@ -119,7 +120,7 @@ export type DealProcess = {
     recordedAt: Date;
     durationMin: number | null;
     fieldsExtracted: number;
-    reviewStatus: "pending" | "applied" | "dismissed";
+    reviewStatus: DiscoveryReviewStatus;
   }[];
 };
 
@@ -257,29 +258,33 @@ const discoveryAnalysisSchema = {
   },
 } as const;
 
-/**
- * The shared ingest core — the authed paste path AND the Zoom webhook (no user
- * context, actorUserId null) both land here. The source and analysis are durable,
- * but the Deal remains unchanged until a human reviews and applies selections.
- */
-export async function ingestCallCore(
-  deal: typeof schema.deals.$inferSelect,
-  input: { title: string; transcriptMd: string; recordedAt?: string | Date; durationMin?: number | null },
-  actorUserId: string | null,
-  trigger: "user" | "webhook" = "user",
-): Promise<{
-  callId: string;
+type RecordedCallInput = {
+  title: string;
+  transcriptMd: string;
+  recordedAt?: string | Date;
+  durationMin?: number | null;
+};
+
+type CallAnalysisResult = {
   analysis: DiscoveryAnalysis;
   recommended: DiscoveryReviewRecommendation;
   usage: DraftUsage;
-}> {
-  const title = input.title?.trim();
-  const transcript = input.transcriptMd?.trim();
-  if (!title) throw new StageError("VALIDATION", "Give the call a title.");
-  if (!transcript) throw new StageError("VALIDATION", "Paste the transcript.");
-  const db = getDb();
-  const dealId = deal.id;
+};
 
+function cleanRecordedCallInput(input: RecordedCallInput): RecordedCallInput & { title: string; transcriptMd: string } {
+  const title = input.title?.trim();
+  const transcriptMd = input.transcriptMd?.trim();
+  if (!title) throw new StageError("VALIDATION", "Give the call a title.");
+  if (!transcriptMd) throw new StageError("VALIDATION", "Paste the transcript.");
+  return { ...input, title, transcriptMd };
+}
+
+async function generateCallAnalysis(
+  deal: typeof schema.deals.$inferSelect,
+  title: string,
+  transcript: string,
+): Promise<CallAnalysisResult> {
+  const dealId = deal.id;
   const previous = await loadPackage(dealId);
   const provider = await getDraftProvider();
   const cfg = await resolveAgentConfig("package_extractor");
@@ -321,16 +326,35 @@ export async function ingestCallCore(
     fieldsImproved: Math.max(0, Math.min(SOLUTION_CLARITY_FIELDS.length, Math.round(output.fieldsImproved))),
   });
   const recommended = recommendedDiscoverySelection(deal, previous, analysis);
+  return { analysis, recommended, usage };
+}
+
+/**
+ * The shared ingest core for automatic sources such as Zoom. It preserves the
+ * existing one-step behavior: analyze first, then store the call with a pending
+ * human review. Manual entry uses saveRecordedCall + analyzeRecordedCall so a
+ * transcript is never held hostage by an AI request.
+ */
+export async function ingestCallCore(
+  deal: typeof schema.deals.$inferSelect,
+  input: RecordedCallInput,
+  actorUserId: string | null,
+  trigger: "user" | "webhook" = "user",
+): Promise<{ callId: string } & CallAnalysisResult> {
+  const cleaned = cleanRecordedCallInput(input);
+  const { analysis, recommended, usage } = await generateCallAnalysis(deal, cleaned.title, cleaned.transcriptMd);
+  const db = getDb();
+  const dealId = deal.id;
   const callId = crypto.randomUUID();
 
   await db.batch([
     db.insert(schema.dealCalls).values({
       id: callId,
       dealId,
-      title,
-      recordedAt: input.recordedAt ? new Date(input.recordedAt) : new Date(),
-      durationMin: input.durationMin ?? null,
-      transcriptMd: transcript,
+      title: cleaned.title,
+      recordedAt: cleaned.recordedAt ? new Date(cleaned.recordedAt) : new Date(),
+      durationMin: cleaned.durationMin ?? null,
+      transcriptMd: cleaned.transcriptMd,
       fieldsExtracted: 0,
       discoveryAnalysis: analysis,
       reviewStatus: "pending",
@@ -352,20 +376,80 @@ export async function ingestCallCore(
   return { callId, analysis, recommended, usage };
 }
 
-/**
- * Ingest a recorded call from the UI (paste path). Sales manager (costs money).
- */
-export async function ingestCall(
+/** Store a manually entered call without spending money or changing Deal evidence. */
+export async function saveRecordedCall(
   ctx: AuthContext,
   dealId: string,
-  input: { title: string; transcriptMd: string; recordedAt?: string; durationMin?: number },
-): Promise<{ callId: string; analysis: DiscoveryAnalysis; recommended: DiscoveryReviewRecommendation; usage: DraftUsage }> {
-  assertDealSeller(ctx, "ingest_call");
+  input: RecordedCallInput,
+): Promise<{ callId: string }> {
+  assertDealSeller(ctx, "save_recorded_call");
   const db = getDb();
   const deal = await db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) });
   if (!deal) throw new StageError("NOT_FOUND", "Deal not found.");
-  assertCanManageDeal(ctx, deal, "ingest_call");
-  return ingestCallCore(deal, input, ctx.user.id);
+  assertCanManageDeal(ctx, deal, "save_recorded_call");
+  const cleaned = cleanRecordedCallInput(input);
+  const callId = crypto.randomUUID();
+  await db.batch([
+    db.insert(schema.dealCalls).values({
+      id: callId,
+      dealId,
+      title: cleaned.title,
+      recordedAt: cleaned.recordedAt ? new Date(cleaned.recordedAt) : new Date(),
+      durationMin: cleaned.durationMin ?? null,
+      transcriptMd: cleaned.transcriptMd,
+      reviewStatus: "not_analyzed",
+      createdByUserId: ctx.user.id,
+    }),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: deal.organizationId,
+        actorUserId: ctx.user.id,
+        action: "deal.call_recorded",
+        entityType: "deal_call",
+        entityId: callId,
+        metadata: { dealId, title: cleaned.title },
+      }),
+    ),
+  ]);
+  return { callId };
+}
+
+/** Analyze one saved call and create a pending, human-reviewed evidence proposal. */
+export async function analyzeRecordedCall(
+  ctx: AuthContext,
+  dealId: string,
+  callId: string,
+): Promise<{ callId: string } & CallAnalysisResult> {
+  assertDealSeller(ctx, "analyze_recorded_call");
+  const db = getDb();
+  const [deal, call] = await Promise.all([
+    db.query.deals.findFirst({ where: eq(schema.deals.id, dealId) }),
+    db.query.dealCalls.findFirst({ where: eq(schema.dealCalls.id, callId) }),
+  ]);
+  if (!deal || !call || call.dealId !== dealId) throw new StageError("NOT_FOUND", "Recorded call not found.");
+  assertCanManageDeal(ctx, deal, "analyze_recorded_call");
+  if (call.reviewStatus !== "not_analyzed" || call.discoveryAnalysis) {
+    throw new StageError("INVALID_STATE", "This recorded call has already been analyzed.");
+  }
+
+  const { analysis, recommended, usage } = await generateCallAnalysis(deal, call.title, call.transcriptMd);
+  const updated = await db.update(schema.dealCalls)
+    .set({ discoveryAnalysis: analysis, reviewStatus: "pending" })
+    .where(and(eq(schema.dealCalls.id, callId), eq(schema.dealCalls.reviewStatus, "not_analyzed")))
+    .returning({ id: schema.dealCalls.id });
+  if (updated.length === 0) throw new StageError("INVALID_STATE", "This recorded call has already been analyzed.");
+  await db.insert(schema.auditLog).values(
+    buildAudit({
+      organizationId: deal.organizationId,
+      actorUserId: ctx.user.id,
+      action: "deal.discovery_analyzed",
+      entityType: "deal_call",
+      entityId: callId,
+      metadata: { dealId, model: usage.model, costCents: usage.costCents, reviewStatus: "pending" },
+    }),
+  );
+  await recordAiRun(db, { agentKey: "package_extractor", trigger: "user", dealId, organizationId: deal.organizationId, ...usage });
+  return { callId, analysis, recommended, usage };
 }
 
 export type DiscoveryReviewView = {

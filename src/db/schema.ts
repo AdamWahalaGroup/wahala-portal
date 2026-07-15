@@ -423,6 +423,8 @@ export const dealCalls = sqliteTable(
     // qualification facts, and commercial classifications. Nothing reaches the
     // Deal until a staff member reviews this payload and explicitly applies it.
     discoveryAnalysis: text("discovery_analysis", { mode: "json" }),
+    // Manual calls are explicitly inserted as not_analyzed; automatic sources
+    // insert pending after their AI pass. The legacy DB default remains applied.
     reviewStatus: text("review_status", { enum: DISCOVERY_REVIEW_STATUSES }).notNull().default("applied"),
     reviewedByUserId: text("reviewed_by_user_id").references(() => users.id),
     reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
