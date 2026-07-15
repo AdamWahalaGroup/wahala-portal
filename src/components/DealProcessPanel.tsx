@@ -671,9 +671,9 @@ export function DealProcessPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <section style={{ background: "#FAFBFF", border: "1.5px solid #C9D0FB", borderRadius: 14, padding: 14 }}>
+      <section style={{ background: "var(--ink)", border: "1px solid #2C2F36", borderRadius: 14, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span className="kicker" style={{ color: "var(--cobalt-text)" }}>Proposal readiness</span>
+          <span className="kicker" style={{ color: "#DDE0E6" }}>Proposal readiness</span>
           <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 9px", background: readyToDraft ? TONE.green.bg : TONE.red.bg, color: readyToDraft ? TONE.green.fg : TONE.red.fg }}>
             DRAFT {readyToDraft ? "READY" : "NOT READY"}
           </span>
@@ -681,8 +681,8 @@ export function DealProcessPanel({
             SEND {readyToSend ? "READY" : "NOT READY"}
           </span>
         </div>
-        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>{readinessGuidance}</p>
-        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>Evidence milestones · not a win forecast and never a hard gate</p>
+        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "#D5D8DE", lineHeight: 1.5 }}>{readinessGuidance}</p>
+        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "#AEB2BB" }}>Evidence milestones · not a win forecast and never a hard gate</p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
           {/* Discovery package card */}
