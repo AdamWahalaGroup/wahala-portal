@@ -51,14 +51,20 @@ const sectionStyle: React.CSSProperties = {
   gap: 10,
 };
 
+const darkSectionStyle: React.CSSProperties = {
+  ...sectionStyle,
+  background: "var(--ink)",
+  border: "1px solid #2C2F36",
+};
+
 function dateOnly(value: string | null): string {
   return value ? value.slice(0, 10) : "";
 }
 
-function FieldLabel({ children, help }: { children: React.ReactNode; help?: React.ReactNode }) {
+function FieldLabel({ children, help, color }: { children: React.ReactNode; help?: React.ReactNode; color?: string }) {
   const label = typeof children === "string" ? children : "this field";
   return (
-    <div className="kicker" style={{ marginBottom: 5, display: "flex", alignItems: "center", gap: 5 }}>
+    <div className="kicker" style={{ marginBottom: 5, display: "flex", alignItems: "center", gap: 5, color }}>
       <span>{children}</span>
       {help && <FieldHelp label={label}>{help}</FieldHelp>}
     </div>
@@ -182,43 +188,44 @@ export function DealFieldsForm({
 
   return (
     <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <section style={sectionStyle}>
-        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Commercial shape</div>
+      <section style={darkSectionStyle}>
+        <div className="kicker" style={{ color: "#DDE0E6" }}>Commercial shape</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           <div style={{ gridColumn: "1 / -1" }}>
-            <FieldLabel>Deal name</FieldLabel>
+            <FieldLabel color="#C9CDD5">Deal name</FieldLabel>
             <input style={inputStyle} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           </div>
           <div>
-            <FieldLabel help="A rough portfolio-planning estimate, not a quote, forecast, or promise. Record funding evidence in the Buying path section.">Estimated value ($)</FieldLabel>
+            <FieldLabel color="#C9CDD5" help="A rough portfolio-planning estimate, not a quote, forecast, or promise. Record funding evidence in the Buying path section.">Estimated value ($)</FieldLabel>
             <input style={inputStyle} inputMode="numeric" placeholder="Gut range anchor, not a quote" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value.replace(/[^0-9.]/g, "") }))} />
           </div>
           <div>
-            <FieldLabel help="The buyer-supported target date for a decision or signed agreement. Leave it blank when it is only a founder hope.">Expected close</FieldLabel>
+            <FieldLabel color="#C9CDD5" help="The buyer-supported target date for a decision or signed agreement. Leave it blank when it is only a founder hope.">Expected close</FieldLabel>
             <input type="date" style={inputStyle} value={form.expectedCloseAt} onChange={(e) => setForm((f) => ({ ...f, expectedCloseAt: e.target.value }))} />
           </div>
           <div>
-            <FieldLabel help="What Wahala is selling: a product/license, modernization, custom build, paid discovery, advisory work, or support.">Engagement type</FieldLabel>
+            <FieldLabel color="#C9CDD5" help="What Wahala is selling: a product/license, modernization, custom build, paid discovery, advisory work, or support.">Engagement type</FieldLabel>
             <select style={inputStyle} value={form.engagementType} onChange={(e) => setForm((f) => ({ ...f, engagementType: e.target.value as EngagementType | "" }))}>
               <option value="">Unclassified</option>
               {ENGAGEMENT_TYPES.map((value) => <option key={value} value={value}>{ENGAGEMENT_TYPE_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
-            <FieldLabel help="How the engagement will be structured and delivered. This is separate from what is being sold and from the payment schedule.">Delivery model</FieldLabel>
+            <FieldLabel color="#C9CDD5" help="How the engagement will be structured and delivered. This is separate from what is being sold and from the payment schedule.">Delivery model</FieldLabel>
             <select style={inputStyle} value={form.deliveryModel} onChange={(e) => setForm((f) => ({ ...f, deliveryModel: e.target.value as DeliveryModel | "" }))}>
               <option value="">Unclassified</option>
               {DELIVERY_MODELS.map((value) => <option key={value} value={value}>{DELIVERY_MODEL_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
-            <FieldLabel help="The intended ownership or license outcome for code and deliverables. It records the commercial position; it does not prove Wahala has authority to sell or transfer the IP.">IP disposition</FieldLabel>
+            <FieldLabel color="#C9CDD5" help="The intended ownership or license outcome for code and deliverables. It records the commercial position; it does not prove Wahala has authority to sell or transfer the IP.">IP disposition</FieldLabel>
             <select style={inputStyle} value={form.ipDisposition} onChange={(e) => setForm((f) => ({ ...f, ipDisposition: e.target.value as IpDisposition }))}>
               {IP_DISPOSITIONS.map((value) => <option key={value} value={value}>{IP_DISPOSITION_LABELS[value]}</option>)}
             </select>
           </div>
           <div>
             <FieldLabel
+              color="#C9CDD5"
               help={
                 <span className="field-help__definitions">
                   <span>Classify the most sensitive data the work may receive, store, transmit, or send to a provider. When unsure, choose the higher risk until discovery proves otherwise.</span>
@@ -231,17 +238,17 @@ export function DealFieldsForm({
             <select style={inputStyle} value={form.dataSensitivity} onChange={(e) => setForm((f) => ({ ...f, dataSensitivity: e.target.value as DataSensitivity }))}>
               {DATA_SENSITIVITIES.map((value) => <option key={value} value={value}>{DATA_SENSITIVITY_LABELS[value]}</option>)}
             </select>
-            <p style={{ margin: "6px 2px 0", fontSize: 11.5, lineHeight: 1.45, color: "var(--muted)" }}>
+            <p style={{ margin: "6px 2px 0", fontSize: 11.5, lineHeight: 1.45, color: "#AEB2BB" }}>
               {DATA_SENSITIVITY_DESCRIPTIONS[form.dataSensitivity]}
             </p>
           </div>
         </div>
       </section>
 
-      <section style={sectionStyle}>
-        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Delivery &amp; support</div>
+      <section style={darkSectionStyle}>
+        <div className="kicker" style={{ color: "#DDE0E6" }}>Delivery &amp; support</div>
         <div>
-          <FieldLabel help="What Wahala must do after handoff or acceptance: warranty fixes, enablement, monitoring, response times, a paid retainer, or explicitly nothing.">Post-handoff support expectation</FieldLabel>
+          <FieldLabel color="#C9CDD5" help="What Wahala must do after handoff or acceptance: warranty fixes, enablement, monitoring, response times, a paid retainer, or explicitly nothing.">Post-handoff support expectation</FieldLabel>
           <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
         </div>
       </section>
