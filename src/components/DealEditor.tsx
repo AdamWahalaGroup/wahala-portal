@@ -235,10 +235,14 @@ export function DealFieldsForm({
               {DATA_SENSITIVITY_DESCRIPTIONS[form.dataSensitivity]}
             </p>
           </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <FieldLabel help="What Wahala must do after handoff or acceptance: warranty fixes, enablement, monitoring, response times, a paid retainer, or explicitly nothing.">Support expectation</FieldLabel>
-            <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
-          </div>
+        </div>
+      </section>
+
+      <section style={sectionStyle}>
+        <div className="kicker" style={{ color: "var(--cobalt-text)" }}>Delivery &amp; support</div>
+        <div>
+          <FieldLabel help="What Wahala must do after handoff or acceptance: warranty fixes, enablement, monitoring, response times, a paid retainer, or explicitly nothing.">Post-handoff support expectation</FieldLabel>
+          <input style={inputStyle} placeholder="Warranty, enablement, retainer, or explicitly none" value={form.supportExpectation} onChange={(e) => setForm((f) => ({ ...f, supportExpectation: e.target.value }))} />
         </div>
       </section>
 

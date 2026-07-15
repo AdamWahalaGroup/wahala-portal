@@ -83,17 +83,12 @@ export function ProcessSectionHeader({ title, trailing }: { title: string; trail
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 9,
+        gap: 8,
         flexWrap: "wrap",
         minHeight: 24,
         marginBottom: 8,
-        padding: "7px 9px",
-        background: "#F6F7FB",
-        border: "1px solid #E4E7F0",
-        borderRadius: 9,
       }}
     >
-      <span aria-hidden="true" style={{ width: 3, height: 20, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
       <span className="kicker" style={{ color: "#303642", fontSize: 10.5, fontWeight: 900, letterSpacing: ".09em" }}>
         {title}
       </span>
@@ -676,9 +671,9 @@ export function DealProcessPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <section style={{ background: "#FAFBFF", border: "1.5px solid #C9D0FB", borderRadius: 14, padding: 14 }}>
+      <section style={{ background: "var(--ink)", border: "1px solid #2C2F36", borderRadius: 14, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span className="kicker" style={{ color: "var(--cobalt-text)" }}>Proposal readiness</span>
+          <span className="kicker" style={{ color: "#DDE0E6" }}>Proposal readiness</span>
           <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 9px", background: readyToDraft ? TONE.green.bg : TONE.red.bg, color: readyToDraft ? TONE.green.fg : TONE.red.fg }}>
             DRAFT {readyToDraft ? "READY" : "NOT READY"}
           </span>
@@ -686,8 +681,8 @@ export function DealProcessPanel({
             SEND {readyToSend ? "READY" : "NOT READY"}
           </span>
         </div>
-        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>{readinessGuidance}</p>
-        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>Evidence milestones · not a win forecast and never a hard gate</p>
+        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "#D5D8DE", lineHeight: 1.5 }}>{readinessGuidance}</p>
+        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "#AEB2BB" }}>Evidence milestones · not a win forecast and never a hard gate</p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
           {/* Discovery package card */}
@@ -786,7 +781,7 @@ export function DealProcessPanel({
       {/* Recorded calls (the past — "Log = past") */}
       <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span className="kicker">Recorded calls ({calls.length})</span>
+          <span className="kicker" style={{ color: "#303642", fontWeight: 900 }}>Recorded calls ({calls.length})</span>
           {canManage && (
             <button
               onClick={() => setAdding((v) => !v)}
@@ -847,8 +842,26 @@ export function DealProcessPanel({
                   {c.reviewStatus === "not_analyzed" ? " · saved · not analyzed" : c.reviewStatus === "pending" ? " · review pending" : c.reviewStatus === "dismissed" ? " · analysis dismissed" : ` · ${c.fieldsExtracted} fields accepted`}
                 </span>
                 {canManage && c.reviewStatus === "not_analyzed" && (
-                  <button onClick={() => void analyzeCall(c)} disabled={analyzingCallId !== null} className="mono" style={{ border: 0, background: "none", color: "var(--cobalt-text)", fontSize: 10, fontWeight: 800, cursor: "pointer", flex: "none" }}>
-                    {analyzingCallId === c.id ? "analyzing (~20s)…" : "◆ analyze recorded call"}
+                  <button
+                    onClick={() => void analyzeCall(c)}
+                    disabled={analyzingCallId !== null}
+                    className="mono"
+                    style={{
+                      border: 0,
+                      background: "var(--ink)",
+                      color: "var(--white)",
+                      borderRadius: 999,
+                      padding: "5px 9px",
+                      fontSize: 9.5,
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      cursor: analyzingCallId !== null ? "wait" : "pointer",
+                      opacity: analyzingCallId !== null ? 0.7 : 1,
+                      flex: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {analyzingCallId === c.id ? "Analyzing (~20s)…" : "◆ Analyze with AI"}
                   </button>
                 )}
                 {c.reviewStatus === "pending" && (

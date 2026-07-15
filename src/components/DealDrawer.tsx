@@ -560,7 +560,7 @@ export function DealDrawer({
             )}
 
             {/* Establish the commercial record before evaluating proposal readiness. */}
-            <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
+            <section>
               <ProcessSectionHeader title="Deal record" />
               {fieldsNode}
             </section>
