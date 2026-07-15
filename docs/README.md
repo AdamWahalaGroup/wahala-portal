@@ -20,9 +20,11 @@ history—not live Markdown—is the archive for superseded plans and handoffs.
   Deal Pulse and clearly labels the uncalibrated parts as experiments.
 - [`FIRST-DEAL-PILOT.md`](FIRST-DEAL-PILOT.md) is the working gate and discovery
   brief for the deposition-platform opportunity. It contains no buyer PII.
-- [`DEAL-SIMULATION-LAB.md`](DEAL-SIMULATION-LAB.md) contains three fictional,
-  end-to-end onboarding exercises covering a product handoff, contradictory AI
-  modernization discovery, and a phased mobile build with change control.
+- [`DEAL-SIMULATION-LAB.md`](DEAL-SIMULATION-LAB.md) is the training index and
+  facilitator scorecard. It links to three standalone, step-by-step deal
+  walkthroughs covering a [product handoff](DEAL-SIMULATION-01-PRODUCT-HANDOFF.md),
+  [contradictory AI modernization discovery](DEAL-SIMULATION-02-AI-CONTRADICTIONS.md),
+  and a [phased mobile build with change control](DEAL-SIMULATION-03-PHASE-CHANGE.md).
 - [`design_handoff_wahala_portal/design-system.md`](design_handoff_wahala_portal/design-system.md)
   and [`design_handoff_wahala_portal/patterns.md`](design_handoff_wahala_portal/patterns.md)
   retain durable visual and interaction rules. They do not override product or
