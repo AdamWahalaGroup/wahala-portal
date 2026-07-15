@@ -83,17 +83,12 @@ export function ProcessSectionHeader({ title, trailing }: { title: string; trail
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 9,
+        gap: 8,
         flexWrap: "wrap",
         minHeight: 24,
         marginBottom: 8,
-        padding: "7px 9px",
-        background: "#F6F7FB",
-        border: "1px solid #E4E7F0",
-        borderRadius: 9,
       }}
     >
-      <span aria-hidden="true" style={{ width: 3, height: 20, borderRadius: 999, background: "var(--cobalt)", flex: "none" }} />
       <span className="kicker" style={{ color: "#303642", fontSize: 10.5, fontWeight: 900, letterSpacing: ".09em" }}>
         {title}
       </span>
@@ -786,7 +781,7 @@ export function DealProcessPanel({
       {/* Recorded calls (the past — "Log = past") */}
       <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <span className="kicker">Recorded calls ({calls.length})</span>
+          <span className="kicker" style={{ color: "#303642", fontWeight: 900 }}>Recorded calls ({calls.length})</span>
           {canManage && (
             <button
               onClick={() => setAdding((v) => !v)}
