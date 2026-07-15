@@ -15,7 +15,7 @@
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AuthContext } from "@/auth/context";
-import { canAccessOrg, canManageCommercialDeal } from "@/auth/access";
+import { canAccessOrg, canManageCommercialDeal, canSalesRepSeedOpportunityOnAccount } from "@/auth/access";
 import { StageError } from "@/domain/stage-machine";
 import { isDealStage, daysInStage, FUNNEL_STAGES, STAGE_META, nextStepFor, type DealStage } from "@/domain/sales";
 import { isStuckWith, type SlaSettings } from "@/domain/sla";
@@ -177,7 +177,7 @@ async function resolveOwner(ctx: AuthContext, ownerUserId?: string): Promise<str
 /** Resolve/validate/create the (optional) account. Returns [orgId | null, insert stmts]. */
 async function resolveAccount(
   ctx: AuthContext,
-  input: { organizationId?: string; newAccountName?: string },
+  input: { organizationId?: string; newAccountName?: string; contactId?: string },
 ): Promise<{ organizationId: string | null; accountName: string | null; statements: unknown[] }> {
   const db = getDb();
   const organizationId = input.organizationId?.trim() || null;
@@ -185,7 +185,32 @@ async function resolveAccount(
     const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, organizationId) });
     if (!org) throw new StageError("VALIDATION", "That account does not exist.");
     if (ctx.user.role === "sales_rep" && !canAccessOrg(ctx.accessScope, organizationId)) {
-      throw new StageError("NOT_FOUND", "Account not found.");
+      // A rep can start their first Deal on an account only through a contact
+      // explicitly assigned to them. Their scope will include the account once
+      // that Deal exists; this does not reveal or grant access to other Deals.
+      const contactId = input.contactId?.trim();
+      const contact = contactId
+        ? await db.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) })
+        : null;
+      const links = contactId
+        ? await db
+            .select({ organizationId: schema.contactCompanies.organizationId })
+            .from(schema.contactCompanies)
+            .where(eq(schema.contactCompanies.contactId, contactId))
+        : [];
+      if (
+        !contact ||
+        !canSalesRepSeedOpportunityOnAccount({
+          scope: ctx.accessScope,
+          userId: ctx.user.id,
+          contactAssignedToUserId: contact.assignedToUserId,
+          contactOrganizationId: contact.organizationId,
+          linkedOrganizationIds: links.map((link) => link.organizationId),
+          organizationId,
+        })
+      ) {
+        throw new StageError("NOT_FOUND", "Account not found.");
+      }
     }
     return { organizationId, accountName: org.name, statements: [] };
   }

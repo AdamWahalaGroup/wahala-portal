@@ -102,3 +102,22 @@ export function canManageCommercialDeal(
   if (deal.organizationId) return canAccessOrg(scope, deal.organizationId);
   return deal.ownerUserId === actor.userId;
 }
+
+/**
+ * A sales rep's normal account scope comes from Deals they already own. That
+ * cannot be the only rule at opportunity creation: a rep may be assigned a
+ * contact on an account before they own their first Deal there. Permit that
+ * narrowly, while keeping every other account and Deal out of reach.
+ */
+export function canSalesRepSeedOpportunityOnAccount(input: {
+  scope: AccessScope;
+  userId: string;
+  contactAssignedToUserId: string | null;
+  contactOrganizationId: string | null;
+  linkedOrganizationIds: string[];
+  organizationId: string;
+}): boolean {
+  if (canAccessOrg(input.scope, input.organizationId)) return true;
+  if (input.contactAssignedToUserId !== input.userId) return false;
+  return input.contactOrganizationId === input.organizationId || input.linkedOrganizationIds.includes(input.organizationId);
+}
