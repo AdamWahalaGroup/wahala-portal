@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MarkdownPanel } from "@/components/MarkdownPanel";
+import { ExpandCollapseButton } from "@/components/ExpandCollapseButton";
 
 export function DiscoveryPanel({
   dealId,
@@ -46,17 +47,12 @@ export function DiscoveryPanel({
 
   return (
     <section style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, padding: 14 }}>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, border: 0, background: "none", padding: 0, color: "inherit", cursor: "pointer", textAlign: "left" }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span className="kicker" style={{ color: "#303642", fontSize: 10.5, fontWeight: 900, letterSpacing: ".09em" }}>Discovery memo</span>
-        <span className="mono" style={{ marginLeft: "auto", color: "var(--cobalt-text)", fontSize: 10, fontWeight: 800 }}>
-          {expanded ? "collapse ↑" : "expand ↓"}
+        <span style={{ marginLeft: "auto" }}>
+          <ExpandCollapseButton expanded={expanded} onClick={() => setExpanded((value) => !value)} label="discovery memo" />
         </span>
-      </button>
+      </div>
 
       {!expanded ? (
         <p style={{ margin: "8px 0 0", color: discoveryMd ? "var(--ink-soft)" : "var(--muted-line)", fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

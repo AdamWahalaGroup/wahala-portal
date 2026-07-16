@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { VisibilityMarker } from "@/components/VisibilityMarker";
+import { ExpandCollapseButton } from "@/components/ExpandCollapseButton";
 import { VISIBILITY } from "@/lib/theme";
 
 type Subtask = { id: string; title: string; done: boolean };
@@ -245,14 +246,9 @@ function TaskRow({
   return (
     <div style={{ borderTop: first ? "none" : "1px solid var(--border-soft)", background: task.visibility === "internal" ? "var(--surface-soft-2)" : "var(--white)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px" }}>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? "Collapse" : "Expand"}
-          style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted-line)", fontSize: 13, flex: "none", marginTop: 2, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}
-        >
-          ▶
-        </button>
+        <span style={{ marginTop: 2 }}>
+          <ExpandCollapseButton expanded={open} onClick={() => setOpen((o) => !o)} label="task details" size={24} />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, overflowWrap: "anywhere" }}>{task.title}</div>
           {/* Meta wraps under the title so long titles never get squeezed */}
