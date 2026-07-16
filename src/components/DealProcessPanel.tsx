@@ -97,6 +97,45 @@ export function ProcessSectionHeader({ title, trailing }: { title: string; trail
   );
 }
 
+function ExpandCollapseButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
+  const label = expanded ? "Collapse section" : "Expand section";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-label={label}
+      title={label}
+      style={{
+        width: 30,
+        height: 30,
+        padding: 0,
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        background: "var(--white)",
+        color: "var(--cobalt)",
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: "0 0 30px",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 7,
+          height: 7,
+          borderRight: "1.5px solid currentColor",
+          borderBottom: "1.5px solid currentColor",
+          transform: `rotate(${expanded ? "225deg" : "45deg"})`,
+          marginTop: expanded ? 4 : -3,
+        }}
+      />
+    </button>
+  );
+}
+
 function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: BuyingPath; canManage: boolean }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -170,15 +209,7 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
             <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: colors.fg, background: colors.bg, borderRadius: 999, padding: "3px 9px" }}>
               {path.status.toUpperCase()} · {path.completed}/{path.total}
             </span>
-            <button
-              type="button"
-              onClick={() => setExpanded((value) => !value)}
-              aria-expanded={expanded}
-              className="mono"
-              style={{ border: 0, background: "none", color: "var(--muted-line)", fontSize: 9.5, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
-            >
-              {expanded ? "collapse ↑" : "expand ↓"}
-            </button>
+            <ExpandCollapseButton expanded={expanded} onClick={() => setExpanded((value) => !value)} />
           </div>
         }
       />
@@ -722,15 +753,7 @@ export function DealProcessPanel({
               trailing={
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <ReadyPill score={readiness} tone={tone} />
-                  <button
-                    type="button"
-                    onClick={() => setDiscoveryExpanded((value) => !value)}
-                    aria-expanded={discoveryExpanded}
-                    className="mono"
-                    style={{ border: 0, background: "none", color: "var(--muted-line)", fontSize: 9.5, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
-                  >
-                    {discoveryExpanded ? "collapse ↑" : "expand ↓"}
-                  </button>
+                  <ExpandCollapseButton expanded={discoveryExpanded} onClick={() => setDiscoveryExpanded((value) => !value)} />
                 </div>
               }
             />
