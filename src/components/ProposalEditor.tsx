@@ -19,6 +19,7 @@ import { Money } from "@/components/Money";
 import { ProposalStatusPill } from "@/components/SalesChips";
 import { ReadinessNudgeModal } from "@/components/ReadinessNudgeModal";
 import { ProposalViewSwitcher } from "@/components/ProposalViewSwitcher";
+import { ExpandCollapseButton } from "@/components/ExpandCollapseButton";
 import { canAmendPhase } from "@/domain/proposal-math";
 import { proposalReadinessFrom } from "@/domain/process";
 import type { BuyingPathStatus } from "@/domain/process";
@@ -949,16 +950,9 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                                   <span style={{ color: "var(--ink-soft)", fontSize: 11, fontWeight: 700 }}>weeks</span>
                                 </div>
                               </label>
-                              <button
-                                type="button"
-                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
-                                title={expanded ? "Collapse phase details" : "Expand phase details"}
-                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
-                                aria-expanded={expanded}
-                                style={{ flex: "none", width: 26, height: 32, marginLeft: "auto", alignSelf: "flex-end", border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
-                              >
-                                {expanded ? "▴" : "▾"}
-                              </button>
+                              <span style={{ marginLeft: "auto", alignSelf: "flex-end" }}>
+                                <ExpandCollapseButton expanded={expanded} onClick={() => setPhaseExpanded(o.id, i, !expanded)} label={`phase ${i + 1} details`} />
+                              </span>
                             </div>
                           </>
                         )}
@@ -986,16 +980,9 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
                                   </span>
                                 )}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setPhaseExpanded(o.id, i, !expanded)}
-                                title={expanded ? "Collapse phase details" : "Expand phase details"}
-                                aria-label={`${expanded ? "Collapse" : "Expand"} phase ${i + 1} details`}
-                                aria-expanded={expanded}
-                                style={{ flex: "none", width: 26, height: 32, marginLeft: "auto", border: "1px solid #D8DCEC", borderRadius: 7, background: "var(--white)", color: "#5362D9", fontSize: 13, cursor: "pointer", padding: 0 }}
-                              >
-                                {expanded ? "▴" : "▾"}
-                              </button>
+                              <span style={{ marginLeft: "auto" }}>
+                                <ExpandCollapseButton expanded={expanded} onClick={() => setPhaseExpanded(o.id, i, !expanded)} label={`phase ${i + 1} details`} />
+                              </span>
                             </div>
                           </>
                         )}
