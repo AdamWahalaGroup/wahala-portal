@@ -99,6 +99,7 @@ export function ProcessSectionHeader({ title, trailing }: { title: string; trail
 
 function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: BuyingPath; canManage: boolean }) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState<BuyingPathFieldKey | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +121,13 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
     setForm({ status: field?.source ? field.status : null, evidence: field?.evidence ?? "", budgetStatus: path.budgetStatus });
     setError(null);
     setEditing(key);
+    setExpanded(true);
   }
+
+  const openFields = BUYING_PATH_FIELDS.filter((key) => (path.fields[key]?.status ?? "missing") !== "ok");
+  const openSummary = openFields.length
+    ? `${openFields.length} open: ${openFields.map((key) => BUYING_PATH_LABELS[key]).join(", ")}`
+    : "All buying evidence confirmed";
 
   async function save() {
     if (!editing) return;
@@ -159,16 +166,30 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
       <ProcessSectionHeader
         title="Buying path"
         trailing={
-        <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: colors.fg, background: colors.bg, borderRadius: 999, padding: "3px 9px" }}>
-          {path.status.toUpperCase()} · {path.completed}/{path.total}
-        </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, color: colors.fg, background: colors.bg, borderRadius: 999, padding: "3px 9px" }}>
+              {path.status.toUpperCase()} · {path.completed}/{path.total}
+            </span>
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+              className="mono"
+              style={{ border: 0, background: "none", color: "var(--muted-line)", fontSize: 9.5, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
+            >
+              {expanded ? "collapse ↑" : "expand ↓"}
+            </button>
+          </div>
         }
       />
-      <p style={{ margin: "6px 0 9px", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
-        Can this customer actually buy? Confirm the people, urgency, approval steps, and funding path behind a credible purchase.
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", columnGap: 16, rowGap: 7 }}>
-        {BUYING_PATH_FIELDS.map((key) => {
+      {!expanded && <p style={{ margin: 0, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>{openSummary}</p>}
+      {expanded && (
+        <>
+          <p style={{ margin: "6px 0 9px", fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>
+            Can this customer actually buy? Confirm the people, urgency, approval steps, and funding path behind a credible purchase.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", columnGap: 16, rowGap: 7 }}>
+            {BUYING_PATH_FIELDS.map((key) => {
           const field = path.fields[key];
           const status = field?.status ?? "missing";
           const color = status === "ok" ? TONE.green : status === "partial" ? TONE.amber : TONE.red;
@@ -206,11 +227,13 @@ function BuyingPathCard({ dealId, path, canManage }: { dealId: string; path: Buy
               )}
             </div>
           );
-        })}
-      </div>
-      <div style={{ marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 9, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.5 }}>
-        <b>What this tells you:</b> Unverified means the purchase path is still unknown. Developing means some evidence exists but at least one item is incomplete. Confirmed means all five items are supported well enough to send a proposal with confidence.
-      </div>
+            })}
+          </div>
+          <div style={{ marginTop: 10, borderTop: "1px solid var(--border-softer)", paddingTop: 9, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.5 }}>
+            <b>What this tells you:</b> Unverified means the purchase path is still unknown. Developing means some evidence exists but at least one item is incomplete. Confirmed means all five items are supported well enough to send a proposal with confidence.
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -431,6 +454,7 @@ export function DealProcessPanel({
   const [fieldBusy, setFieldBusy] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [askAll, setAskAll] = useState(false);
+  const [discoveryExpanded, setDiscoveryExpanded] = useState(false);
   const [review, setReview] = useState<ReviewView | null>(null);
 
   useEffect(() => {
@@ -662,6 +686,10 @@ export function DealProcessPanel({
   const prompts = stage === "committed" ? [] : nextCallPrompts(fields);
   const shownPrompts = askAll ? prompts : prompts.slice(0, 3);
   const discoveryScore = readiness ?? 0;
+  const openDiscoveryFields = PACKAGE_FIELDS.filter((key) => (fields[key]?.status ?? "missing") !== "ok");
+  const discoverySummary = openDiscoveryFields.length
+    ? `${PACKAGE_FIELDS.length - openDiscoveryFields.length} of ${PACKAGE_FIELDS.length} confirmed · ${openDiscoveryFields.length} open: ${openDiscoveryFields.map((key) => PACKAGE_FIELD_LABELS[key]).join(", ")}`
+    : `All ${PACKAGE_FIELDS.length} discovery items confirmed`;
   const { readyToDraft, readyToSend } = proposalReadinessFrom(discoveryScore, buyingPath.status);
   const readinessGuidance = !readyToDraft
     ? `Not ready to draft yet. Raise DISCOVERY from ${discoveryScore.toFixed(1)}/10 to at least ${PROPOSAL_READY_AT}/10 by closing the open package fields.`
@@ -671,9 +699,9 @@ export function DealProcessPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <section style={{ background: "var(--ink)", border: "1px solid #2C2F36", borderRadius: 14, padding: 14 }}>
+      <section style={{ borderTop: "1px solid var(--border-softer)", paddingTop: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span className="kicker" style={{ color: "#DDE0E6" }}>Proposal readiness</span>
+          <span className="kicker" style={{ color: "var(--muted-line)" }}>Proposal readiness</span>
           <span className="mono" style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 9px", background: readyToDraft ? TONE.green.bg : TONE.red.bg, color: readyToDraft ? TONE.green.fg : TONE.red.fg }}>
             DRAFT {readyToDraft ? "READY" : "NOT READY"}
           </span>
@@ -681,20 +709,33 @@ export function DealProcessPanel({
             SEND {readyToSend ? "READY" : "NOT READY"}
           </span>
         </div>
-        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "#D5D8DE", lineHeight: 1.5 }}>{readinessGuidance}</p>
-        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "#AEB2BB" }}>Evidence milestones · not a win forecast and never a hard gate</p>
+        <p style={{ margin: "7px 0 0", fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.5 }}>{readinessGuidance}</p>
+        <p className="mono" style={{ margin: "4px 0 0", fontSize: 9.5, color: "var(--muted-line)" }}>Evidence milestones · not a win forecast and never a hard gate</p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
           {/* Discovery package card */}
           <section
             style={{ background: "var(--white)", border: trainingMode ? "1.5px solid var(--cobalt)" : "1px solid var(--border)", borderRadius: 12, padding: 14 }}
           >
-        <ProcessSectionHeader
-          title="Discovery Package"
-          trailing={
-            <ReadyPill score={readiness} tone={tone} />
-          }
-        />
+            <ProcessSectionHeader
+              title="Discovery Package"
+              trailing={
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <ReadyPill score={readiness} tone={tone} />
+                  <button
+                    type="button"
+                    onClick={() => setDiscoveryExpanded((value) => !value)}
+                    aria-expanded={discoveryExpanded}
+                    className="mono"
+                    style={{ border: 0, background: "none", color: "var(--muted-line)", fontSize: 9.5, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
+                  >
+                    {discoveryExpanded ? "collapse ↑" : "expand ↓"}
+                  </button>
+                </div>
+              }
+            />
+            {!discoveryExpanded && <p style={{ margin: 0, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.45 }}>{discoverySummary}</p>}
+            {discoveryExpanded && <>
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {DISCOVERY_SCRIPT_GROUPS.map((group, index) => (
             <div key={group.key} style={{ borderTop: index === 0 ? undefined : "1px solid var(--border-softer)", paddingTop: index === 0 ? 2 : 10 }}>
@@ -737,6 +778,7 @@ export function DealProcessPanel({
             <Explain text={EXPLAIN.whyCompleteness} />
           </div>
         )}
+            </>}
           </section>
 
           <BuyingPathCard dealId={dealId} path={buyingPath} canManage={canManage} />
