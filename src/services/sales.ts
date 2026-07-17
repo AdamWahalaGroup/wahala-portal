@@ -444,6 +444,10 @@ export type DealItem = {
   paidDiscovery: boolean;
   /** Solution-clarity snapshot (0–10) — used by send-time coaching. */
   readinessScore: number | null;
+  /** An internal proposal exists; the deal stays in Discovery until it is sent. */
+  hasDraftProposal: boolean;
+  /** Discovery or buying evidence changed after the internal draft was created. */
+  draftNeedsRefresh: boolean;
   /** Set once Create project → ran — the board's won-drag guard reads it. */
   projectId: string | null;
   /** Agent layer: business-fit 0–10 + the derived priority (Home queue / list sort). */
@@ -469,7 +473,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const projectIds = [...new Set(rows.map((d) => d.projectId).filter((v): v is string => !!v))];
   const now = new Date();
 
-  const [orgs, owners, people, sentProposals, agRows, projects, upcomingMeetings, discoveryPackages] = await Promise.all([
+  const [orgs, owners, people, proposalRows, agRows, projects, upcomingMeetings, discoveryPackages] = await Promise.all([
     orgIds.length > 0
       ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
       : Promise.resolve([] as { id: string; name: string }[]),
@@ -483,9 +487,9 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
           .where(inArray(schema.contacts.id, contactIds))
       : Promise.resolve([]),
     db
-      .select({ dealId: schema.proposals.dealId, sentAt: schema.proposals.sentAt })
+      .select({ dealId: schema.proposals.dealId, status: schema.proposals.status, sentAt: schema.proposals.sentAt, createdAt: schema.proposals.createdAt })
       .from(schema.proposals)
-      .where(and(inArray(schema.proposals.dealId, dealIds), eq(schema.proposals.status, "sent"))),
+      .where(and(inArray(schema.proposals.dealId, dealIds), inArray(schema.proposals.status, ["draft", "sent"]))),
     orgIds.length > 0
       ? db
           .select({ organizationId: schema.agreements.organizationId, dealId: schema.agreements.dealId, kind: schema.agreements.kind, status: schema.agreements.status })
@@ -500,7 +504,7 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       .from(schema.meetings)
       .where(and(inArray(schema.meetings.dealId, dealIds), eq(schema.meetings.status, "upcoming"), gte(schema.meetings.startsAt, now))),
     db
-      .select({ dealId: schema.discoveryPackages.dealId, fields: schema.discoveryPackages.fields })
+      .select({ dealId: schema.discoveryPackages.dealId, fields: schema.discoveryPackages.fields, updatedAt: schema.discoveryPackages.updatedAt })
       .from(schema.discoveryPackages)
       .where(inArray(schema.discoveryPackages.dealId, dealIds)),
   ]);
@@ -509,8 +513,14 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   const contactById = new Map(people.map((c) => [c.id, c]));
   const projectKind = new Map(projects.map((p) => [p.id, p.kind]));
   const solutionClarityByDeal = new Map(discoveryPackages.map((pkg) => [pkg.dealId, readinessFrom((pkg.fields ?? {}) as PackageFields)]));
+  const packageUpdatedAtByDeal = new Map(discoveryPackages.map((pkg) => [pkg.dealId, pkg.updatedAt]));
   const latestSent = new Map<string, Date>();
-  for (const p of sentProposals) {
+  const latestDraftCreatedAt = new Map<string, Date>();
+  for (const p of proposalRows) {
+    if (p.status === "draft") {
+      const current = latestDraftCreatedAt.get(p.dealId);
+      if (!current || p.createdAt > current) latestDraftCreatedAt.set(p.dealId, p.createdAt);
+    }
     if (!p.sentAt) continue;
     const cur = latestSent.get(p.dealId);
     if (!cur || p.sentAt > cur) latestSent.set(p.dealId, p.sentAt);
@@ -536,6 +546,8 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
   return rows.map((d) => {
     const contact = d.primaryContactId ? contactById.get(d.primaryContactId) : undefined;
     const sentAt = latestSent.get(d.id) ?? null;
+    const draftCreatedAt = latestDraftCreatedAt.get(d.id) ?? null;
+    const draftNeedsRefresh = !!draftCreatedAt && Math.max(d.updatedAt.getTime(), packageUpdatedAtByDeal.get(d.id)?.getTime() ?? 0) > draftCreatedAt.getTime();
     const sentDaysAgo = sentAt ? daysInStage(sentAt, now) : null;
     // Deposit is part of the committed package: one more doc, done when paid.
     const pkg = pkgByDeal.get(d.id);
@@ -578,6 +590,8 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
       msaOnFile: !!d.organizationId && msaOrgs.has(d.organizationId),
       paidDiscovery: d.origin === "spawned_from_project" || (d.projectId ? projectKind.get(d.projectId) === "paid_discovery" : false),
       readinessScore: solutionClarityByDeal.get(d.id) ?? 0,
+      hasDraftProposal: !!draftCreatedAt,
+      draftNeedsRefresh,
       projectId: d.projectId,
       fitScore: d.fitScore,
       engagementHealthScore: d.engagementHealthScore,

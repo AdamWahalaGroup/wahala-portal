@@ -77,6 +77,7 @@ export default async function DealDrawerPage({ params }: { params: Promise<{ id:
         complexityScore: p.complexityScore,
         needsReview: p.needsReview,
         selectedLabel: p.selectedLabel,
+        draftNeedsRefresh: p.draftNeedsRefresh,
       }))}
       canManage={canManage}
       hasDiscovery={!!deal.discoveryMd}

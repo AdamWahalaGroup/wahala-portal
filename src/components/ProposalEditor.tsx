@@ -60,6 +60,7 @@ type Proposal = {
   selectedOptionId: string | null;
   approvers: Approver[] | null;
   contract: ProposalContract | null;
+  draftNeedsRefresh: boolean;
   options: Option[];
 };
 
@@ -460,6 +461,24 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     else setConfirmSend(true);
   }
 
+  async function refreshFromDiscovery() {
+    if (!window.confirm("Create a new AI-grounded draft from the latest discovery evidence? Your current draft will be kept as the prior version, not overwritten.")) return;
+    setBusy("refresh-discovery");
+    try {
+      const res = await fetch(`/api/proposals/${proposal.id}/refresh`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; proposalId?: string };
+      if (!res.ok || !data.proposalId) {
+        setError(data.message ?? "Could not create a refreshed draft.");
+        return;
+      }
+      router.push(`/dashboard/proposals/${data.proposalId}`);
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // ---------------------------------------------------------------- spine
 
   const sigDot =
@@ -624,6 +643,22 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
           </div>
         </div>
         <h1 style={{ margin: 0, fontSize: 23, fontWeight: 800, letterSpacing: "-.025em" }}>{proposal.dealName}</h1>
+
+        {proposal.draftNeedsRefresh && isDraft && (
+          <section style={{ background: "#FFF7ED", border: "1px solid #FADCB4", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#B45309" }}>Discovery changed after this draft was created</div>
+            <p style={{ margin: "5px 0 10px", fontSize: 12.5, color: "#92400E", lineHeight: 1.5 }}>
+              This proposal remains editable, but its scope may no longer match the latest discovery or buying-path evidence. Review the deal before sending.
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <Link href={`/dashboard/sales/deals/${proposal.dealId}`} style={{ ...btn("plain"), textDecoration: "none", color: "#92400E", borderColor: "#F2D58A" }}>Review discovery →</Link>
+              <button onClick={() => void refreshFromDiscovery()} disabled={busy === "refresh-discovery"} style={btn("ink", busy === "refresh-discovery")}>
+                {busy === "refresh-discovery" ? "Creating refreshed draft…" : "Refresh draft with AI"}
+              </button>
+              <span className="mono" style={{ fontSize: 9.5, color: "#A16207" }}>creates a new version · preserves this draft</span>
+            </div>
+          </section>
+        )}
 
         {/* Needs-review card */}
         {complexity > 3 && (

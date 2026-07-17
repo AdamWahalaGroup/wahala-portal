@@ -101,6 +101,11 @@ function DealRow({ deal, canManage, onMoved }: { deal: DealItem; canManage: bool
           {deal.contactName ? ` · ${deal.contactName}` : ""}
           {deal.ownerName ? ` · owner ${deal.ownerName}` : ""}
         </div>
+        {deal.hasDraftProposal && (
+          <span className="mono" style={{ display: "inline-block", marginTop: 5, fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 8px", background: deal.draftNeedsRefresh ? "#FCEFDC" : "#EEF0FE", color: deal.draftNeedsRefresh ? "#B45309" : "#2536C4" }}>
+            {deal.draftNeedsRefresh ? "DRAFT NEEDS REFRESH" : "DRAFT IN PROGRESS"}
+          </span>
+        )}
       </div>
       {deal.fitScore !== null && (
         <span
@@ -261,6 +266,7 @@ function KanbanView({ overview, canManage, filter, currentUserId, onMoved }: { o
     // Stage-specific chip (frame 31 card anatomy).
     let chip: React.ReactNode = null;
     if (d.paidDiscovery) chip = <CardChip text="◆ paid discovery · runs as a project" tone="cobalt" />;
+    else if (d.hasDraftProposal) chip = <CardChip text={d.draftNeedsRefresh ? "draft needs refresh" : "proposal draft in progress"} tone={d.draftNeedsRefresh ? "amber" : "cobalt"} />;
     else if (d.stage === "negotiating" && d.subStatus) {
       const s = d.subStatus.toLowerCase();
       chip = <CardChip text={d.subStatus} tone={s.includes("redline") ? "amber" : s.includes("verbal") || s.includes("yes") ? "green" : "grey"} />;

@@ -86,6 +86,8 @@ export type ProposalDetail = {
   contract: ProposalContract | null;
   /** Chosen/recommended option's phases changed after the contract snapshot (draft only). */
   contractStale: boolean;
+  /** Discovery evidence changed after this internal draft was created. */
+  draftNeedsRefresh: boolean;
   options: ProposalOption[];
 };
 
@@ -99,7 +101,18 @@ export type ProposalSummary = {
   sentAt: Date | null;
   respondedAt: Date | null;
   selectedLabel: string | null;
+  draftNeedsRefresh: boolean;
 };
+
+function draftNeedsRefresh(
+  proposal: { status: ProposalStatus; createdAt: Date },
+  deal: { updatedAt: Date },
+  discoveryPackage: { updatedAt: Date } | null,
+): boolean {
+  if (proposal.status !== "draft") return false;
+  const newestEvidenceAt = Math.max(deal.updatedAt.getTime(), discoveryPackage?.updatedAt.getTime() ?? 0);
+  return newestEvidenceAt > proposal.createdAt.getTime();
+}
 
 function assertStaffScoped(
   ctx: AuthContext,
@@ -173,12 +186,15 @@ export async function listProposalsForDeal(ctx: AuthContext, dealId: string): Pr
   if (rows.length === 0) return [];
 
   const selectedIds = rows.map((p) => p.selectedOptionId).filter((v): v is string => !!v);
-  const selected = selectedIds.length
-    ? await db
+  const [selected, discoveryPackage] = await Promise.all([
+    selectedIds.length
+    ? db
         .select({ id: schema.proposalOptions.id, label: schema.proposalOptions.label })
         .from(schema.proposalOptions)
         .where(inArray(schema.proposalOptions.id, selectedIds))
-    : [];
+    : Promise.resolve([] as { id: string; label: string }[]),
+    db.query.discoveryPackages.findFirst({ where: eq(schema.discoveryPackages.dealId, dealId) }),
+  ]);
   const selectedLabel = new Map(selected.map((o) => [o.id, o.label]));
 
   return rows.map((p) => ({
@@ -191,6 +207,7 @@ export async function listProposalsForDeal(ctx: AuthContext, dealId: string): Pr
     sentAt: p.sentAt,
     respondedAt: p.respondedAt,
     selectedLabel: p.selectedOptionId ? selectedLabel.get(p.selectedOptionId) ?? null : null,
+    draftNeedsRefresh: draftNeedsRefresh(p, deal, discoveryPackage ?? null),
   }));
 }
 
@@ -213,6 +230,7 @@ export type ProposalIndexRow = {
   priceCents: number;
   sentAt: Date | null;
   respondedAt: Date | null;
+  draftNeedsRefresh: boolean;
 };
 
 /** One row per deal with a live proposal (prototype §2) — the Proposals nav index. */
@@ -239,14 +257,17 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
   const dealIds = [...new Set(live.map((p) => p.dealId))];
   const orgIds = [...new Set(live.map((p) => p.organizationId).filter((v): v is string => !!v))];
   const proposalIds = live.map((p) => p.id);
-  const [dealRows, orgRows, optionRows] = await Promise.all([
-    db.select({ id: schema.deals.id, name: schema.deals.name }).from(schema.deals).where(inArray(schema.deals.id, dealIds)),
+  const [dealRows, orgRows, optionRows, discoveryPackages] = await Promise.all([
+    db.select({ id: schema.deals.id, name: schema.deals.name, updatedAt: schema.deals.updatedAt }).from(schema.deals).where(inArray(schema.deals.id, dealIds)),
     orgIds.length > 0
       ? db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations).where(inArray(schema.organizations.id, orgIds))
       : Promise.resolve([] as { id: string; name: string }[]),
     db.select().from(schema.proposalOptions).where(inArray(schema.proposalOptions.proposalId, proposalIds)).orderBy(schema.proposalOptions.sortOrder),
+    db.select({ dealId: schema.discoveryPackages.dealId, updatedAt: schema.discoveryPackages.updatedAt }).from(schema.discoveryPackages).where(inArray(schema.discoveryPackages.dealId, dealIds)),
   ]);
+  const dealById = new Map(dealRows.map((d) => [d.id, d]));
   const dealName = new Map(dealRows.map((d) => [d.id, d.name]));
+  const packageByDeal = new Map(discoveryPackages.map((pkg) => [pkg.dealId, pkg]));
   const orgName = new Map(orgRows.map((o) => [o.id, o.name]));
   const optionsByProposal = new Map<string, ProposalOption[]>();
   for (const o of optionRows) {
@@ -283,6 +304,7 @@ export async function listAllProposals(ctx: AuthContext): Promise<ProposalIndexR
         priceCents: headline?.priceCents ?? 0,
         sentAt: p.sentAt,
         respondedAt: p.respondedAt,
+        draftNeedsRefresh: draftNeedsRefresh(p, dealById.get(p.dealId) ?? { updatedAt: p.createdAt }, packageByDeal.get(p.dealId) ?? null),
       };
     });
 }
@@ -350,6 +372,7 @@ export async function getProposal(ctx: AuthContext, proposalId: string): Promise
     approvers: (p.approvers as Approver[] | null) ?? null,
     contract,
     contractStale: computeContractStale(contract, options, p.selectedOptionId),
+    draftNeedsRefresh: draftNeedsRefresh(p, deal, discoveryPackage ?? null),
     options,
   };
 }
@@ -560,6 +583,32 @@ export async function roughDraftProposal(
   ]);
   if (usage) await recordAiRun(db, { agentKey: "proposal", dealId, organizationId: deal.organizationId, ...usage });
   return { proposalId, usage };
+}
+
+/**
+ * Discovery changed after a draft was made. Create a new AI-grounded version and
+ * preserve the old one as a superseded record; never overwrite manual proposal edits.
+ */
+export async function refreshProposalFromDiscovery(ctx: AuthContext, proposalId: string): Promise<{ proposalId: string; usage: DraftUsage | null }> {
+  const prior = await loadDraft(ctx, proposalId, "refresh_proposal_from_discovery");
+  const options = await loadOptions(proposalId);
+  const pathCount = String(Math.min(3, Math.max(1, options.length))) as PathCount;
+  const refreshed = await roughDraftProposal(ctx, prior.dealId, { pathCount });
+  const db = getDb();
+  await db.batch([
+    db.update(schema.proposals).set({ status: "superseded" }).where(eq(schema.proposals.id, proposalId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: prior.organizationId,
+        actorUserId: ctx.user.id,
+        action: "proposal.refreshed_from_discovery",
+        entityType: "proposal",
+        entityId: refreshed.proposalId,
+        metadata: { priorProposalId: proposalId, priorVersion: prior.version, refreshedVersion: prior.version + 1 },
+      }),
+    ),
+  ]);
+  return refreshed;
 }
 
 // ---------------------------------------------------------------- edit (draft only)

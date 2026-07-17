@@ -65,6 +65,11 @@ export default async function ProposalsIndexPage() {
               {p.priceCents > 0 && <Money cents={p.priceCents} style={{ fontWeight: 800, fontSize: 14.5, flex: "none" }} />}
               <ComplexityChip score={p.complexityScore} />
               <ProposalStatusPill status={p.status} />
+              {p.status === "draft" && (
+                <span className="mono" style={{ fontSize: 9, fontWeight: 800, borderRadius: 999, padding: "3px 7px", background: p.draftNeedsRefresh ? "#FCEFDC" : "#EEF0FE", color: p.draftNeedsRefresh ? "#B45309" : "#2536C4" }}>
+                  {p.draftNeedsRefresh ? "needs refresh" : "in progress"}
+                </span>
+              )}
               <span style={{ color: "var(--muted-line)", flex: "none" }}>›</span>
             </Link>
           ))}

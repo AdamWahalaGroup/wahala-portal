@@ -19,6 +19,7 @@ type Summary = {
   complexityScore: number | null;
   needsReview: boolean;
   selectedLabel: string | null;
+  draftNeedsRefresh: boolean;
 };
 
 export function ProposalsSection({
@@ -82,6 +83,11 @@ export function ProposalsSection({
           }}
         >
           <span style={{ fontWeight: 800, fontSize: 13.5, color: "var(--cobalt-text)", flex: "none" }}>◆ View full proposal</span>
+          {live.status === "draft" && (
+            <span className="mono" style={{ fontSize: 9.5, fontWeight: 800, borderRadius: 999, padding: "3px 8px", background: live.draftNeedsRefresh ? "#FCEFDC" : "#EEF0FE", color: live.draftNeedsRefresh ? "#B45309" : "#2536C4" }}>
+              {live.draftNeedsRefresh ? "DRAFT NEEDS REFRESH" : "DRAFT IN PROGRESS"}
+            </span>
+          )}
           <span style={{ flex: 1 }} />
           {live.selectedLabel && (
             <span className="kicker" style={{ flex: "none", fontSize: 9.5, padding: "3px 7px", borderRadius: 5, background: "#DCF5E3", color: "#15803D" }}>
