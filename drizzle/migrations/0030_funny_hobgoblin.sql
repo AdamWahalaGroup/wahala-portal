@@ -1,0 +1,1 @@
+ALTER TABLE `proposals` ADD `evidence_reviewed_at` integer;

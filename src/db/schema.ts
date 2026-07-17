@@ -627,6 +627,9 @@ export const proposals = sqliteTable(
     // The Contract/SOW document — a one-time SNAPSHOT of the chosen option (never a
     // live binding). Draft→sent→executed lifecycle + amendment log live inside.
     contract: text("contract", { mode: "json" }).$type<import("../domain/proposal-doc").ProposalContract | null>(),
+    // Explicit acknowledgement that a human reconciled this draft against the
+    // then-current Discovery Package / Buying Path without an AI rewrite.
+    evidenceReviewedAt: integer("evidence_reviewed_at", { mode: "timestamp" }),
     createdByUserId: text("created_by_user_id").references(() => users.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

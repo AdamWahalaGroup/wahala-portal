@@ -479,6 +479,24 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
     }
   }
 
+  async function markEvidenceReviewed() {
+    if (!window.confirm("Confirm that you reviewed the latest discovery and buying-path evidence and manually reconciled this draft. This keeps the current draft and clears its refresh warning.")) return;
+    setBusy("review-evidence");
+    try {
+      const res = await fetch(`/api/proposals/${proposal.id}/review-evidence`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        setError(data.message ?? "Could not mark this draft as reviewed.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // ---------------------------------------------------------------- spine
 
   const sigDot =
@@ -655,7 +673,10 @@ export function ProposalEditor({ proposal, canManage, trainingMode = false }: { 
               <button onClick={() => void refreshFromDiscovery()} disabled={busy === "refresh-discovery"} style={btn("ink", busy === "refresh-discovery")}>
                 {busy === "refresh-discovery" ? "Creating refreshed draft…" : "Refresh draft with AI"}
               </button>
-              <span className="mono" style={{ fontSize: 9.5, color: "#A16207" }}>creates a new version · preserves this draft</span>
+              <button onClick={() => void markEvidenceReviewed()} disabled={busy === "review-evidence"} style={btn("plain", busy === "review-evidence")}>
+                {busy === "review-evidence" ? "Marking reviewed…" : "Mark reviewed — keep this draft"}
+              </button>
+              <span className="mono" style={{ fontSize: 9.5, color: "#A16207" }}>AI refresh creates a new version · reviewed keeps this draft</span>
             </div>
           </section>
         )}

@@ -105,7 +105,7 @@ export type ProposalSummary = {
 };
 
 function draftNeedsRefresh(
-  proposal: { status: ProposalStatus; createdAt: Date },
+  proposal: { status: ProposalStatus; createdAt: Date; evidenceReviewedAt: Date | null },
   discoveryPackage: { updatedAt: Date } | null,
 ): boolean {
   if (proposal.status !== "draft") return false;
@@ -113,7 +113,8 @@ function draftNeedsRefresh(
   // recording the cost of the AI run that just created this proposal). The
   // Discovery Package is the structured source used for both discovery and
   // buying-path evidence, so it is the reliable freshness signal.
-  return (discoveryPackage?.updatedAt.getTime() ?? 0) > proposal.createdAt.getTime();
+  const reviewedAt = proposal.evidenceReviewedAt?.getTime() ?? proposal.createdAt.getTime();
+  return (discoveryPackage?.updatedAt.getTime() ?? 0) > reviewedAt;
 }
 
 function assertStaffScoped(
@@ -610,6 +611,30 @@ export async function refreshProposalFromDiscovery(ctx: AuthContext, proposalId:
     ),
   ]);
   return refreshed;
+}
+
+/**
+ * The seller manually reconciled this draft with the current Discovery Package
+ * and Buying Path. This is intentionally explicit: ordinary proposal saves do
+ * not clear the warning, so a typo fix cannot masquerade as an evidence review.
+ */
+export async function markProposalEvidenceReviewed(ctx: AuthContext, proposalId: string): Promise<void> {
+  const proposal = await loadDraft(ctx, proposalId, "mark_proposal_evidence_reviewed");
+  const reviewedAt = new Date();
+  const db = getDb();
+  await db.batch([
+    db.update(schema.proposals).set({ evidenceReviewedAt: reviewedAt }).where(eq(schema.proposals.id, proposalId)),
+    db.insert(schema.auditLog).values(
+      buildAudit({
+        organizationId: proposal.organizationId,
+        actorUserId: ctx.user.id,
+        action: "proposal.evidence_reviewed",
+        entityType: "proposal",
+        entityId: proposalId,
+        metadata: { dealId: proposal.dealId, version: proposal.version, reviewedAt: reviewedAt.toISOString() },
+      }),
+    ),
+  ]);
 }
 
 // ---------------------------------------------------------------- edit (draft only)
