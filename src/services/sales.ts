@@ -547,7 +547,10 @@ async function loadDealItems(ctx: AuthContext, sla: SlaSettings): Promise<DealIt
     const contact = d.primaryContactId ? contactById.get(d.primaryContactId) : undefined;
     const sentAt = latestSent.get(d.id) ?? null;
     const draftCreatedAt = latestDraftCreatedAt.get(d.id) ?? null;
-    const draftNeedsRefresh = !!draftCreatedAt && Math.max(d.updatedAt.getTime(), packageUpdatedAtByDeal.get(d.id)?.getTime() ?? 0) > draftCreatedAt.getTime();
+    // Deal updates also include non-evidence activity such as AI cost metering.
+    // The package contains both Discovery Package and Buying Path evidence, so
+    // only its timestamp should make an internal proposal draft stale.
+    const draftNeedsRefresh = !!draftCreatedAt && (packageUpdatedAtByDeal.get(d.id)?.getTime() ?? 0) > draftCreatedAt.getTime();
     const sentDaysAgo = sentAt ? daysInStage(sentAt, now) : null;
     // Deposit is part of the committed package: one more doc, done when paid.
     const pkg = pkgByDeal.get(d.id);
